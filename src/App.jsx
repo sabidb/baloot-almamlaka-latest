@@ -42,9 +42,23 @@ function shuffle(deck) {
   }
   return d;
 }
-function deal(deck) {
-  return [deck.slice(0,8),deck.slice(8,16),deck.slice(16,24),deck.slice(24,32)];
+
+// ── KEY FIX: Store hands as h0,h1,h2,h3 not nested array ──
+function dealHands(deck) {
+  return {
+    h0: deck.slice(0,8),
+    h1: deck.slice(8,16),
+    h2: deck.slice(16,24),
+    h3: deck.slice(24,32),
+  };
 }
+function getHands(gd) {
+  return [gd.h0||[], gd.h1||[], gd.h2||[], gd.h3||[]];
+}
+function handsUpdate(hands, playerIndex, newHand) {
+  return { [`h${playerIndex}`]: newHand };
+}
+
 function cardValue(card,mode,trump) {
   if(!card) return 0;
   if(mode==='sun') return card.rank.sun;
@@ -436,7 +450,6 @@ export default function App() {
   const isHostRef=useRef(false);
   const gameDataRef=useRef(null);
 
-  // Keep refs in sync
   useEffect(()=>{roomCodeRef.current=roomCode;},[roomCode]);
   useEffect(()=>{myIndexRef.current=myIndex;},[myIndex]);
   useEffect(()=>{isHostRef.current=isHost;},[isHost]);
@@ -445,14 +458,12 @@ export default function App() {
   const shareLink=typeof window!=='undefined'
     ?`${window.location.origin}?room=${roomCode}`:'';
 
-  // Check URL params on load
   useEffect(()=>{
     const params=new URLSearchParams(window.location.search);
     const room=params.get('room');
-    if(room){setJoinCode(room);}
+    if(room) setJoinCode(room);
   },[]);
 
-  // Subscribe to Firestore room
   const subscribeRoom=useCallback((code)=>{
     if(unsubRef.current) unsubRef.current();
     unsubRef.current=onSnapshot(
@@ -461,23 +472,19 @@ export default function App() {
         if(snap.exists()){
           const data=snap.data();
           setGameData(data);
-          // Auto switch screens based on phase
-          if(['bidding','playing','roundEnd'].includes(data.phase)){
+          if(['bidding','playing','roundEnd'].includes(data.phase))
             setScreen('game');
-          } else if(data.phase==='lobby'){
+          else if(data.phase==='lobby')
             setScreen('lobby');
-          }
         }
       },
-      (err)=>{console.error('Firestore error:',err);}
+      (err)=>console.error('Firestore:',err)
     );
   },[]);
 
-  useEffect(()=>()=>{
-    if(unsubRef.current) unsubRef.current();
-  },[]);
+  useEffect(()=>()=>{if(unsubRef.current)unsubRef.current();},[]);
 
-  // Create room
+  // ── Create Room ───────────────────────────────────────
   const createRoom=async()=>{
     if(!playerName.trim()){setError('أدخل اسمك أولاً');return;}
     setError('');
@@ -486,7 +493,7 @@ export default function App() {
       await setDoc(doc(db,'rooms',code),{
         phase:'lobby',
         players:[playerName.trim(),null,null,null],
-        hands:[[],[],[],[]],
+        h0:[],h1:[],h2:[],h3:[],
         bids:[],
         contract:null,
         biddingTurn:0,
@@ -507,13 +514,10 @@ export default function App() {
       setIsHost(true);
       isHostRef.current=true;
       subscribeRoom(code);
-      // setScreen handled by onSnapshot
-    } catch(e){
-      setError('فشل الاتصال: '+e.message);
-    }
+    } catch(e){setError('فشل: '+e.message);}
   };
 
-  // Join room
+  // ── Join Room ─────────────────────────────────────────
   const joinRoom=async()=>{
     if(!playerName.trim()){setError('أدخل اسمك أولاً');return;}
     if(!joinCode.trim()){setError('أدخل كود الغرفة');return;}
@@ -535,28 +539,26 @@ export default function App() {
       setIsHost(false);
       isHostRef.current=false;
       subscribeRoom(code);
-      // setScreen handled by onSnapshot
-    } catch(e){
-      setError('فشل الاتصال: '+e.message);
-    }
+    } catch(e){setError('فشل: '+e.message);}
   };
 
-  // Start game
+  // ── Start Game ────────────────────────────────────────
   const startGame=async()=>{
     const code=roomCodeRef.current;
     if(!code) return;
     const shuffled=shuffle(buildDeck());
-    const hands=deal(shuffled);
+    const h=dealHands(shuffled);
     await updateDoc(doc(db,'rooms',code),{
-      phase:'bidding',hands,bids:[],
-      contract:null,biddingTurn:0,
+      phase:'bidding',
+      h0:h.h0,h1:h.h1,h2:h.h2,h3:h.h3,
+      bids:[],contract:null,biddingTurn:0,
       trickPlays:[],leader:0,
       roundScores:[0,0],trickResult:null,
       roundResult:null,matchWinner:null,
     });
   };
 
-  // Handle bid
+  // ── Handle Bid ────────────────────────────────────────
   const handleBid=async(bid)=>{
     const gd=gameDataRef.current;
     const code=roomCodeRef.current;
@@ -565,8 +567,10 @@ export default function App() {
     if(bid.type==='pass') {
       if(newBids.filter(b=>b.type==='pass').length===4) {
         const shuffled=shuffle(buildDeck());
+        const h=dealHands(shuffled);
         await updateDoc(doc(db,'rooms',code),{
-          hands:deal(shuffled),bids:[],biddingTurn:0});
+          h0:h.h0,h1:h.h1,h2:h.h2,h3:h.h3,
+          bids:[],biddingTurn:0});
         return;
       }
       await updateDoc(doc(db,'rooms',code),{
@@ -582,16 +586,17 @@ export default function App() {
     }
   };
 
-  // Play card
+  // ── Play Card ─────────────────────────────────────────
   const playCard=async(card)=>{
     const gd=gameDataRef.current;
     const code=roomCodeRef.current;
     const mi=myIndexRef.current;
     if(!gd||!code||!gd.contract) return;
-    const {trickPlays,leader,contract,roundScores,hands}=gd;
+    const hands=getHands(gd);
+    const {trickPlays,leader,contract,roundScores}=gd;
     const newPlays=[...trickPlays,{playerIndex:mi,card}];
-    const newHands=hands.map((h,i)=>
-      i===mi?h.filter(c=>c.id!==card.id):h);
+    const newHand=hands[mi].filter(c=>c.id!==card.id);
+
     if(newPlays.length===4) {
       const mode=contract.type,trump=contract.trump;
       const winner=trickWinner(newPlays,mode,trump);
@@ -601,6 +606,14 @@ export default function App() {
       const newRS=[...roundScores];
       newRS[winTeam]+=pts;
       const trickResult={winner,pts,winTeam};
+      const update={
+        trickPlays:newPlays,
+        [`h${mi}`]:newHand,
+        roundScores:newRS,
+        trickResult,
+      };
+      // Check if last trick
+      const newHands=hands.map((h,i)=>i===mi?newHand:h);
       if(newHands[0].length===0) {
         const result=calculateRoundResult(newRS,contract);
         const newGS=[...gd.gameScore];
@@ -608,22 +621,18 @@ export default function App() {
         newGS[1-contract.bidTeam]+=result.oppTeamFinal;
         const mw=newGS[0]>=152?0:newGS[1]>=152?1:null;
         await updateDoc(doc(db,'rooms',code),{
-          trickPlays:newPlays,hands:newHands,
-          roundScores:newRS,trickResult,
-          gameScore:newGS,roundResult:result,
-          matchWinner:mw,phase:'roundEnd'});
+          ...update,gameScore:newGS,
+          roundResult:result,matchWinner:mw,phase:'roundEnd'});
       } else {
-        await updateDoc(doc(db,'rooms',code),{
-          trickPlays:newPlays,hands:newHands,
-          roundScores:newRS,trickResult});
+        await updateDoc(doc(db,'rooms',code),update);
       }
     } else {
       await updateDoc(doc(db,'rooms',code),{
-        trickPlays:newPlays,hands:newHands});
+        trickPlays:newPlays,[`h${mi}`]:newHand});
     }
   };
 
-  // Next trick
+  // ── Next Trick ────────────────────────────────────────
   const nextTrick=async()=>{
     const gd=gameDataRef.current;
     const code=roomCodeRef.current;
@@ -633,21 +642,23 @@ export default function App() {
       trickPlays:[],trickResult:null});
   };
 
-  // New round
+  // ── New Round ─────────────────────────────────────────
   const newRound=async(resetMatch=false)=>{
     const gd=gameDataRef.current;
     const code=roomCodeRef.current;
     if(!code) return;
     const shuffled=shuffle(buildDeck());
+    const h=dealHands(shuffled);
     await updateDoc(doc(db,'rooms',code),{
-      phase:'bidding',hands:deal(shuffled),bids:[],
-      contract:null,biddingTurn:0,trickPlays:[],
-      leader:0,roundScores:[0,0],trickResult:null,
-      roundResult:null,matchWinner:null,
+      phase:'bidding',
+      h0:h.h0,h1:h.h1,h2:h.h2,h3:h.h3,
+      bids:[],contract:null,biddingTurn:0,
+      trickPlays:[],leader:0,roundScores:[0,0],
+      trickResult:null,roundResult:null,matchWinner:null,
       gameScore:resetMatch?[0,0]:gd?.gameScore||[0,0]});
   };
 
-  // Bot bidding (host only)
+  // ── Bot Bidding ───────────────────────────────────────
   useEffect(()=>{
     const gd=gameData;
     if(!gd||gd.phase!=='bidding'||!isHostRef.current) return;
@@ -658,14 +669,18 @@ export default function App() {
       const gd2=gameDataRef.current;
       const code=roomCodeRef.current;
       if(!gd2||!code) return;
-      const hand=gd2.hands[bt];
+      const hands=getHands(gd2);
+      const hand=hands[bt];
       if(!hand?.length) return;
       const bid=botBid(hand,gd2.bids.filter(b=>b.type==='pass').length);
       const newBids=[...gd2.bids,{playerIndex:bt,...bid}];
       if(bid.type==='pass') {
         if(newBids.filter(b=>b.type==='pass').length===4) {
+          const shuffled=shuffle(buildDeck());
+          const h=dealHands(shuffled);
           await updateDoc(doc(db,'rooms',code),{
-            hands:deal(shuffle(buildDeck())),bids:[],biddingTurn:0});
+            h0:h.h0,h1:h.h1,h2:h.h2,h3:h.h3,
+            bids:[],biddingTurn:0});
           return;
         }
         await updateDoc(doc(db,'rooms',code),{
@@ -680,11 +695,11 @@ export default function App() {
     },1500);
   },[gameData?.biddingTurn,gameData?.phase]);
 
-  // Bot playing (host only)
+  // ── Bot Playing ───────────────────────────────────────
   useEffect(()=>{
     const gd=gameData;
     if(!gd||gd.phase!=='playing'||gd.trickResult||!isHostRef.current) return;
-    const {leader,trickPlays,contract,hands,players}=gd;
+    const {leader,trickPlays,contract,players}=gd;
     const activePIdx=(leader+trickPlays.length)%4;
     if(players[activePIdx]) return;
     clearTimeout(botRef.current);
@@ -692,14 +707,14 @@ export default function App() {
       const gd2=gameDataRef.current;
       const code=roomCodeRef.current;
       if(!gd2||!code||!gd2.contract) return;
-      const hand=gd2.hands[activePIdx];
+      const hands=getHands(gd2);
+      const hand=hands[activePIdx];
       if(!hand?.length) return;
       const card=botPickCard(hand,gd2.trickPlays,
         gd2.contract.type,gd2.contract.trump);
       if(!card) return;
       const newPlays=[...gd2.trickPlays,{playerIndex:activePIdx,card}];
-      const newHands=gd2.hands.map((h,i)=>
-        i===activePIdx?h.filter(c=>c.id!==card.id):h);
+      const newHand=hand.filter(c=>c.id!==card.id);
       if(newPlays.length===4) {
         const mode=gd2.contract.type,trump=gd2.contract.trump;
         const winner=trickWinner(newPlays,mode,trump);
@@ -708,30 +723,33 @@ export default function App() {
         const winTeam=winner.playerIndex%2;
         const newRS=[...gd2.roundScores];
         newRS[winTeam]+=pts;
-        if(newHands[0].length===0) {
+        const allHands=hands.map((h,i)=>i===activePIdx?newHand:h);
+        const update={
+          trickPlays:newPlays,
+          [`h${activePIdx}`]:newHand,
+          roundScores:newRS,
+          trickResult:{winner,pts,winTeam},
+        };
+        if(allHands[0].length===0) {
           const result=calculateRoundResult(newRS,gd2.contract);
           const newGS=[...gd2.gameScore];
           newGS[gd2.contract.bidTeam]+=result.bidTeamFinal;
           newGS[1-gd2.contract.bidTeam]+=result.oppTeamFinal;
           const mw=newGS[0]>=152?0:newGS[1]>=152?1:null;
           await updateDoc(doc(db,'rooms',code),{
-            trickPlays:newPlays,hands:newHands,
-            roundScores:newRS,trickResult:{winner,pts,winTeam},
-            gameScore:newGS,roundResult:result,
+            ...update,gameScore:newGS,roundResult:result,
             matchWinner:mw,phase:'roundEnd'});
         } else {
-          await updateDoc(doc(db,'rooms',code),{
-            trickPlays:newPlays,hands:newHands,
-            roundScores:newRS,trickResult:{winner,pts,winTeam}});
+          await updateDoc(doc(db,'rooms',code),update);
         }
       } else {
         await updateDoc(doc(db,'rooms',code),{
-          trickPlays:newPlays,hands:newHands});
+          trickPlays:newPlays,[`h${activePIdx}`]:newHand});
       }
     },3000);
   },[gameData?.trickPlays?.length,gameData?.phase,gameData?.trickResult]);
 
-  // Timer
+  // ── Timer ─────────────────────────────────────────────
   useEffect(()=>{
     clearInterval(timerRef.current);
     const gd=gameData;
@@ -745,7 +763,8 @@ export default function App() {
         if(t<=1) {
           clearInterval(timerRef.current);
           const gd2=gameDataRef.current;
-          const hand=gd2?.hands?.[mi];
+          const hands=getHands(gd2);
+          const hand=hands[mi];
           if(hand?.length>0) {
             const card=[...hand].sort((a,b)=>
               cardValue(a,gd2.contract.type,gd2.contract.trump)-
@@ -789,18 +808,15 @@ export default function App() {
             fontFamily:'inherit',direction:'rtl'}}
         />
         {error&&(
-          <div style={{color:'#EF476F',fontSize:12,
-            textAlign:'center',padding:'8px',
-            background:'#3a0a0a',borderRadius:8}}>
+          <div style={{color:'#EF476F',fontSize:12,textAlign:'center',
+            padding:'8px',background:'#3a0a0a',borderRadius:8}}>
             {error}
           </div>
         )}
-        <button
-          onClick={createRoom}
-          style={{
-            background:'linear-gradient(135deg,#C9A84C,#F0C060)',
-            color:'#000',border:'none',borderRadius:12,
-            padding:'14px',fontWeight:900,cursor:'pointer',fontSize:16}}>
+        <button onClick={createRoom} style={{
+          background:'linear-gradient(135deg,#C9A84C,#F0C060)',
+          color:'#000',border:'none',borderRadius:12,
+          padding:'14px',fontWeight:900,cursor:'pointer',fontSize:16}}>
           🏠 إنشاء غرفة جديدة
         </button>
         <div style={{color:'#555',textAlign:'center',fontSize:12}}>أو</div>
@@ -814,12 +830,10 @@ export default function App() {
             fontSize:18,textAlign:'center',letterSpacing:6,
             outline:'none',fontFamily:'inherit'}}
         />
-        <button
-          onClick={joinRoom}
-          style={{
-            background:'#1a3a6b',color:'#60A5FA',
-            border:'1.5px solid #60A5FA',borderRadius:12,
-            padding:'14px',fontWeight:800,cursor:'pointer',fontSize:16}}>
+        <button onClick={joinRoom} style={{
+          background:'#1a3a6b',color:'#60A5FA',
+          border:'1.5px solid #60A5FA',borderRadius:12,
+          padding:'14px',fontWeight:800,cursor:'pointer',fontSize:16}}>
           🚪 انضم لغرفة
         </button>
       </div>
@@ -841,7 +855,7 @@ export default function App() {
   // GAME
   if(screen==='game'&&gd) {
     const contract=gd.contract;
-    const hands=gd.hands||[[],[],[],[]];
+    const hands=getHands(gd);
     const myHand=hands[myIndex]||[];
     const activePIdx=gd.phase==='playing'&&!gd.trickResult
       ?(gd.leader+gd.trickPlays.length)%4:-1;
@@ -932,9 +946,7 @@ export default function App() {
               border:`1.5px solid ${contract.type==='sun'?'#C9A84C':'#2ECC71'}`,
               borderRadius:10,padding:'7px 14px',marginBottom:10,
               display:'flex',gap:10,alignItems:'center'}}>
-              <div style={{fontSize:16}}>
-                {contract.type==='sun'?'☀️':'🎯'}
-              </div>
+              <div style={{fontSize:16}}>{contract.type==='sun'?'☀️':'🎯'}</div>
               <div>
                 <div style={{color:contract.type==='sun'?'#C9A84C':'#4ADE80',
                   fontWeight:800,fontSize:13}}>
@@ -954,8 +966,7 @@ export default function App() {
                 <div key={t} style={{flex:1,background:'#071f10',
                   border:`1px solid ${TEAM_COLORS[t]}33`,
                   borderRadius:10,padding:'6px 10px',
-                  display:'flex',justifyContent:'space-between',
-                  alignItems:'center'}}>
+                  display:'flex',justifyContent:'space-between',alignItems:'center'}}>
                   <div style={{color:TEAM_COLORS[t],fontWeight:700,fontSize:11}}>
                     Team {t===0?'A':'B'}
                     {contract.bidTeam===t&&
@@ -975,12 +986,12 @@ export default function App() {
               marginBottom:10,minHeight:260,
               boxShadow:'inset 0 0 40px #00000044'}}>
 
-              {/* Top */}
-              <div style={{display:'flex',justifyContent:'center',marginBottom:8}}>
-                {(()=>{
-                  const pIdx=(myIndex+2)%4;
-                  const isActive=activePIdx===pIdx;
-                  return(
+              {/* Top player */}
+              {(()=>{
+                const pIdx=(myIndex+2)%4;
+                const isActive=activePIdx===pIdx;
+                return(
+                  <div style={{display:'flex',justifyContent:'center',marginBottom:8}}>
                     <div style={{textAlign:'center'}}>
                       <div style={{display:'inline-flex',alignItems:'center',gap:4,
                         background:isActive?`${TEAM_COLORS[pIdx%2]}22`:'#0a1a0a',
@@ -1001,15 +1012,15 @@ export default function App() {
                         ))}
                       </div>
                     </div>
-                  );
-                })()}
-              </div>
+                  </div>
+                );
+              })()}
 
-              {/* Middle */}
+              {/* Middle row */}
               <div style={{display:'flex',alignItems:'center',
                 justifyContent:'space-between',marginBottom:8}}>
 
-                {/* Left */}
+                {/* Left player */}
                 {(()=>{
                   const pIdx=(myIndex+1)%4;
                   const isActive=activePIdx===pIdx;
@@ -1036,7 +1047,7 @@ export default function App() {
                   );
                 })()}
 
-                {/* Center trick */}
+                {/* Center trick area */}
                 <div style={{flex:1,display:'flex',flexDirection:'column',
                   alignItems:'center',justifyContent:'center',gap:4}}>
                   <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:4,
@@ -1070,7 +1081,6 @@ export default function App() {
                       );
                     })}
                   </div>
-
                   {gd.trickResult&&(
                     <div style={{textAlign:'center'}}>
                       <div style={{color:'#C9A84C',fontSize:11,fontWeight:700}}>
@@ -1088,7 +1098,6 @@ export default function App() {
                       )}
                     </div>
                   )}
-
                   {!gd.trickResult&&activePIdx>=0&&(
                     <div style={{color:isMyTurn?'#4ADE80':'#888',
                       fontSize:10,textAlign:'center'}}>
@@ -1098,7 +1107,7 @@ export default function App() {
                   )}
                 </div>
 
-                {/* Right */}
+                {/* Right player */}
                 {(()=>{
                   const pIdx=(myIndex+3)%4;
                   const isActive=activePIdx===pIdx;
