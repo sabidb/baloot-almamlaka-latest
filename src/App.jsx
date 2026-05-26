@@ -497,8 +497,8 @@ export default function App() {
     setRoomCode(code);
     setMyIndex(0);
     setIsHost(true);
-    subscribeRoom(code);
     setScreen('lobby');
+subscribeRoom(code);
   };
 
   // ── Join room ─────────────────────────────────────────────
