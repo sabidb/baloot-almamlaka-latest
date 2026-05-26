@@ -93,7 +93,7 @@ function calculateRoundResult(roundScores,contract) {
     made,isGahwa:false,
     bidTeamFinal:made?bidScore:0,
     oppTeamFinal:made?oppScore:total,
-    reason:made?`✅ حكم نجح! (${bidScore}≥82)`:`❌ حكم فشل! الخصم يأخذ كل شيء`,
+    reason:made?`✅ حكم نجح! (${bidScore}≥82)`:`❌ حكم فشل!`,
   };
 }
 
@@ -108,7 +108,7 @@ function botPickCard(hand,trickPlays,mode,trump) {
     if(trumpCards.length>0)
       return trumpCards.sort((a,b)=>cardStrength(b,mode,trump)-cardStrength(a,mode,trump))[0];
   }
-  return hand.sort((a,b)=>cardValue(a,mode,trump)-cardValue(b,mode,trump))[0];
+  return [...hand].sort((a,b)=>cardValue(a,mode,trump)-cardValue(b,mode,trump))[0];
 }
 function botBid(hand,passCount) {
   let bestSuit=null,bestScore=0;
@@ -124,8 +124,6 @@ function botBid(hand,passCount) {
   if(bestScore>=6||passCount>=2) return{type:'hokum',trump:bestSuit.symbol,trumpName:bestSuit.name};
   return{type:'pass'};
 }
-
-// ── Generate Room Code ────────────────────────────────────
 function generateRoomCode() {
   return Math.floor(100000+Math.random()*900000).toString();
 }
@@ -193,7 +191,7 @@ function BiddingModal({playerIndex,onBid,canSun,passCount,playerName}) {
         <div style={{textAlign:'center',marginBottom:16}}>
           <div style={{fontSize:28}}>{AVATARS[playerIndex%4]}</div>
           <div style={{color:'#C9A84C',fontWeight:900,fontSize:17,marginTop:4}}>
-            {playerName} — دورك للمزايدة
+            {playerName||`اللاعب ${playerIndex+1}`} — دورك للمزايدة
           </div>
           <div style={{color:'#888',fontSize:11,marginTop:3}}>
             {passCount>0?`${passCount} پاس قبلك`:'أنت أول من يزايد'}
@@ -332,6 +330,7 @@ function RoundEndScreen({result,contract,roundScores,gameScore,onNext,matchWinne
 // ── Lobby Screen ──────────────────────────────────────────
 function LobbyScreen({roomCode,players,isHost,onStart,myIndex,shareLink}) {
   const [copied,setCopied]=useState(false);
+  const safePlayers=players||[];
   const copy=()=>{
     navigator.clipboard?.writeText(shareLink).then(()=>{
       setCopied(true);
@@ -341,15 +340,14 @@ function LobbyScreen({roomCode,players,isHost,onStart,myIndex,shareLink}) {
   return(
     <div style={{minHeight:'100vh',background:'#0D4A2A',
       display:'flex',flexDirection:'column',alignItems:'center',
-      justifyContent:'center',padding:20,fontFamily:'Segoe UI,sans-serif'}}>
+      justifyContent:'center',padding:20,
+      fontFamily:'Segoe UI,Tahoma,sans-serif'}}>
       <h1 style={{color:'#C9A84C',fontSize:28,fontWeight:900,margin:'0 0 4px'}}>
         🃏 بلوت المملكة
       </h1>
       <p style={{color:'#888',fontSize:13,margin:'0 0 24px'}}>
-        {isHost?'أنت المضيف — شارك الكود مع أصدقائك':'انتظر المضيف ليبدأ اللعبة'}
+        {isHost?'أنت المضيف — شارك الكود':'انتظر المضيف'}
       </p>
-
-      {/* Room code */}
       <div style={{background:'#071f10',border:'2px solid #C9A84C',
         borderRadius:16,padding:'20px 32px',marginBottom:20,textAlign:'center'}}>
         <div style={{color:'#888',fontSize:11,marginBottom:6}}>كود الغرفة</div>
@@ -357,64 +355,51 @@ function LobbyScreen({roomCode,players,isHost,onStart,myIndex,shareLink}) {
           {roomCode}
         </div>
       </div>
-
-      {/* Share link */}
       <button onClick={copy} style={{
         background:copied?'#1B6B3A':'#0a3a1e',
         color:copied?'#4ADE80':'#888',
         border:`1.5px solid ${copied?'#4ADE80':'#555'}`,
         borderRadius:10,padding:'10px 20px',
         fontWeight:700,cursor:'pointer',fontSize:13,
-        marginBottom:20,width:'100%',maxWidth:320}}>
+        marginBottom:12,width:'100%',maxWidth:320}}>
         {copied?'✅ تم النسخ!':'📋 انسخ رابط الدعوة'}
       </button>
-
-      {/* WhatsApp share */}
-      <a href={`https://wa.me/?text=${encodeURIComponent(`تحداني في بلوت المملكة! 🃏\nكود الغرفة: ${roomCode}\nالرابط: ${shareLink}`)}`}
+      <a href={`https://wa.me/?text=${encodeURIComponent(`تحداني في بلوت المملكة! 🃏\nكود: ${roomCode}\n${shareLink}`)}`}
         target="_blank" rel="noreferrer"
-        style={{
-          background:'#25D366',color:'#fff',
-          borderRadius:10,padding:'10px 20px',
-          fontWeight:700,fontSize:13,textDecoration:'none',
-          display:'block',textAlign:'center',
+        style={{background:'#25D366',color:'#fff',borderRadius:10,
+          padding:'10px 20px',fontWeight:700,fontSize:13,
+          textDecoration:'none',display:'block',textAlign:'center',
           marginBottom:20,width:'100%',maxWidth:316,boxSizing:'border-box'}}>
         📱 شارك عبر واتساب
       </a>
-
-      {/* Players */}
       <div style={{width:'100%',maxWidth:320,marginBottom:20}}>
         <div style={{color:'#888',fontSize:11,marginBottom:8,textAlign:'center'}}>
-          اللاعبون ({players.filter(p=>p).length}/4)
+          اللاعبون ({safePlayers.filter(p=>p).length}/4)
         </div>
         {[0,1,2,3].map(i=>(
           <div key={i} style={{
-            background:players[i]?'#0a2a0a':'#071f10',
-            border:`1px solid ${players[i]?TEAM_COLORS[i%2]+'44':'#1a2a1a'}`,
+            background:safePlayers[i]?'#0a2a0a':'#071f10',
+            border:`1px solid ${safePlayers[i]?TEAM_COLORS[i%2]+'44':'#1a2a1a'}`,
             borderRadius:10,padding:'10px 14px',marginBottom:6,
             display:'flex',alignItems:'center',gap:10}}>
-            <span style={{fontSize:20}}>{players[i]?AVATARS[i%4]:'⬜'}</span>
+            <span style={{fontSize:20}}>{safePlayers[i]?AVATARS[i%4]:'⬜'}</span>
             <div>
-              <div style={{color:players[i]?TEAM_COLORS[i%2]:'#444',
+              <div style={{color:safePlayers[i]?TEAM_COLORS[i%2]:'#444',
                 fontWeight:700,fontSize:13}}>
-                {players[i]||`اللاعب ${i+1}`}
+                {safePlayers[i]||`اللاعب ${i+1}`}
                 {i===myIndex&&<span style={{color:'#C9A84C',fontSize:10}}> (أنت)</span>}
               </div>
-              <div style={{color:'#555',fontSize:10}}>
-                Team {i%2===0?'A':'B'}
-              </div>
+              <div style={{color:'#555',fontSize:10}}>Team {i%2===0?'A':'B'}</div>
             </div>
-            {players[i]&&(
-              <div style={{marginRight:'auto',
-                background:'#2ECC7133',color:'#4ADE80',
-                borderRadius:10,padding:'2px 8px',fontSize:9,fontWeight:700}}>
-                متصل ✓
-              </div>
+            {safePlayers[i]&&(
+              <div style={{marginRight:'auto',background:'#2ECC7133',
+                color:'#4ADE80',borderRadius:10,padding:'2px 8px',
+                fontSize:9,fontWeight:700}}>متصل ✓</div>
             )}
           </div>
         ))}
       </div>
-
-      {isHost&&players.filter(p=>p).length>=2&&(
+      {isHost&&safePlayers.filter(p=>p).length>=2?(
         <button onClick={onStart} style={{
           background:'linear-gradient(135deg,#C9A84C,#F0C060)',
           color:'#000',border:'none',borderRadius:14,
@@ -423,164 +408,190 @@ function LobbyScreen({roomCode,players,isHost,onStart,myIndex,shareLink}) {
           boxShadow:'0 4px 20px #C9A84C44'}}>
           🎮 ابدأ اللعبة!
         </button>
-      )}
-      {isHost&&players.filter(p=>p).length<2&&(
+      ):isHost?(
         <div style={{color:'#888',fontSize:12,textAlign:'center'}}>
-          انتظر لاعب واحد على الأقل للانضمام...
+          انتظر لاعب واحد على الأقل...
         </div>
-      )}
+      ):null}
     </div>
   );
 }
 
 // ── Main App ──────────────────────────────────────────────
 export default function App() {
-  // ── Screen state ────────────────────────────────────────
-  const [screen,setScreen]=useState('home'); // home|create|join|lobby|game
+  const [screen,setScreen]=useState('home');
   const [playerName,setPlayerName]=useState('');
   const [joinCode,setJoinCode]=useState('');
   const [roomCode,setRoomCode]=useState('');
   const [myIndex,setMyIndex]=useState(0);
   const [isHost,setIsHost]=useState(false);
   const [error,setError]=useState('');
-
-  // ── Game state (synced from Firestore) ──────────────────
   const [gameData,setGameData]=useState(null);
+  const [timer,setTimer]=useState(10);
   const unsubRef=useRef(null);
   const botRef=useRef(null);
   const timerRef=useRef(null);
-  const [timer,setTimer]=useState(10);
+  const roomCodeRef=useRef('');
+  const myIndexRef=useRef(0);
+  const isHostRef=useRef(false);
+  const gameDataRef=useRef(null);
 
-  const shareLink=`${window.location.origin}${window.location.pathname}?room=${roomCode}`;
+  // Keep refs in sync
+  useEffect(()=>{roomCodeRef.current=roomCode;},[roomCode]);
+  useEffect(()=>{myIndexRef.current=myIndex;},[myIndex]);
+  useEffect(()=>{isHostRef.current=isHost;},[isHost]);
+  useEffect(()=>{gameDataRef.current=gameData;},[gameData]);
 
-  // ── Check URL for room code on load ─────────────────────
+  const shareLink=typeof window!=='undefined'
+    ?`${window.location.origin}?room=${roomCode}`:'';
+
+  // Check URL params on load
   useEffect(()=>{
     const params=new URLSearchParams(window.location.search);
     const room=params.get('room');
-    if(room){setJoinCode(room);setScreen('join');}
+    if(room){setJoinCode(room);}
   },[]);
 
-  // ── Subscribe to room ────────────────────────────────────
+  // Subscribe to Firestore room
   const subscribeRoom=useCallback((code)=>{
     if(unsubRef.current) unsubRef.current();
-    unsubRef.current=onSnapshot(doc(db,'rooms',code),(snap)=>{
-      if(snap.exists()) setGameData(snap.data());
-    });
+    unsubRef.current=onSnapshot(
+      doc(db,'rooms',code),
+      (snap)=>{
+        if(snap.exists()){
+          const data=snap.data();
+          setGameData(data);
+          // Auto switch screens based on phase
+          if(['bidding','playing','roundEnd'].includes(data.phase)){
+            setScreen('game');
+          } else if(data.phase==='lobby'){
+            setScreen('lobby');
+          }
+        }
+      },
+      (err)=>{console.error('Firestore error:',err);}
+    );
   },[]);
 
   useEffect(()=>()=>{
     if(unsubRef.current) unsubRef.current();
   },[]);
 
-  // ── Create room ──────────────────────────────────────────
+  // Create room
   const createRoom=async()=>{
     if(!playerName.trim()){setError('أدخل اسمك أولاً');return;}
-    const code=generateRoomCode();
-    const initialData={
-      phase:'lobby',
-      players:[ playerName.trim(), null, null, null ],
-      hands:[[],[],[],[]],
-      bids:[],
-      contract:null,
-      biddingTurn:0,
-      trickPlays:[],
-      leader:0,
-      roundScores:[0,0],
-      gameScore:[0,0],
-      trickResult:null,
-      roundResult:null,
-      matchWinner:null,
-      hostIndex:0,
-      createdAt:Date.now(),
-    };
-    await setDoc(doc(db,'rooms',code),initialData);
-    setRoomCode(code);
-    setMyIndex(0);
-    setIsHost(true);
-    setScreen('lobby');
-subscribeRoom(code);
+    setError('');
+    try {
+      const code=generateRoomCode();
+      await setDoc(doc(db,'rooms',code),{
+        phase:'lobby',
+        players:[playerName.trim(),null,null,null],
+        hands:[[],[],[],[]],
+        bids:[],
+        contract:null,
+        biddingTurn:0,
+        trickPlays:[],
+        leader:0,
+        roundScores:[0,0],
+        gameScore:[0,0],
+        trickResult:null,
+        roundResult:null,
+        matchWinner:null,
+        hostIndex:0,
+        createdAt:Date.now(),
+      });
+      setRoomCode(code);
+      roomCodeRef.current=code;
+      setMyIndex(0);
+      myIndexRef.current=0;
+      setIsHost(true);
+      isHostRef.current=true;
+      subscribeRoom(code);
+      // setScreen handled by onSnapshot
+    } catch(e){
+      setError('فشل الاتصال: '+e.message);
+    }
   };
 
-  // ── Join room ─────────────────────────────────────────────
+  // Join room
   const joinRoom=async()=>{
     if(!playerName.trim()){setError('أدخل اسمك أولاً');return;}
     if(!joinCode.trim()){setError('أدخل كود الغرفة');return;}
-    const code=joinCode.trim();
-    const snap=await getDoc(doc(db,'rooms',code));
-    if(!snap.exists()){setError('الغرفة غير موجودة!');return;}
-    const data=snap.data();
-    const emptySlot=data.players.findIndex(p=>!p);
-    if(emptySlot===-1){setError('الغرفة ممتلئة!');return;}
-    const newPlayers=[...data.players];
-    newPlayers[emptySlot]=playerName.trim();
-    await updateDoc(doc(db,'rooms',code),{players:newPlayers});
-    setRoomCode(code);
-    setMyIndex(emptySlot);
-    setIsHost(false);
-    subscribeRoom(code);
-    setScreen('lobby');
+    setError('');
+    try {
+      const code=joinCode.trim();
+      const snap=await getDoc(doc(db,'rooms',code));
+      if(!snap.exists()){setError('الغرفة غير موجودة!');return;}
+      const data=snap.data();
+      const emptySlot=data.players.findIndex(p=>!p);
+      if(emptySlot===-1){setError('الغرفة ممتلئة!');return;}
+      const newPlayers=[...data.players];
+      newPlayers[emptySlot]=playerName.trim();
+      await updateDoc(doc(db,'rooms',code),{players:newPlayers});
+      setRoomCode(code);
+      roomCodeRef.current=code;
+      setMyIndex(emptySlot);
+      myIndexRef.current=emptySlot;
+      setIsHost(false);
+      isHostRef.current=false;
+      subscribeRoom(code);
+      // setScreen handled by onSnapshot
+    } catch(e){
+      setError('فشل الاتصال: '+e.message);
+    }
   };
 
-  // ── Start game (host only) ────────────────────────────────
+  // Start game
   const startGame=async()=>{
+    const code=roomCodeRef.current;
+    if(!code) return;
     const shuffled=shuffle(buildDeck());
     const hands=deal(shuffled);
-    await updateDoc(doc(db,'rooms',roomCode),{
-      phase:'bidding',
-      hands,
-      bids:[],
-      contract:null,
-      biddingTurn:0,
-      trickPlays:[],
-      leader:0,
-      roundScores:[0,0],
-      trickResult:null,
-      roundResult:null,
-      matchWinner:null,
+    await updateDoc(doc(db,'rooms',code),{
+      phase:'bidding',hands,bids:[],
+      contract:null,biddingTurn:0,
+      trickPlays:[],leader:0,
+      roundScores:[0,0],trickResult:null,
+      roundResult:null,matchWinner:null,
     });
   };
 
-  // ── Handle bid ────────────────────────────────────────────
+  // Handle bid
   const handleBid=async(bid)=>{
-    if(!gameData) return;
-    const newBids=[...gameData.bids,{playerIndex:gameData.biddingTurn,...bid}];
+    const gd=gameDataRef.current;
+    const code=roomCodeRef.current;
+    if(!gd||!code) return;
+    const newBids=[...gd.bids,{playerIndex:gd.biddingTurn,...bid}];
     if(bid.type==='pass') {
       if(newBids.filter(b=>b.type==='pass').length===4) {
-        // All passed — redeal
         const shuffled=shuffle(buildDeck());
-        const hands=deal(shuffled);
-        await updateDoc(doc(db,'rooms',roomCode),{
-          hands,bids:[],biddingTurn:0,
-        });
+        await updateDoc(doc(db,'rooms',code),{
+          hands:deal(shuffled),bids:[],biddingTurn:0});
         return;
       }
-      await updateDoc(doc(db,'rooms',roomCode),{
-        bids:newBids,
-        biddingTurn:(gameData.biddingTurn+1)%4,
-      });
+      await updateDoc(doc(db,'rooms',code),{
+        bids:newBids,biddingTurn:(gd.biddingTurn+1)%4});
     } else {
-      const contract={
-        type:bid.type,
-        trump:bid.trump||null,
-        trumpName:bid.trumpName||null,
-        bidder:gameData.biddingTurn,
-        bidTeam:gameData.biddingTurn%2,
-      };
-      await updateDoc(doc(db,'rooms',roomCode),{
-        bids:newBids,contract,phase:'playing',
+      await updateDoc(doc(db,'rooms',code),{
+        bids:newBids,
+        contract:{type:bid.type,trump:bid.trump||null,
+          trumpName:bid.trumpName||null,
+          bidder:gd.biddingTurn,bidTeam:gd.biddingTurn%2},
+        phase:'playing',
       });
     }
   };
 
-  // ── Play card ─────────────────────────────────────────────
+  // Play card
   const playCard=async(card)=>{
-    if(!gameData||!gameData.contract) return;
-    const {trickPlays,leader,contract,roundScores,hands} = gameData;
-    const newPlays=[...trickPlays,{playerIndex:myIndex,card}];
+    const gd=gameDataRef.current;
+    const code=roomCodeRef.current;
+    const mi=myIndexRef.current;
+    if(!gd||!code||!gd.contract) return;
+    const {trickPlays,leader,contract,roundScores,hands}=gd;
+    const newPlays=[...trickPlays,{playerIndex:mi,card}];
     const newHands=hands.map((h,i)=>
-      i===myIndex?h.filter(c=>c.id!==card.id):h
-    );
-
+      i===mi?h.filter(c=>c.id!==card.id):h);
     if(newPlays.length===4) {
       const mode=contract.type,trump=contract.trump;
       const winner=trickWinner(newPlays,mode,trump);
@@ -590,161 +601,155 @@ subscribeRoom(code);
       const newRS=[...roundScores];
       newRS[winTeam]+=pts;
       const trickResult={winner,pts,winTeam};
-
       if(newHands[0].length===0) {
-        // Round over
         const result=calculateRoundResult(newRS,contract);
-        const newGS=[...gameData.gameScore];
+        const newGS=[...gd.gameScore];
         newGS[contract.bidTeam]+=result.bidTeamFinal;
         newGS[1-contract.bidTeam]+=result.oppTeamFinal;
         const mw=newGS[0]>=152?0:newGS[1]>=152?1:null;
-        await updateDoc(doc(db,'rooms',roomCode),{
+        await updateDoc(doc(db,'rooms',code),{
           trickPlays:newPlays,hands:newHands,
           roundScores:newRS,trickResult,
           gameScore:newGS,roundResult:result,
-          matchWinner:mw,phase:'roundEnd',
-        });
+          matchWinner:mw,phase:'roundEnd'});
       } else {
-        await updateDoc(doc(db,'rooms',roomCode),{
+        await updateDoc(doc(db,'rooms',code),{
           trickPlays:newPlays,hands:newHands,
-          roundScores:newRS,trickResult,
-        });
+          roundScores:newRS,trickResult});
       }
     } else {
-      await updateDoc(doc(db,'rooms',roomCode),{
-        trickPlays:newPlays,hands:newHands,
-      });
+      await updateDoc(doc(db,'rooms',code),{
+        trickPlays:newPlays,hands:newHands});
     }
   };
 
-  // ── Next trick ────────────────────────────────────────────
+  // Next trick
   const nextTrick=async()=>{
-    if(!gameData?.trickResult) return;
-    await updateDoc(doc(db,'rooms',roomCode),{
-      leader:gameData.trickResult.winner.playerIndex,
-      trickPlays:[],
-      trickResult:null,
-    });
+    const gd=gameDataRef.current;
+    const code=roomCodeRef.current;
+    if(!gd?.trickResult||!code) return;
+    await updateDoc(doc(db,'rooms',code),{
+      leader:gd.trickResult.winner.playerIndex,
+      trickPlays:[],trickResult:null});
   };
 
-  // ── New round ─────────────────────────────────────────────
+  // New round
   const newRound=async(resetMatch=false)=>{
+    const gd=gameDataRef.current;
+    const code=roomCodeRef.current;
+    if(!code) return;
     const shuffled=shuffle(buildDeck());
-    const hands=deal(shuffled);
-    const newGS=resetMatch?[0,0]:gameData.gameScore;
-    await updateDoc(doc(db,'rooms',roomCode),{
-      phase:'bidding',hands,bids:[],
-      contract:null,biddingTurn:0,
-      trickPlays:[],leader:0,
-      roundScores:[0,0],trickResult:null,
+    await updateDoc(doc(db,'rooms',code),{
+      phase:'bidding',hands:deal(shuffled),bids:[],
+      contract:null,biddingTurn:0,trickPlays:[],
+      leader:0,roundScores:[0,0],trickResult:null,
       roundResult:null,matchWinner:null,
-      gameScore:newGS,
-    });
+      gameScore:resetMatch?[0,0]:gd?.gameScore||[0,0]});
   };
 
-  // ── Bot bidding ───────────────────────────────────────────
+  // Bot bidding (host only)
   useEffect(()=>{
-    if(!gameData||gameData.phase!=='bidding') return;
-    const bt=gameData.biddingTurn;
-    const player=gameData.players[bt];
-    // If this slot is empty = bot
-    if(player) return; // real player handles it
-    // Check if I am host (host runs bots)
-    if(!isHost) return;
+    const gd=gameData;
+    if(!gd||gd.phase!=='bidding'||!isHostRef.current) return;
+    const bt=gd.biddingTurn;
+    if(gd.players[bt]) return;
     clearTimeout(botRef.current);
     botRef.current=setTimeout(async()=>{
-      const hand=gameData.hands[bt];
-      if(!hand||hand.length===0) return;
-      const bid=botBid(hand,gameData.bids.filter(b=>b.type==='pass').length);
-      const newBids=[...gameData.bids,{playerIndex:bt,...bid}];
+      const gd2=gameDataRef.current;
+      const code=roomCodeRef.current;
+      if(!gd2||!code) return;
+      const hand=gd2.hands[bt];
+      if(!hand?.length) return;
+      const bid=botBid(hand,gd2.bids.filter(b=>b.type==='pass').length);
+      const newBids=[...gd2.bids,{playerIndex:bt,...bid}];
       if(bid.type==='pass') {
         if(newBids.filter(b=>b.type==='pass').length===4) {
-          const shuffled=shuffle(buildDeck());
-          const hands=deal(shuffled);
-          await updateDoc(doc(db,'rooms',roomCode),{hands,bids:[],biddingTurn:0});
+          await updateDoc(doc(db,'rooms',code),{
+            hands:deal(shuffle(buildDeck())),bids:[],biddingTurn:0});
           return;
         }
-        await updateDoc(doc(db,'rooms',roomCode),{
+        await updateDoc(doc(db,'rooms',code),{
           bids:newBids,biddingTurn:(bt+1)%4});
       } else {
-        const contract={type:bid.type,trump:bid.trump||null,
-          trumpName:bid.trumpName||null,bidder:bt,bidTeam:bt%2};
-        await updateDoc(doc(db,'rooms',roomCode),{
-          bids:newBids,contract,phase:'playing'});
+        await updateDoc(doc(db,'rooms',code),{
+          bids:newBids,
+          contract:{type:bid.type,trump:bid.trump||null,
+            trumpName:bid.trumpName||null,bidder:bt,bidTeam:bt%2},
+          phase:'playing'});
       }
     },1500);
   },[gameData?.biddingTurn,gameData?.phase]);
 
-  // ── Bot playing ────────────────────────────────────────────
+  // Bot playing (host only)
   useEffect(()=>{
-    if(!gameData||gameData.phase!=='playing'||gameData.trickResult) return;
-    if(!isHost) return;
-    const {leader,trickPlays,contract,hands,players}=gameData;
+    const gd=gameData;
+    if(!gd||gd.phase!=='playing'||gd.trickResult||!isHostRef.current) return;
+    const {leader,trickPlays,contract,hands,players}=gd;
     const activePIdx=(leader+trickPlays.length)%4;
-    if(players[activePIdx]) return; // real player
+    if(players[activePIdx]) return;
     clearTimeout(botRef.current);
     botRef.current=setTimeout(async()=>{
-      const hand=hands[activePIdx];
-      if(!hand||hand.length===0) return;
-      const card=botPickCard(hand,trickPlays,contract.type,contract.trump);
+      const gd2=gameDataRef.current;
+      const code=roomCodeRef.current;
+      if(!gd2||!code||!gd2.contract) return;
+      const hand=gd2.hands[activePIdx];
+      if(!hand?.length) return;
+      const card=botPickCard(hand,gd2.trickPlays,
+        gd2.contract.type,gd2.contract.trump);
       if(!card) return;
-      const newPlays=[...trickPlays,{playerIndex:activePIdx,card}];
-      const newHands=hands.map((h,i)=>
-        i===activePIdx?h.filter(c=>c.id!==card.id):h
-      );
+      const newPlays=[...gd2.trickPlays,{playerIndex:activePIdx,card}];
+      const newHands=gd2.hands.map((h,i)=>
+        i===activePIdx?h.filter(c=>c.id!==card.id):h);
       if(newPlays.length===4) {
-        const mode=contract.type,trump=contract.trump;
+        const mode=gd2.contract.type,trump=gd2.contract.trump;
         const winner=trickWinner(newPlays,mode,trump);
         let pts=newPlays.reduce((s,p)=>s+cardValue(p.card,mode,trump),0);
         if(mode==='sun') pts*=2;
         const winTeam=winner.playerIndex%2;
-        const newRS=[...gameData.roundScores];
+        const newRS=[...gd2.roundScores];
         newRS[winTeam]+=pts;
-        const trickResult={winner,pts,winTeam};
         if(newHands[0].length===0) {
-          const result=calculateRoundResult(newRS,contract);
-          const newGS=[...gameData.gameScore];
-          newGS[contract.bidTeam]+=result.bidTeamFinal;
-          newGS[1-contract.bidTeam]+=result.oppTeamFinal;
+          const result=calculateRoundResult(newRS,gd2.contract);
+          const newGS=[...gd2.gameScore];
+          newGS[gd2.contract.bidTeam]+=result.bidTeamFinal;
+          newGS[1-gd2.contract.bidTeam]+=result.oppTeamFinal;
           const mw=newGS[0]>=152?0:newGS[1]>=152?1:null;
-          await updateDoc(doc(db,'rooms',roomCode),{
+          await updateDoc(doc(db,'rooms',code),{
             trickPlays:newPlays,hands:newHands,
-            roundScores:newRS,trickResult,
+            roundScores:newRS,trickResult:{winner,pts,winTeam},
             gameScore:newGS,roundResult:result,
-            matchWinner:mw,phase:'roundEnd',
-          });
+            matchWinner:mw,phase:'roundEnd'});
         } else {
-          await updateDoc(doc(db,'rooms',roomCode),{
+          await updateDoc(doc(db,'rooms',code),{
             trickPlays:newPlays,hands:newHands,
-            roundScores:newRS,trickResult,
-          });
+            roundScores:newRS,trickResult:{winner,pts,winTeam}});
         }
       } else {
-        await updateDoc(doc(db,'rooms',roomCode),{
-          trickPlays:newPlays,hands:newHands,
-        });
+        await updateDoc(doc(db,'rooms',code),{
+          trickPlays:newPlays,hands:newHands});
       }
     },3000);
   },[gameData?.trickPlays?.length,gameData?.phase,gameData?.trickResult]);
 
-  // ── Timer for my turn ──────────────────────────────────────
+  // Timer
   useEffect(()=>{
     clearInterval(timerRef.current);
-    if(!gameData||gameData.phase!=='playing'||gameData.trickResult) return;
-    const {leader,trickPlays,players}=gameData;
-    const activePIdx=(leader+trickPlays.length)%4;
-    if(activePIdx!==myIndex) return;
+    const gd=gameData;
+    if(!gd||gd.phase!=='playing'||gd.trickResult) return;
+    const mi=myIndexRef.current;
+    const activePIdx=(gd.leader+gd.trickPlays.length)%4;
+    if(activePIdx!==mi) return;
     setTimer(10);
     timerRef.current=setInterval(()=>{
       setTimer(t=>{
         if(t<=1) {
           clearInterval(timerRef.current);
-          const hand=gameData.hands[myIndex];
+          const gd2=gameDataRef.current;
+          const hand=gd2?.hands?.[mi];
           if(hand?.length>0) {
-            const card=hand.sort((a,b)=>
-              cardValue(a,gameData.contract.type,gameData.contract.trump)-
-              cardValue(b,gameData.contract.type,gameData.contract.trump)
-            )[0];
+            const card=[...hand].sort((a,b)=>
+              cardValue(a,gd2.contract.type,gd2.contract.trump)-
+              cardValue(b,gd2.contract.type,gd2.contract.trump))[0];
             playCard(card);
           }
           return 0;
@@ -753,27 +758,10 @@ subscribeRoom(code);
       });
     },1000);
     return()=>clearInterval(timerRef.current);
-  },[gameData?.trickPlays?.length,gameData?.phase]);
+  },[gameData?.trickPlays?.length,gameData?.phase,gameData?.trickResult]);
 
-  // ── Switch to game screen when phase changes ───────────────
-  useEffect(()=>{
-    if(!gameData) return;
-    if(['playing','roundEnd','bidding'].includes(gameData.phase)&&screen==='lobby')
-      setScreen('game');
-    if(gameData.phase==='lobby'&&screen==='game')
-      setScreen('lobby');
-  },[gameData?.phase]);
-
-  // ── Derived values ─────────────────────────────────────────
+  // ── Render ─────────────────────────────────────────────
   const gd=gameData;
-  const activePIdx=gd&&gd.phase==='playing'&&!gd.trickResult
-    ?(gd.leader+gd.trickPlays.length)%4:-1;
-  const isMyTurn=activePIdx===myIndex;
-  const isBiddingTurn=gd?.phase==='bidding'&&gd?.biddingTurn===myIndex;
-
-  // ─────────────────────────────────────────────────────────
-  // ── RENDER ────────────────────────────────────────────────
-  // ─────────────────────────────────────────────────────────
 
   // HOME
   if(screen==='home') return(
@@ -786,12 +774,11 @@ subscribeRoom(code);
       <h1 style={{color:'#C9A84C',fontSize:32,fontWeight:900,margin:'0 0 4px'}}>
         بلوت المملكة
       </h1>
-      <p style={{color:'#888',fontSize:14,margin:'0 0 40px'}}>
+      <p style={{color:'#888',fontSize:14,margin:'0 0 32px'}}>
         اللعبة الأصيلة — العب مع أصدقائك
       </p>
-
-      <div style={{width:'100%',maxWidth:300,display:'flex',
-        flexDirection:'column',gap:12}}>
+      <div style={{width:'100%',maxWidth:300,
+        display:'flex',flexDirection:'column',gap:12}}>
         <input
           value={playerName}
           onChange={e=>setPlayerName(e.target.value)}
@@ -799,24 +786,24 @@ subscribeRoom(code);
           style={{background:'#0a2a0a',border:'1.5px solid #2ECC71',
             borderRadius:10,padding:'12px 16px',color:'#fff',
             fontSize:15,textAlign:'center',outline:'none',
-            fontFamily:'inherit'}}
+            fontFamily:'inherit',direction:'rtl'}}
         />
-
         {error&&(
-          <div style={{color:'#EF476F',fontSize:12,textAlign:'center'}}>
+          <div style={{color:'#EF476F',fontSize:12,
+            textAlign:'center',padding:'8px',
+            background:'#3a0a0a',borderRadius:8}}>
             {error}
           </div>
         )}
-
-        <button onClick={()=>{setError('');createRoom();}} style={{
-          background:'linear-gradient(135deg,#C9A84C,#F0C060)',
-          color:'#000',border:'none',borderRadius:12,
-          padding:'14px',fontWeight:900,cursor:'pointer',fontSize:16}}>
+        <button
+          onClick={createRoom}
+          style={{
+            background:'linear-gradient(135deg,#C9A84C,#F0C060)',
+            color:'#000',border:'none',borderRadius:12,
+            padding:'14px',fontWeight:900,cursor:'pointer',fontSize:16}}>
           🏠 إنشاء غرفة جديدة
         </button>
-
         <div style={{color:'#555',textAlign:'center',fontSize:12}}>أو</div>
-
         <input
           value={joinCode}
           onChange={e=>setJoinCode(e.target.value)}
@@ -827,11 +814,12 @@ subscribeRoom(code);
             fontSize:18,textAlign:'center',letterSpacing:6,
             outline:'none',fontFamily:'inherit'}}
         />
-
-        <button onClick={()=>{setError('');joinRoom();}} style={{
-          background:'#1a3a6b',color:'#60A5FA',
-          border:'1.5px solid #60A5FA',borderRadius:12,
-          padding:'14px',fontWeight:800,cursor:'pointer',fontSize:16}}>
+        <button
+          onClick={joinRoom}
+          style={{
+            background:'#1a3a6b',color:'#60A5FA',
+            border:'1.5px solid #60A5FA',borderRadius:12,
+            padding:'14px',fontWeight:800,cursor:'pointer',fontSize:16}}>
           🚪 انضم لغرفة
         </button>
       </div>
@@ -839,10 +827,10 @@ subscribeRoom(code);
   );
 
   // LOBBY
-  if(screen==='lobby'&&gd) return(
+  if(screen==='lobby') return(
     <LobbyScreen
       roomCode={roomCode}
-      players={gd.players}
+      players={gd?.players||[playerName,null,null,null]}
       isHost={isHost}
       onStart={startGame}
       myIndex={myIndex}
@@ -853,8 +841,12 @@ subscribeRoom(code);
   // GAME
   if(screen==='game'&&gd) {
     const contract=gd.contract;
-    const hands=gd.hands;
+    const hands=gd.hands||[[],[],[],[]];
     const myHand=hands[myIndex]||[];
+    const activePIdx=gd.phase==='playing'&&!gd.trickResult
+      ?(gd.leader+gd.trickPlays.length)%4:-1;
+    const isMyTurn=activePIdx===myIndex;
+    const isBiddingTurn=gd.phase==='bidding'&&gd.biddingTurn===myIndex;
 
     return(
       <div style={{minHeight:'100vh',
@@ -874,7 +866,7 @@ subscribeRoom(code);
                 {contract.type==='hokum'
                   ?`أتو: ${contract.trumpName} ${contract.trump} 👑`
                   :'☀️ صن'}
-                {' · '}Room: {roomCode}
+                {' · '}{roomCode}
               </div>
             )}
           </div>
@@ -887,14 +879,14 @@ subscribeRoom(code);
                   Team {t===0?'A':'B'}
                 </div>
                 <div style={{color:'#C9A84C',fontSize:16,fontWeight:900,lineHeight:1}}>
-                  {gd.gameScore[t]}
+                  {gd.gameScore?.[t]||0}
                 </div>
               </div>
             ))}
           </div>
         </div>
 
-        {/* Bidding phase */}
+        {/* Bidding */}
         {gd.phase==='bidding'&&(
           <>
             <div style={{background:'#071f10',borderRadius:10,
@@ -911,10 +903,10 @@ subscribeRoom(code);
             {isBiddingTurn?(
               <BiddingModal
                 playerIndex={myIndex}
-                playerName={gd.players[myIndex]||'أنت'}
+                playerName={gd.players?.[myIndex]||'أنت'}
                 onBid={handleBid}
-                canSun={gd.bids.length>=1}
-                passCount={gd.bids.filter(b=>b.type==='pass').length}
+                canSun={gd.bids?.length>=1}
+                passCount={gd.bids?.filter(b=>b.type==='pass').length||0}
               />
             ):(
               <div style={{position:'fixed',inset:0,background:'#000b',
@@ -922,11 +914,9 @@ subscribeRoom(code);
                 zIndex:100}}>
                 <div style={{background:'#0D2A1A',border:'2px solid #1B6B3A',
                   borderRadius:16,padding:24,textAlign:'center'}}>
-                  <div style={{fontSize:32}}>
-                    {AVATARS[gd.biddingTurn%4]}
-                  </div>
+                  <div style={{fontSize:32}}>{AVATARS[gd.biddingTurn%4]}</div>
                   <div style={{color:'#4ADE80',fontSize:16,fontWeight:700,marginTop:8}}>
-                    {gd.players[gd.biddingTurn]||`اللاعب ${gd.biddingTurn+1}`} يفكر...
+                    {gd.players?.[gd.biddingTurn]||`اللاعب ${gd.biddingTurn+1}`} يفكر...
                   </div>
                 </div>
               </div>
@@ -934,10 +924,9 @@ subscribeRoom(code);
           </>
         )}
 
-        {/* Playing phase */}
+        {/* Playing */}
         {(gd.phase==='playing'||gd.phase==='roundEnd')&&contract&&(
           <div>
-            {/* Contract badge */}
             <div style={{
               background:contract.type==='sun'?'#3a2a00':'#0a2a0a',
               border:`1.5px solid ${contract.type==='sun'?'#C9A84C':'#2ECC71'}`,
@@ -954,26 +943,26 @@ subscribeRoom(code);
                     :'صن ☀️ (2×)'}
                 </div>
                 <div style={{color:'#888',fontSize:10}}>
-                  {gd.players[contract.bidder]||`P${contract.bidder+1}`}
+                  {gd.players?.[contract.bidder]||`P${contract.bidder+1}`}
                   {' · '}Team {contract.bidTeam===0?'A':'B'}
                 </div>
               </div>
             </div>
 
-            {/* Round scores */}
             <div style={{display:'flex',gap:8,marginBottom:10}}>
               {[0,1].map(t=>(
                 <div key={t} style={{flex:1,background:'#071f10',
                   border:`1px solid ${TEAM_COLORS[t]}33`,
                   borderRadius:10,padding:'6px 10px',
-                  display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+                  display:'flex',justifyContent:'space-between',
+                  alignItems:'center'}}>
                   <div style={{color:TEAM_COLORS[t],fontWeight:700,fontSize:11}}>
                     Team {t===0?'A':'B'}
                     {contract.bidTeam===t&&
                       <span style={{color:'#C9A84C',fontSize:9}}> 📋</span>}
                   </div>
                   <div style={{color:'#C9A84C',fontSize:18,fontWeight:900}}>
-                    {gd.roundScores[t]}
+                    {gd.roundScores?.[t]||0}
                   </div>
                 </div>
               ))}
@@ -984,83 +973,78 @@ subscribeRoom(code);
               background:'radial-gradient(ellipse,#1a5c35,#0D4A2A)',
               border:'3px solid #C9A84C44',borderRadius:20,padding:12,
               marginBottom:10,minHeight:260,
-              boxShadow:'inset 0 0 40px #00000044',position:'relative'}}>
+              boxShadow:'inset 0 0 40px #00000044'}}>
 
-              {/* Top player (opposite) */}
+              {/* Top */}
               <div style={{display:'flex',justifyContent:'center',marginBottom:8}}>
-                {[2].map(relIdx=>{
-                  const pIdx=(myIndex+relIdx)%4;
+                {(()=>{
+                  const pIdx=(myIndex+2)%4;
                   const isActive=activePIdx===pIdx;
                   return(
-                    <div key={pIdx} style={{textAlign:'center'}}>
-                      <div style={{
-                        display:'inline-flex',alignItems:'center',gap:4,
+                    <div style={{textAlign:'center'}}>
+                      <div style={{display:'inline-flex',alignItems:'center',gap:4,
                         background:isActive?`${TEAM_COLORS[pIdx%2]}22`:'#0a1a0a',
                         border:`1.5px solid ${isActive?TEAM_COLORS[pIdx%2]:'#1a2a1a'}`,
                         borderRadius:20,padding:'3px 10px',marginBottom:4}}>
                         <span>{AVATARS[pIdx%4]}</span>
                         <span style={{color:isActive?TEAM_COLORS[pIdx%2]:'#888',
                           fontSize:11,fontWeight:700}}>
-                          {gd.players[pIdx]||`P${pIdx+1}`}
+                          {gd.players?.[pIdx]||`P${pIdx+1}`}
                         </span>
                       </div>
                       <div style={{display:'flex',flexWrap:'wrap',
                         justifyContent:'center',maxWidth:200}}>
                         {(hands[pIdx]||[]).map((_,j)=>(
                           <Card key={j} faceDown small
-                            card={{suit:{symbol:'',color:''},
-                              rank:{symbol:'',nameAr:''}}}
+                            card={{suit:{symbol:'',color:''},rank:{symbol:'',nameAr:''}}}
                             mode='' trump=''/>
                         ))}
                       </div>
                     </div>
                   );
-                })}
+                })()}
               </div>
 
-              {/* Middle row */}
+              {/* Middle */}
               <div style={{display:'flex',alignItems:'center',
                 justifyContent:'space-between',marginBottom:8}}>
 
-                {/* Left player */}
-                {[1].map(relIdx=>{
-                  const pIdx=(myIndex+relIdx)%4;
+                {/* Left */}
+                {(()=>{
+                  const pIdx=(myIndex+1)%4;
                   const isActive=activePIdx===pIdx;
                   return(
-                    <div key={pIdx} style={{textAlign:'center'}}>
-                      <div style={{
-                        display:'inline-flex',alignItems:'center',gap:4,
+                    <div style={{textAlign:'center'}}>
+                      <div style={{display:'inline-flex',alignItems:'center',gap:4,
                         background:isActive?`${TEAM_COLORS[pIdx%2]}22`:'#0a1a0a',
                         border:`1.5px solid ${isActive?TEAM_COLORS[pIdx%2]:'#1a2a1a'}`,
                         borderRadius:20,padding:'3px 8px',marginBottom:4}}>
                         <span>{AVATARS[pIdx%4]}</span>
                         <span style={{color:isActive?TEAM_COLORS[pIdx%2]:'#888',
                           fontSize:10,fontWeight:700}}>
-                          {gd.players[pIdx]||`P${pIdx+1}`}
+                          {gd.players?.[pIdx]||`P${pIdx+1}`}
                         </span>
                       </div>
                       <div style={{display:'flex',flexDirection:'column'}}>
                         {(hands[pIdx]||[]).map((_,j)=>(
                           <Card key={j} faceDown small
-                            card={{suit:{symbol:'',color:''},
-                              rank:{symbol:'',nameAr:''}}}
+                            card={{suit:{symbol:'',color:''},rank:{symbol:'',nameAr:''}}}
                             mode='' trump=''/>
                         ))}
                       </div>
                     </div>
                   );
-                })}
+                })()}
 
                 {/* Center trick */}
                 <div style={{flex:1,display:'flex',flexDirection:'column',
                   alignItems:'center',justifyContent:'center',gap:4}}>
-                  <div style={{
-                    display:'grid',gridTemplateColumns:'1fr 1fr',gap:4,
+                  <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:4,
                     padding:8,background:'#00000022',borderRadius:12,
                     border:'1px solid #C9A84C22',minWidth:120,minHeight:90}}>
                     {[2,1,3,0].map(relIdx=>{
                       const pIdx=(myIndex+relIdx)%4;
-                      const play=gd.trickPlays.find(p=>p.playerIndex===pIdx);
+                      const play=gd.trickPlays?.find(p=>p.playerIndex===pIdx);
                       return(
                         <div key={pIdx} style={{display:'flex',
                           flexDirection:'column',alignItems:'center',
@@ -1068,7 +1052,7 @@ subscribeRoom(code);
                           {play?(
                             <>
                               <div style={{color:'#888',fontSize:8,marginBottom:1}}>
-                                {gd.players[pIdx]||`P${pIdx+1}`}
+                                {gd.players?.[pIdx]||`P${pIdx+1}`}
                               </div>
                               <Card card={play.card}
                                 mode={contract.type} trump={contract.trump}
@@ -1090,12 +1074,11 @@ subscribeRoom(code);
                   {gd.trickResult&&(
                     <div style={{textAlign:'center'}}>
                       <div style={{color:'#C9A84C',fontSize:11,fontWeight:700}}>
-                        🏆 {gd.players[gd.trickResult.winner.playerIndex]||
+                        🏆 {gd.players?.[gd.trickResult.winner.playerIndex]||
                           `P${gd.trickResult.winner.playerIndex+1}`}
                         {' '}+{gd.trickResult.pts}
                       </div>
-                      {(isHost||myIndex===gd.trickResult.winner.playerIndex)&&
-                        gd.phase==='playing'&&(
+                      {gd.phase==='playing'&&(
                         <button onClick={nextTrick} style={{
                           marginTop:4,background:'#C9A84C',color:'#000',
                           border:'none',borderRadius:8,padding:'5px 14px',
@@ -1110,50 +1093,46 @@ subscribeRoom(code);
                     <div style={{color:isMyTurn?'#4ADE80':'#888',
                       fontSize:10,textAlign:'center'}}>
                       {isMyTurn?'🟢 دورك!':
-                        `⏳ ${gd.players[activePIdx]||`P${activePIdx+1}`}...`}
+                        `⏳ ${gd.players?.[activePIdx]||`P${activePIdx+1}`}...`}
                     </div>
                   )}
                 </div>
 
-                {/* Right player */}
-                {[3].map(relIdx=>{
-                  const pIdx=(myIndex+relIdx)%4;
+                {/* Right */}
+                {(()=>{
+                  const pIdx=(myIndex+3)%4;
                   const isActive=activePIdx===pIdx;
                   return(
-                    <div key={pIdx} style={{textAlign:'center'}}>
-                      <div style={{
-                        display:'inline-flex',alignItems:'center',gap:4,
+                    <div style={{textAlign:'center'}}>
+                      <div style={{display:'inline-flex',alignItems:'center',gap:4,
                         background:isActive?`${TEAM_COLORS[pIdx%2]}22`:'#0a1a0a',
                         border:`1.5px solid ${isActive?TEAM_COLORS[pIdx%2]:'#1a2a1a'}`,
                         borderRadius:20,padding:'3px 8px',marginBottom:4}}>
                         <span>{AVATARS[pIdx%4]}</span>
                         <span style={{color:isActive?TEAM_COLORS[pIdx%2]:'#888',
                           fontSize:10,fontWeight:700}}>
-                          {gd.players[pIdx]||`P${pIdx+1}`}
+                          {gd.players?.[pIdx]||`P${pIdx+1}`}
                         </span>
                       </div>
                       <div style={{display:'flex',flexDirection:'column'}}>
                         {(hands[pIdx]||[]).map((_,j)=>(
                           <Card key={j} faceDown small
-                            card={{suit:{symbol:'',color:''},
-                              rank:{symbol:'',nameAr:''}}}
+                            card={{suit:{symbol:'',color:''},rank:{symbol:'',nameAr:''}}}
                             mode='' trump=''/>
                         ))}
                       </div>
                     </div>
                   );
-                })}
+                })()}
               </div>
 
-              {/* My hand — bottom */}
-              <div style={{display:'flex',flexDirection:'column',
-                alignItems:'center'}}>
-                <div style={{display:'flex',alignItems:'center',
-                  gap:6,marginBottom:6}}>
+              {/* My hand */}
+              <div style={{display:'flex',flexDirection:'column',alignItems:'center'}}>
+                <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:6}}>
                   <span style={{fontSize:16}}>{AVATARS[myIndex%4]}</span>
                   <span style={{color:isMyTurn?'#4ADE80':'#888',
                     fontWeight:700,fontSize:12}}>
-                    {gd.players[myIndex]||'أنت'}
+                    {gd.players?.[myIndex]||'أنت'}
                     {isMyTurn&&(
                       <span style={{background:'#4ADE80',color:'#000',
                         fontSize:9,padding:'1px 7px',
@@ -1165,9 +1144,8 @@ subscribeRoom(code);
                   {isMyTurn&&timer>0&&(
                     <div style={{
                       background:timer<=3?'#EF476F':timer<=6?'#F39C12':'#2ECC71',
-                      color:'#fff',borderRadius:'50%',
-                      width:22,height:22,display:'flex',
-                      alignItems:'center',justifyContent:'center',
+                      color:'#fff',borderRadius:'50%',width:22,height:22,
+                      display:'flex',alignItems:'center',justifyContent:'center',
                       fontSize:11,fontWeight:900}}>{timer}</div>
                   )}
                 </div>
@@ -1199,8 +1177,8 @@ subscribeRoom(code);
           <RoundEndScreen
             result={gd.roundResult}
             contract={gd.contract}
-            roundScores={gd.roundScores}
-            gameScore={gd.gameScore}
+            roundScores={gd.roundScores||[0,0]}
+            gameScore={gd.gameScore||[0,0]}
             matchWinner={gd.matchWinner}
             onNext={()=>newRound(gd.matchWinner!==null)}
           />
@@ -1212,9 +1190,13 @@ subscribeRoom(code);
   // Loading
   return(
     <div style={{minHeight:'100vh',background:'#0D4A2A',
-      display:'flex',alignItems:'center',justifyContent:'center'}}>
-      <div style={{color:'#C9A84C',fontSize:18,fontWeight:700}}>
-        جاري التحميل... 🃏
+      display:'flex',alignItems:'center',justifyContent:'center',
+      fontFamily:'Segoe UI,sans-serif'}}>
+      <div style={{textAlign:'center'}}>
+        <div style={{fontSize:48,marginBottom:12}}>🃏</div>
+        <div style={{color:'#C9A84C',fontSize:18,fontWeight:700}}>
+          جاري التحميل...
+        </div>
       </div>
     </div>
   );
