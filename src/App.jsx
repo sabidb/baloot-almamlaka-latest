@@ -42,7 +42,7 @@ const REACTIONS = ['👏','🔥','😤','🤣','☕','🃏','👑','💪'];
 // ── Auth (lazy init to avoid crashes) ────────────────────
 let _auth = null;
 let _googleProvider = null;
-function getFirebaseAuth() {
+async function getFirebaseAuth() {
   if (!_auth) {
     try {
   const { initializeApp, getApps } = await import('firebase/app');
