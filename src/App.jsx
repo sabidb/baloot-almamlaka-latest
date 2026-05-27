@@ -45,10 +45,12 @@ let _googleProvider = null;
 function getFirebaseAuth() {
   if (!_auth) {
     try {
-      _auth = getAuth();
-      _googleProvider = new GoogleAuthProvider();
-      _googleProvider.setCustomParameters({ prompt: 'select_account' });
-    } catch(e) { console.error('Auth init:', e); }
+  const { initializeApp, getApps } = await import('firebase/app');
+  const { getAuth, GoogleAuthProvider } = await import('firebase/auth');
+  _auth = getAuth();
+  _googleProvider = new GoogleAuthProvider();
+  _googleProvider.setCustomParameters({ prompt: 'select_account' });
+} catch(e) { console.error('Auth init:', e); }
   }
   return { auth: _auth, googleProvider: _googleProvider };
 }
