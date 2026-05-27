@@ -5,7 +5,7 @@ import {
   collection, query, orderBy, limit, getDocs,
   addDoc, serverTimestamp
 } from 'firebase/firestore';
-import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from 'firebase/auth';
+// Auth imports loaded dynamically
 
 // ── Design Tokens ─────────────────────────────────────────
 const T = {
