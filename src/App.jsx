@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { db, auth, googleProvider } from './firebase';
-import { signInWithPopup, onAuthStateChanged, signOut } from 'firebase/auth';
+import { db } from './firebase';
 import {
-  doc, setDoc, onSnapshot, updateDoc, getDoc, collection,
-  query, orderBy, limit, getDocs, addDoc, serverTimestamp
+  doc, setDoc, onSnapshot, updateDoc, getDoc,
+  collection, query, orderBy, limit, getDocs,
+  addDoc, serverTimestamp
 } from 'firebase/firestore';
 
 // ── Design Tokens ─────────────────────────────────────────
