@@ -5,7 +5,7 @@ import{SUITS,RANKS,TEAM_COLORS,AVATARS,CITIES,REACTIONS,DECK_THEMES,TABLE_THEMES
 import TournamentScreen from'./Tournament';
 import{DailyRewardPopup,FriendSystem,NotificationCenter,sendLocalNotification,requestNotificationPermission}from'./Social';
 import OnboardingTutorial,{ShareScoreCard}from'./Onboarding';
-
+import{listenAuth,signInGoogle,signOutUser as firebaseSignOut}from'./auth';
 const T={gold:'#C9A84C',goldL:'#F0C060',green:'#006C35',greenL:'#1a8a4a',greenD:'#004D26',night:'#07070F',felt:'#0D4A2A',bg2:'#0D0D1A',cream:'#F0EEE8',red:'#C0392B',redL:'#E74C3C',blue:'#1A4A8A',blueL:'#2E86C1',smoke:'#888',border:'#C9A84C33'};
 
 function Card({card,mode,trump,highlight,winner,onClick,disabled,faceDown,small,deckTheme='classic'}){
