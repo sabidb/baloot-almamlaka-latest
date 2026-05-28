@@ -5,7 +5,7 @@ import{SUITS,RANKS,TEAM_COLORS,AVATARS,CITIES,REACTIONS,DECK_THEMES,TABLE_THEMES
 import TournamentScreen from'./Tournament';
 import{DailyRewardPopup,FriendSystem,NotificationCenter,sendLocalNotification,requestNotificationPermission}from'./Social';
 import OnboardingTutorial,{ShareScoreCard}from'./Onboarding';
-import{listenAuth,signInGoogle,signOutUser as firebaseSignOut}from'./auth';
+
 const T={gold:'#C9A84C',goldL:'#F0C060',green:'#006C35',greenL:'#1a8a4a',greenD:'#004D26',night:'#07070F',felt:'#0D4A2A',bg2:'#0D0D1A',cream:'#F0EEE8',red:'#C0392B',redL:'#E74C3C',blue:'#1A4A8A',blueL:'#2E86C1',smoke:'#888',border:'#C9A84C33'};
 
 function Card({card,mode,trump,highlight,winner,onClick,disabled,faceDown,small,deckTheme='classic'}){
@@ -129,8 +129,10 @@ export default function App(){
   useEffect(()=>{const p=new URLSearchParams(window.location.search);const r=p.get('room');if(r)setJoinCode(r);},[]);
   useEffect(()=>{
     let u=()=>{};
-    try{u=listenAuth(async usr=>{setUser(usr);setAuthLoading(false);if(usr){const ref=doc(db,'users',usr.uid);const s=await getDoc(ref);if(s.exists()){const d=s.data();setProfile(d);setPlayerName(d.name||usr.displayName||'');setPlayerAvatar(d.avatar||AVATARS[0]);setPlayerCity(d.city||'الرياض');}else{const np={name:usr.displayName||'لاعب',avatar:AVATARS[0],city:'الرياض',wins:0,losses:0,coins:100,owned:{decks:['classic'],tables:['classic'],reactions:[]},activeDeck:'classic',activeTable:'classic',createdAt:Date.now()};await setDoc(ref,np);setProfile(np);setPlayerName(usr.displayName||'');}}});} catch(e){console.error('Auth:',e);setAuthLoading(false);}
-    return()=>u();
+    // Set timeout fallback - if auth doesn't respond in 3s, show app anyway
+    const fallback=setTimeout(()=>setAuthLoading(false),3000);
+    try{u=listenAuth(async usr=>{setUser(usr);setAuthLoading(false);if(usr){const ref=doc(db,'users',usr.uid);const s=await getDoc(ref);if(s.exists()){const d=s.data();setProfile(d);setPlayerName(d.name||usr.displayName||'');setPlayerAvatar(d.avatar||AVATARS[0]);setPlayerCity(d.city||'الرياض');}else{const np={name:usr.displayName||'لاعب',avatar:AVATARS[0],city:'الرياض',wins:0,losses:0,coins:100,owned:{decks:['classic'],tables:['classic'],reactions:[]},activeDeck:'classic',activeTable:'classic',createdAt:Date.now()};await setDoc(ref,np);setProfile(np);setPlayerName(usr.displayName||'');}}});clearTimeout(fallback);} catch(e){console.error('Auth:',e);clearTimeout(fallback);setAuthLoading(false);}
+    return()=>{u();clearTimeout(fallback);};
   },[]);
   const signIn=async()=>{try{await signInGoogle();}catch(e){setError('فشل تسجيل الدخول');}};
   const signOutUser=async()=>{try{await firebaseSignOut();setUser(null);setProfile(null);}catch(e){}};
@@ -153,7 +155,7 @@ export default function App(){
   const gd=gameData;const aDeck=profile?.activeDeck||'classic';const aTable=profile?.activeTable||'classic';const tFelt=TABLE_THEMES[aTable]?.felt||T.felt;
   const CSS=`@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.2)}}@keyframes bounce{0%{transform:scale(0.5)}70%{transform:scale(1.1)}100%{transform:scale(1)}}@keyframes pulse-border{0%,100%{opacity:1}50%{opacity:0.3}}@keyframes float-up{0%{transform:translateY(0);opacity:1}100%{transform:translateY(-100px);opacity:0}}`;
 
-  if(authLoading)return(<div style={{minHeight:'100vh',background:T.felt,display:'flex',alignItems:'center',justifyContent:'center',fontFamily:'Segoe UI,sans-serif'}}><div style={{textAlign:'center'}}><div style={{fontSize:56,marginBottom:12,animation:'float 2s ease-in-out infinite'}}>🃏</div><div style={{color:T.gold,fontSize:18,fontWeight:700}}>جاري التحميل...</div></div><style>{CSS}</style></div>);
+  if(authLoading)return(<div style={{minHeight:'100vh',background:T.felt,display:'flex',alignItems:'center',justifyContent:'center',fontFamily:'Segoe UI,sans-serif'}}><div style={{textAlign:'center'}}><div style={{fontSize:56,marginBottom:12,animation:'float 2s ease-in-out infinite'}}>🃏</div><div style={{color:T.gold,fontSize:18,fontWeight:700}}>جاري التحميل...</div><button onClick={()=>setAuthLoading(false)} style={{marginTop:20,background:'rgba(255,255,255,0.1)',color:'#888',border:'1px solid #333',borderRadius:10,padding:'8px 16px',cursor:'pointer',fontSize:12,fontFamily:'inherit'}}>تخطي تسجيل الدخول</button></div><style>{CSS}</style></div>);
   if(navTab==='store'&&screen==='home')return(<><StoreScreen profile={{...profile,uid:user?.uid}} onUpdateProfile={u=>{setProfile(p=>({...p,...u}));}}/><BottomNav active={navTab} onChange={setNavTab}/></>);
   if(navTab==='tournament'&&screen==='home')return(<><TournamentScreen userId={user?.uid} userProfile={profile} onUpdateProfile={u=>{setProfile(p=>({...p,...u}));}}/><BottomNav active={navTab} onChange={setNavTab}/></>);
   if(navTab==='friends'&&screen==='home')return(<><FriendSystem userId={user?.uid} userProfile={profile} onInvite={code=>{setJoinCode(code);setNavTab('home');}} currentRoomCode={roomCode}/><BottomNav active={navTab} onChange={setNavTab}/></>);
