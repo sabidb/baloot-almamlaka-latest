@@ -5,7 +5,6 @@ import{SUITS,RANKS,TEAM_COLORS,AVATARS,CITIES,REACTIONS,DECK_THEMES,TABLE_THEMES
 import TournamentScreen from'./Tournament';
 import{DailyRewardPopup,FriendSystem,NotificationCenter,sendLocalNotification,requestNotificationPermission}from'./Social';
 import OnboardingTutorial,{ShareScoreCard}from'./Onboarding';
-import'firebase/auth';
 
 const T={gold:'#C9A84C',goldL:'#F0C060',green:'#006C35',greenL:'#1a8a4a',greenD:'#004D26',night:'#07070F',felt:'#0D4A2A',bg2:'#0D0D1A',cream:'#F0EEE8',red:'#C0392B',redL:'#E74C3C',blue:'#1A4A8A',blueL:'#2E86C1',smoke:'#888',border:'#C9A84C33'};
 
@@ -130,11 +129,11 @@ export default function App(){
   useEffect(()=>{const p=new URLSearchParams(window.location.search);const r=p.get('room');if(r)setJoinCode(r);},[]);
   useEffect(()=>{
     let u=()=>{};
-    (async()=>{try{const{getAuth,onAuthStateChanged}=await import('firebase/auth');const auth=getAuth();u=onAuthStateChanged(auth,async usr=>{setUser(usr);setAuthLoading(false);if(usr){const ref=doc(db,'users',usr.uid);const s=await getDoc(ref);if(s.exists()){const d=s.data();setProfile(d);setPlayerName(d.name||usr.displayName||'');setPlayerAvatar(d.avatar||AVATARS[0]);setPlayerCity(d.city||'الرياض');}else{const np={name:usr.displayName||'لاعب',avatar:AVATARS[0],city:'الرياض',wins:0,losses:0,coins:100,owned:{decks:['classic'],tables:['classic'],reactions:[]},activeDeck:'classic',activeTable:'classic',createdAt:Date.now()};await setDoc(ref,np);setProfile(np);setPlayerName(usr.displayName||'');}}});}catch(e){console.error('Auth:',e);setAuthLoading(false);}})();
+    try{u=listenAuth(async usr=>{setUser(usr);setAuthLoading(false);if(usr){const ref=doc(db,'users',usr.uid);const s=await getDoc(ref);if(s.exists()){const d=s.data();setProfile(d);setPlayerName(d.name||usr.displayName||'');setPlayerAvatar(d.avatar||AVATARS[0]);setPlayerCity(d.city||'الرياض');}else{const np={name:usr.displayName||'لاعب',avatar:AVATARS[0],city:'الرياض',wins:0,losses:0,coins:100,owned:{decks:['classic'],tables:['classic'],reactions:[]},activeDeck:'classic',activeTable:'classic',createdAt:Date.now()};await setDoc(ref,np);setProfile(np);setPlayerName(usr.displayName||'');}}});} catch(e){console.error('Auth:',e);setAuthLoading(false);}
     return()=>u();
   },[]);
-  const signIn=async()=>{try{const{getAuth,GoogleAuthProvider,signInWithPopup}=await import('firebase/auth');const a=getAuth();const p=new GoogleAuthProvider();p.setCustomParameters({prompt:'select_account'});await signInWithPopup(a,p);}catch(e){setError('فشل تسجيل الدخول');}};
-  const signOutUser=async()=>{try{const{getAuth,signOut}=await import('firebase/auth');await signOut(getAuth());setUser(null);setProfile(null);}catch(e){}};
+  const signIn=async()=>{try{await signInGoogle();}catch(e){setError('فشل تسجيل الدخول');}};
+  const signOutUser=async()=>{try{await firebaseSignOut();setUser(null);setProfile(null);}catch(e){}};
   const saveProfile=async()=>{if(!user)return;const d={name:playerName,avatar:playerAvatar,city:playerCity};try{await updateDoc(doc(db,'users',user.uid),d);setProfile(p=>({...p,...d}));}catch(e){}};
   const updateStats=async won=>{if(!user)return;try{await updateDoc(doc(db,'users',user.uid),{wins:increment(won?1:0),losses:increment(won?0:1),coins:increment(won?50:10)});const s=await getDoc(doc(db,'users',user.uid));if(s.exists())setProfile(s.data());}catch(e){}};
   const subscribeRoom=useCallback(code=>{if(unsubRef.current)unsubRef.current();unsubRef.current=onSnapshot(doc(db,'rooms',code),snap=>{if(snap.exists()){const d=snap.data();setGameData(d);if(['bidding','playing','roundEnd'].includes(d.phase))setScreen('game');else if(d.phase==='lobby')setScreen('lobby');}},err=>console.error(err));},[]);
