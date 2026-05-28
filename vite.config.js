@@ -5,14 +5,5 @@ export default defineConfig({
   plugins: [react()],
   optimizeDeps: {
     exclude: ['firebase/auth']
-  },
-  build: {
-    rollupOptions: {
-      output: {
-        manualChunks: {
-          firebase: ['firebase/app', 'firebase/firestore'],
-        }
-      }
-    }
   }
 })
