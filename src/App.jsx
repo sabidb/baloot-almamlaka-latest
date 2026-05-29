@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { initializeApp } from 'firebase/app';
 import { getFirestore, doc, getDoc, setDoc, onSnapshot, updateDoc, collection, query, where, getDocs, addDoc, serverTimestamp, orderBy, limit } from 'firebase/firestore';
-import { getAuth, GoogleAuthProvider, signInWithRedirect, getRedirectResult, onAuthStateChanged, signOut } from 'firebase/auth';
+import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, onAuthStateChanged, signOut } from 'firebase/auth';
 
 // ─── Firebase ────────────────────────────────────────────────
 const firebaseConfig = {
@@ -937,11 +937,9 @@ function AuthScreen({onDone}){
     (async()=>{
       try{
         const result=await getRedirectResult(auth);
-        if(result?.user){
-          await handleGoogleUser(result.user);
-        }
+        if(result?.user) await handleGoogleUser(result.user);
       }catch(e){
-        if(e.code!=='auth/no-current-user') setError('خطأ في تسجيل الدخول، حاول مجدداً');
+        // ignore no-redirect errors silently
       }
     })();
   },[]);
@@ -951,25 +949,33 @@ function AuthScreen({onDone}){
     try{
       const snap=await getDoc(doc(db,'users',user.uid));
       if(snap.exists()){
-        // Existing user — go straight in
         onDone({uid:user.uid,...snap.data()});
       } else {
-        // New user — show setup step
         setPendingUser(user);
         setStep('setup');
       }
-    }catch(e){ setError('خطأ: '+e.message); }
-    setLoading(false);
+    }catch(e){ setError('خطأ: '+e.message); setLoading(false); }
   };
 
   const signInGoogle=async()=>{
     setLoading(true); setError('');
     try{
-      await signInWithRedirect(auth, gProvider);
-      // Page will redirect — loading stays true
+      // Try popup first (works on desktop + most mobile browsers)
+      const result=await signInWithPopup(auth, gProvider);
+      if(result?.user) await handleGoogleUser(result.user);
     }catch(e){
-      setError('تعذر تسجيل الدخول: '+e.message);
-      setLoading(false);
+      // Popup blocked (some mobile browsers) — fall back to redirect
+      if(e.code==='auth/popup-blocked'||e.code==='auth/popup-closed-by-user'||e.code==='auth/cancelled-popup-request'){
+        try{
+          await signInWithRedirect(auth, gProvider);
+        }catch(e2){
+          setError('تعذر تسجيل الدخول، حاول مجدداً');
+          setLoading(false);
+        }
+      } else {
+        setError('خطأ: '+e.message);
+        setLoading(false);
+      }
     }
   };
 
