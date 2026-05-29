@@ -1,4 +1,4 @@
-const CACHE_NAME = 'baloot-v1';
+const CACHE_NAME = 'baloot-v2';
 const ASSETS = ['/', '/index.html'];
 
 self.addEventListener('install', e => {
