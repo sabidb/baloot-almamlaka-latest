@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { doc, getDoc, setDoc, updateDoc, increment, collection, addDoc, orderBy, where, limit, getDocs, query, serverTimestamp } from 'firebase/firestore';
 import { db } from './firebase';
-import { listenAuth, signInGoogle, signOutUser } from './auth';
+import { listenAuth, signInGoogle, signOutUser, getRedirect } from './auth';
 import { SUITS as CARD_SUITS, STORE_ITEMS, buildDeck, shuffle, dealHands, cardValue, trickWinner, calcResult, botPickCard, botBid, sounds, haptics, getThemeStyles } from './GameLogic';
 import { ReactionBar } from './Reactions';
 import { settleBotGame } from './functions';
@@ -42,6 +42,8 @@ function Spin(){return <div style={{width:30,height:30,border:'3px solid rgba(24
 
 export default function App(){
   const [profile,setProfile]=useState(null);
+  const [authUser,setAuthUser]=useState(null);
+  const [authErr,setAuthErr]=useState('');
   const [loading,setLoading]=useState(true);
   const [tab,setTab]=useState('home');
   const [inGame,setInGame]=useState(false);
@@ -74,8 +76,11 @@ export default function App(){
   },[]);
 
   useEffect(()=>{
+    // Surface any error from a mobile redirect sign-in.
+    getRedirect().catch(e=>{if(e?.code!=='auth/no-auth-event')setAuthErr('تعذر تسجيل الدخول');});
     const unsub=listenAuth((user)=>{
       (async()=>{
+        setAuthUser(user||null);
         if(user){
           try{
             const snap=await getDoc(doc(db,'users',user.uid));
@@ -105,7 +110,7 @@ export default function App(){
     </div>
   );
 
-  if(!profile)return <AuthScreen onDone={p=>{const isNew=p._new;const clean={...p};delete clean._new;setProfile(clean);if(isNew)setShowOnboarding(true);}}/>;
+  if(!profile)return <AuthScreen authUser={authUser} authErr={authErr} onDone={p=>{const isNew=p._new;const clean={...p};delete clean._new;setProfile(clean);if(isNew)setShowOnboarding(true);}}/>;
 
   if(showOnboarding)return <OnboardingTutorial onComplete={()=>setShowOnboarding(false)}/>;
 
@@ -164,30 +169,30 @@ export default function App(){
   );
 }
 
-function AuthScreen({onDone}){
-  const [step,setStep]=useState('login');
-  const [pending,setPending]=useState(null);
+function AuthScreen({authUser,authErr,onDone}){
+  // If we already have a signed-in Firebase user (e.g. returned from a
+  // mobile redirect) but no Firestore profile yet, go straight to setup.
+  const step=authUser?'setup':'login';
   const [av,setAv]=useState(AVATARS[0]);
   const [city,setCity]=useState('الرياض');
   const [busy,setBusy]=useState(false);
-  const [err,setErr]=useState('');
+  const [err,setErr]=useState(authErr||'');
 
   const doGoogle=async()=>{
     setBusy(true);setErr('');
     try{
-      const res=await signInGoogle();
-      const snap=await getDoc(doc(db,'users',res.user.uid));
-      if(snap.exists()){onDone({uid:res.user.uid,...snap.data()});}
-      else{setPending(res.user);setStep('setup');setBusy(false);}
+      // On success the app-level auth listener takes over (loads profile or
+      // shows this setup step). On mobile this navigates away entirely.
+      await signInGoogle();
     }catch{setErr('تعذر تسجيل الدخول');setBusy(false);}
   };
 
   const finish=async()=>{
-    if(!pending)return;
+    if(!authUser)return;
     setBusy(true);
     try{
-      const p={uid:pending.uid,name:pending.displayName||'لاعب',avatar:av,city,wins:0,losses:0,coins:500,createdAt:serverTimestamp()};
-      await setDoc(doc(db,'users',pending.uid),p,{merge:true});
+      const p={uid:authUser.uid,name:authUser.displayName||'لاعب',avatar:av,city,wins:0,losses:0,coins:500,createdAt:serverTimestamp()};
+      await setDoc(doc(db,'users',authUser.uid),p,{merge:true});
       onDone({...p,_new:true});
     }catch(e){setErr(e.message);setBusy(false);}
   };
@@ -200,7 +205,7 @@ function AuthScreen({onDone}){
       <div style={{fontFamily:"'Scheherazade New',serif",fontSize:46,color:'#F0C040',textShadow:'0 0 24px rgba(240,192,64,.4)',marginBottom:6}}>بلوت</div>
       <div style={{color:'rgba(240,237,229,.6)',fontSize:12,letterSpacing:2,marginBottom:26}}>أكمل ملفك</div>
       <div style={box}>
-        <div style={{fontSize:16,fontWeight:900,textAlign:'center',marginBottom:18}}>مرحباً {pending?.displayName?.split(' ')[0]||'لاعب'} 👋</div>
+        <div style={{fontSize:16,fontWeight:900,textAlign:'center',marginBottom:18}}>مرحباً {authUser?.displayName?.split(' ')[0]||'لاعب'} 👋</div>
         <div style={{marginBottom:12}}>
           <div style={{color:'rgba(240,237,229,.6)',fontSize:11,fontWeight:700,marginBottom:4}}>مدينتك</div>
           <select style={G.input} value={city} onChange={e=>setCity(e.target.value)}>{CITIES.map(c=><option key={c}>{c}</option>)}</select>
