@@ -1,36 +1,17 @@
 import { useState, useEffect, useRef } from 'react';
-import { initializeApp, getApps } from 'firebase/app';
-import { getFirestore, doc, getDoc, setDoc, collection, orderBy, limit, getDocs, query, serverTimestamp, updateDoc } from 'firebase/firestore';
-import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from 'firebase/auth';
-
-const firebaseConfig = {
-  apiKey:            import.meta.env.VITE_FIREBASE_API_KEY,
-  authDomain:        import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-  projectId:         import.meta.env.VITE_FIREBASE_PROJECT_ID,
-  storageBucket:     import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-  appId:             import.meta.env.VITE_FIREBASE_APP_ID,
-};
-
-const fbApp  = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
-const db     = getFirestore(fbApp);
-const auth   = getAuth(fbApp);
-const gProv  = new GoogleAuthProvider();
+import { doc, getDoc, setDoc, updateDoc, increment, collection, orderBy, limit, getDocs, query, serverTimestamp } from 'firebase/firestore';
+import { db } from './firebase';
+import { listenAuth, signInGoogle, signOutUser } from './auth';
+import { SUITS as CARD_SUITS, buildDeck, shuffle, dealHands, cardValue, trickWinner, calcResult, botPickCard, botBid, sounds } from './GameLogic';
+import OnboardingTutorial, { ShareScoreCard } from './Onboarding';
+import { FriendSystem, NotificationCenter, DailyRewardPopup } from './Social';
+import TournamentScreen from './Tournament';
+import AdminPanel from './AdminPanel';
 
 const AVATARS = ['🧔','👲','🧕','👨‍💼','👩‍💼','🤴','👸','🧙','🦸','🎩'];
 const CITIES  = ['الرياض','جدة','مكة','المدينة','الدمام','الخبر','أبها','تبوك','حائل','القصيم'];
-const SUITS   = {spade:'♠',heart:'♥',diamond:'♦',club:'♣'};
-const SCOLOR  = {spade:'#111',heart:'#c0392b',diamond:'#c0392b',club:'#111'};
-const RANKSAR = {A:'أ',K:'ك',Q:'ق',J:'ج','10':'١٠','9':'٩','8':'٨','7':'٧'};
-
-function mkDeck(){
-  const d=[];
-  ['spade','heart','diamond','club'].forEach(s=>
-    ['A','K','Q','J','10','9','8','7'].forEach(r=>d.push({r,s}))
-  );
-  for(let i=d.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[d[i],d[j]]=[d[j],d[i]];}
-  return d;
-}
+const RANKAR  = {A:'أ',K:'ك',Q:'ق',J:'ج','10':'١٠','9':'٩','8':'٨','7':'٧'};
+const SEAT_POS = {0:{top:76,left:37,rot:-4},1:{top:40,left:4,rot:9},2:{top:2,left:37,rot:-7},3:{top:40,left:66,rot:6}};
 
 function spawnParticles(x,y){
   const colors=['#F0C040','#FFE08A','#2ECC71','#fff'];
@@ -51,6 +32,7 @@ const G={
   card:{width:54,height:78,borderRadius:10,background:'linear-gradient(145deg,#FEFDF8,#F0EBE0)',border:'1px solid rgba(0,0,0,.1)',boxShadow:'0 6px 20px rgba(0,0,0,.65)',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'space-between',padding:'3px',position:'absolute',cursor:'pointer',touchAction:'manipulation'},
   btn:{padding:'11px 20px',borderRadius:11,border:'none',cursor:'pointer',fontFamily:'Tajawal,sans-serif',fontWeight:700,touchAction:'manipulation'},
   input:{background:'rgba(255,255,255,.06)',border:'1px solid rgba(255,255,255,.12)',borderRadius:10,padding:'11px 13px',fontFamily:'Tajawal,sans-serif',fontSize:14,color:'#F0EDE5',width:'100%',outline:'none'},
+  panel:{background:'linear-gradient(180deg,rgba(16,26,18,.97),rgba(8,12,10,.97))',border:'1px solid rgba(240,192,64,.25)',borderRadius:20,padding:'20px 18px',boxShadow:'0 20px 60px rgba(0,0,0,.6)'},
 };
 
 function Spin(){return <div style={{width:30,height:30,border:'3px solid rgba(240,192,64,.2)',borderTopColor:'#F0C040',borderRadius:'50%',animation:'spin .8s linear infinite'}}/>;}
@@ -60,6 +42,10 @@ export default function App(){
   const [loading,setLoading]=useState(true);
   const [tab,setTab]=useState('home');
   const [inGame,setInGame]=useState(false);
+  const [inTournament,setInTournament]=useState(false);
+  const [showOnboarding,setShowOnboarding]=useState(false);
+  const [showAdmin,setShowAdmin]=useState(false);
+  const [showDaily,setShowDaily]=useState(false);
 
   useEffect(()=>{
     const style=document.createElement('style');
@@ -71,6 +57,11 @@ export default function App(){
       @keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
       @keyframes popIn{from{opacity:0;transform:scale(.7)}to{opacity:1;transform:scale(1)}}
       @keyframes pfly{0%{opacity:1;transform:translate(0,0) scale(1)}100%{opacity:0;transform:translate(var(--tx),var(--ty)) scale(0)}}
+      @keyframes dealIn{from{opacity:0;transform:translateY(60px) scale(.6) rotate(0deg)}to{opacity:1;transform:translateY(0) scale(1)}}
+      @keyframes turnGlow{0%,100%{box-shadow:0 0 0 0 rgba(240,192,64,.55)}50%{box-shadow:0 0 16px 5px rgba(240,192,64,.55)}}
+      @keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}
+      @keyframes flyToCenter{from{opacity:1}to{opacity:0;transform:translate(var(--wx),var(--wy)) scale(.5)}}
+      @keyframes ellipsis{0%{content:'.'}33%{content:'..'}66%{content:'...'}}
       select option{background:#0C1410}
     `;
     document.head.appendChild(style);
@@ -78,7 +69,7 @@ export default function App(){
   },[]);
 
   useEffect(()=>{
-    const unsub=onAuthStateChanged(auth,(user)=>{
+    const unsub=listenAuth((user)=>{
       (async()=>{
         if(user){
           try{
@@ -92,6 +83,14 @@ export default function App(){
     return()=>unsub();
   },[]);
 
+  useEffect(()=>{
+    if(!profile||showOnboarding)return;
+    if(sessionStorage.getItem('baloot_daily_shown'))return;
+    sessionStorage.setItem('baloot_daily_shown','1');
+    const t=setTimeout(()=>setShowDaily(true),700);
+    return()=>clearTimeout(t);
+  },[profile,showOnboarding]);
+
   if(loading)return(
     <div style={{height:'100dvh',background:'#07090A',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:20,fontFamily:'Tajawal,sans-serif'}}>
       <div style={{fontFamily:"'Scheherazade New',serif",fontSize:44,color:'#F0C040',textShadow:'0 0 24px rgba(240,192,64,.4)'}}>بلوت</div>
@@ -99,11 +98,27 @@ export default function App(){
     </div>
   );
 
-  if(!profile)return <AuthScreen onDone={setProfile}/>;
+  if(!profile)return <AuthScreen onDone={p=>{const isNew=p._new;const clean={...p};delete clean._new;setProfile(clean);if(isNew)setShowOnboarding(true);}}/>;
+
+  if(showOnboarding)return <OnboardingTutorial onComplete={()=>setShowOnboarding(false)}/>;
+
+  if(showAdmin)return(
+    <div style={{height:'100dvh',overflowY:'auto',position:'relative'}}>
+      <button onClick={()=>setShowAdmin(false)} style={{position:'fixed',top:12,left:12,zIndex:2000,...G.btn,background:'rgba(0,0,0,.6)',color:'#F0EDE5',border:'1px solid rgba(240,192,64,.3)',fontSize:12,padding:'6px 12px'}}>✕ رجوع</button>
+      <AdminPanel/>
+    </div>
+  );
+
+  if(inTournament)return(
+    <div style={{height:'100dvh',overflowY:'auto',position:'relative'}}>
+      <button onClick={()=>setInTournament(false)} style={{position:'fixed',top:'calc(env(safe-area-inset-top,0px) + 12px)',left:12,zIndex:2000,...G.btn,background:'rgba(0,0,0,.6)',color:'#F0EDE5',border:'1px solid rgba(240,192,64,.3)',fontSize:12,padding:'6px 12px'}}>✕ رجوع</button>
+      <TournamentScreen userId={profile.uid} userProfile={profile} onUpdateProfile={patch=>setProfile(p=>({...p,...patch}))}/>
+    </div>
+  );
 
   if(inGame)return(
     <div style={{height:'100dvh',overflow:'hidden'}}>
-      <GameScreen profile={profile} onExit={()=>{setInGame(false);setTab('home');}}/>
+      <GameScreen profile={profile} onExit={()=>{setInGame(false);setTab('home');}} onProfileUpdate={patch=>setProfile(p=>({...p,...patch}))}/>
     </div>
   );
 
@@ -112,11 +127,15 @@ export default function App(){
   return(
     <div style={{height:'100dvh',display:'flex',flexDirection:'column',background:'#07090A',fontFamily:'Tajawal,sans-serif',color:'#F0EDE5',direction:'rtl',overflow:'hidden'}}>
       <div style={{flex:1,overflow:'hidden',position:'relative'}}>
-        {tab==='home'    &&<HomeScreen    profile={profile} onGame={()=>setInGame(true)}/>}
+        {tab==='home'    &&<HomeScreen    profile={profile} onGame={()=>setInGame(true)} onTournament={()=>setInTournament(true)} onAdmin={()=>setShowAdmin(true)}/>}
         {tab==='board'   &&<LeaderScreen/>}
         {tab==='store'   &&<StoreScreen   profile={profile}/>}
-        {tab==='friends' &&<FriendScreen/>}
-        {tab==='profile' &&<ProfileScreen profile={profile} onUpdate={setProfile} onLogout={async()=>{try{await signOut(auth);}catch{}setProfile(null);}}/>}
+        {tab==='friends' &&(
+          <div style={{position:'absolute',inset:0,overflowY:'auto',WebkitOverflowScrolling:'touch',paddingBottom:'calc(60px + env(safe-area-inset-bottom,0px))'}}>
+            <FriendSystem userId={profile.uid} userProfile={profile} currentRoomCode={null}/>
+          </div>
+        )}
+        {tab==='profile' &&<ProfileScreen profile={profile} onUpdate={setProfile} onLogout={async()=>{try{await signOutUser();}catch{/* ignore */}setProfile(null);}}/>}
       </div>
       <nav style={{flexShrink:0,height:'calc(60px + env(safe-area-inset-bottom,0px))',paddingBottom:'env(safe-area-inset-bottom,0px)',background:'rgba(8,12,10,.97)',borderTop:'1px solid rgba(240,192,64,.12)',display:'flex'}}>
         {NAV.map(n=>{const a=tab===n.id;return(
@@ -127,6 +146,7 @@ export default function App(){
           </div>
         );})}
       </nav>
+      {showDaily&&<DailyRewardPopup userId={profile.uid} profile={profile} onClaim={patch=>setProfile(p=>({...p,...patch}))} onClose={()=>setShowDaily(false)}/>}
     </div>
   );
 }
@@ -142,11 +162,11 @@ function AuthScreen({onDone}){
   const doGoogle=async()=>{
     setBusy(true);setErr('');
     try{
-      const res=await signInWithPopup(auth,gProv);
+      const res=await signInGoogle();
       const snap=await getDoc(doc(db,'users',res.user.uid));
       if(snap.exists()){onDone({uid:res.user.uid,...snap.data()});}
       else{setPending(res.user);setStep('setup');setBusy(false);}
-    }catch(e){setErr('تعذر تسجيل الدخول');setBusy(false);}
+    }catch{setErr('تعذر تسجيل الدخول');setBusy(false);}
   };
 
   const finish=async()=>{
@@ -155,7 +175,7 @@ function AuthScreen({onDone}){
     try{
       const p={uid:pending.uid,name:pending.displayName||'لاعب',avatar:av,city,wins:0,losses:0,coins:500,createdAt:serverTimestamp()};
       await setDoc(doc(db,'users',pending.uid),p,{merge:true});
-      onDone(p);
+      onDone({...p,_new:true});
     }catch(e){setErr(e.message);setBusy(false);}
   };
 
@@ -213,17 +233,27 @@ function AuthScreen({onDone}){
   );
 }
 
-function HomeScreen({profile,onGame}){
+function HomeScreen({profile,onGame,onTournament,onAdmin}){
+  const tapRef=useRef({n:0,t:0});
   const modes=[
     {id:'bot',   icon:'🤖',title:'مع الروبوت',  sub:'تدرب بدون انتظار',        color:'#9B59B6'},
     {id:'create',icon:'👥',title:'مع الأصدقاء', sub:'أنشئ غرفة وشارك الكود',  color:'#F0C040'},
     {id:'join',  icon:'🔑',title:'انضم لغرفة',  sub:'أدخل كود الغرفة',         color:'#3498DB'},
     {id:'quick', icon:'⚡',title:'لعبة سريعة',  sub:'العب مع لاعبين عشوائيين',color:'#2ECC71'},
   ];
+
+  const onLogoTap=()=>{
+    const now=Date.now();
+    const r=tapRef.current;
+    if(now-r.t>2500)r.n=0;
+    r.n++;r.t=now;
+    if(r.n>=7){r.n=0;onAdmin();}
+  };
+
   return(
     <div style={{position:'absolute',inset:0,overflowY:'auto',WebkitOverflowScrolling:'touch',paddingBottom:'calc(60px + env(safe-area-inset-bottom,0px) + 12px)',paddingTop:'env(safe-area-inset-top,0px)'}}>
       <div style={{textAlign:'center',padding:'18px 14px 0'}}>
-        <div style={{fontFamily:"'Scheherazade New',serif",fontSize:'clamp(28px,9vw,44px)',background:'linear-gradient(135deg,#7A5B1A,#F0C040,#FFE08A,#F0C040,#7A5B1A)',WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent',backgroundClip:'text',lineHeight:1.1,marginBottom:4}}>بلوت المملكة</div>
+        <div onClick={onLogoTap} style={{fontFamily:"'Scheherazade New',serif",fontSize:'clamp(28px,9vw,44px)',background:'linear-gradient(135deg,#7A5B1A,#F0C040,#FFE08A,#F0C040,#7A5B1A)',WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent',backgroundClip:'text',lineHeight:1.1,marginBottom:4,userSelect:'none'}}>بلوت المملكة</div>
         <div style={{color:'rgba(240,237,229,.6)',fontSize:11,letterSpacing:2,marginBottom:8}}>العب · تنافس · افوز</div>
         <div style={{width:60,height:1,margin:'0 auto 16px',background:'linear-gradient(90deg,transparent,#7A5B1A,transparent)'}}/>
       </div>
@@ -233,6 +263,7 @@ function HomeScreen({profile,onGame}){
           <div style={{fontWeight:900,fontSize:14}}>{profile.name}</div>
           <div style={{color:'rgba(240,237,229,.6)',fontSize:11}}>{profile.city} · {profile.wins||0} انتصار</div>
         </div>
+        <NotificationCenter userId={profile.uid}/>
         <div style={{display:'flex',alignItems:'center',gap:5,background:'rgba(240,192,64,.1)',border:'1px solid rgba(240,192,64,.2)',borderRadius:20,padding:'5px 10px'}}>
           <span>🪙</span><span style={{fontSize:13,fontWeight:900,color:'#F0C040'}}>{profile.coins||500}</span>
         </div>
@@ -247,6 +278,14 @@ function HomeScreen({profile,onGame}){
           </div>
         ))}
       </div>
+      <div onClick={onTournament} style={{margin:'0 12px 12px',borderRadius:16,padding:'16px 18px',cursor:'pointer',touchAction:'manipulation',position:'relative',overflow:'hidden',border:'1px solid rgba(240,192,64,.3)',background:'linear-gradient(120deg,#1a0f00 0%,#2a1a00 25%,#3a2400 50%,#2a1a00 75%,#1a0f00 100%)',backgroundSize:'200% 100%',animation:'shimmer 5s linear infinite',display:'flex',alignItems:'center',gap:12}}>
+        <span style={{fontSize:30}}>🏆</span>
+        <div style={{flex:1}}>
+          <div style={{fontSize:14,fontWeight:900,color:'#F0C040'}}>البطولات</div>
+          <div style={{color:'rgba(240,237,229,.65)',fontSize:11,marginTop:2}}>تنافس واربح جوائز نقدية وعملات</div>
+        </div>
+        <span style={{color:'#F0C040',fontSize:18}}>‹</span>
+      </div>
       <div style={{display:'flex',background:'rgba(13,20,16,.75)',border:'1px solid rgba(240,192,64,.1)',borderRadius:14,margin:'0 12px',overflow:'hidden'}}>
         {[['٦.٢م','لاعب'],['٩٨٤','مباراة الآن'],['٤.٨','التقييم']].map(([n,l],i)=>(
           <div key={i} style={{flex:1,textAlign:'center',padding:'10px 4px',borderRight:i<2?'1px solid rgba(255,255,255,.06)':'none'}}>
@@ -259,121 +298,279 @@ function HomeScreen({profile,onGame}){
   );
 }
 
-function GameScreen({profile,onExit}){
-  const [hand,setHand]=useState(()=>mkDeck().slice(0,8));
-  const [trick,setTrick]=useState([]);
+const seatTeam=s=>s%2;
+const TEAM_KEY=['a','b'];
+
+function GameScreen({profile,onExit,onProfileUpdate}){
+  const players=[{name:profile.name,avatar:profile.avatar},{name:'محمد',avatar:'👲'},{name:'عبدالله',avatar:'🧔'},{name:'سعد',avatar:'🤴'}];
+
+  const [dealer,setDealer]=useState(3);
+  const [dealtNonce,setDealtNonce]=useState(0);
+  const [phase,setPhase]=useState('bidding');
+  const [hands,setHands]=useState(()=>{const{h0,h1,h2,h3}=dealHands(shuffle(buildDeck()));return[h0,h1,h2,h3];});
+  const [trickPlays,setTrickPlays]=useState([]);
+  const [tricksWon,setTricksWon]=useState(0);
+  const [roundScores,setRoundScores]=useState([0,0]);
+  const [contract,setContract]=useState(null);
+  const [currentBidder,setCurrentBidder]=useState(0);
+  const [passCount,setPassCount]=useState(0);
+  const [currentPlayer,setCurrentPlayer]=useState(0);
+  const [pendingTrumpPick,setPendingTrumpPick]=useState(false);
   const [sel,setSel]=useState(null);
   const [scores,setScores]=useState({a:0,b:0});
-  const [mode,setMode]=useState('hokum');
-  const [win,setWin]=useState(false);
   const [toast,setToast]=useState(null);
+  const [roundResult,setRoundResult]=useState(null);
+  const [showShare,setShowShare]=useState(false);
   const tn=useRef(0);
+  const gameOverAppliedRef=useRef(false);
   const showT=msg=>{tn.current++;setToast({msg,k:tn.current});setTimeout(()=>setToast(null),2400);};
 
-  const play=(e,card,idx)=>{
+  const newHand=(dlr)=>{
+    const {h0,h1,h2,h3}=dealHands(shuffle(buildDeck()));
+    setHands([h0,h1,h2,h3]);
+    setDealtNonce(n=>n+1);
+    setTrickPlays([]);
+    setTricksWon(0);
+    setRoundScores([0,0]);
+    setContract(null);
+    setPassCount(0);
+    setPendingTrumpPick(false);
+    setSel(null);
+    setCurrentBidder((dlr+1)%4);
+    setPhase('bidding');
+    sounds.deal();
+  };
+
+  const handleBid=(seat,bid)=>{
+    if(bid.type==='pass'){
+      showT(`${players[seat].name}: پاس`);
+      const np=passCount+1;
+      if(np>=4){showT('الكل مرر — توزيع جديد 🃏');const nd=(dealer+1)%4;setDealer(nd);newHand(nd);return;}
+      setPassCount(np);
+      setCurrentBidder((seat+1)%4);
+    }else{
+      const bidTeam=seatTeam(seat);
+      setContract({type:bid.type,trump:bid.trump||null,bidTeam,bidderSeat:seat});
+      const suitInfo=bid.trump?CARD_SUITS.find(s=>s.symbol===bid.trump):null;
+      showT(bid.type==='sun'?`${players[seat].name}: صن ☀️`:`${players[seat].name}: حكم ${suitInfo?.symbol||''}`);
+      setCurrentPlayer((dealer+1)%4);
+      setPhase('playing');
+    }
+  };
+
+  useEffect(()=>{
+    if(phase!=='bidding'||currentBidder===0||pendingTrumpPick)return;
+    const t=setTimeout(()=>{handleBid(currentBidder,botBid(hands[currentBidder],passCount));},900);
+    return()=>clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  },[phase,currentBidder,passCount,pendingTrumpPick]);
+
+  const playCard=(seat,card,rect)=>{
+    if(rect)spawnParticles(rect.left+27,rect.top+39);
+    setHands(hs=>hs.map((h,i)=>i===seat?h.filter(c=>c.id!==card.id):h));
+    setTrickPlays(tp=>[...tp,{seat,card}]);
+    setCurrentPlayer((seat+1)%4);
+    setSel(null);
+    sounds.play();
+  };
+
+  useEffect(()=>{
+    if(phase!=='playing'||currentPlayer===0||trickPlays.length>=4)return;
+    const t=setTimeout(()=>{
+      const hand=hands[currentPlayer];
+      const card=botPickCard(hand,trickPlays,contract.type,contract.trump);
+      playCard(currentPlayer,card,null);
+    },850);
+    return()=>clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  },[phase,currentPlayer,trickPlays]);
+
+  useEffect(()=>{
+    if(phase!=='playing'||trickPlays.length<4)return;
+    const t=setTimeout(()=>{
+      const winnerPlay=trickWinner(trickPlays,contract.type,contract.trump);
+      const trickValue=trickPlays.reduce((s,p)=>s+cardValue(p.card,contract.type,contract.trump),0);
+      const wTeam=seatTeam(winnerPlay.seat);
+      const newRoundScores=[...roundScores];newRoundScores[wTeam]+=trickValue;
+      setRoundScores(newRoundScores);
+      showT(`${players[winnerPlay.seat].name} أخذ الضربة (+${trickValue}) 🏆`);
+      sounds.win();
+      const nt=tricksWon+1;
+      setTricksWon(nt);
+      setTrickPlays([]);
+      if(nt>=8){
+        const result=calcResult(newRoundScores,contract);
+        setScores(s=>{
+          const bidKey=TEAM_KEY[contract.bidTeam],oppKey=TEAM_KEY[1-contract.bidTeam];
+          return {...s,[bidKey]:s[bidKey]+result.bidTeamFinal,[oppKey]:s[oppKey]+result.oppTeamFinal};
+        });
+        setRoundResult(result);
+        if(result.isGahwa)sounds.gahwa();
+        setPhase('roundEnd');
+      }else{
+        setCurrentPlayer(winnerPlay.seat);
+      }
+    },1100);
+    return()=>clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  },[trickPlays,phase]);
+
+  useEffect(()=>{
+    if(phase!=='gameOver'||gameOverAppliedRef.current)return;
+    gameOverAppliedRef.current=true;
+    const humanWon=scores.a>=scores.b;
+    const coinDelta=humanWon?50:10;
+    (async()=>{try{await updateDoc(doc(db,'users',profile.uid),{wins:increment(humanWon?1:0),losses:increment(humanWon?0:1),coins:increment(coinDelta)});}catch{/* ignore */}})();
+    onProfileUpdate&&onProfileUpdate({wins:(profile.wins||0)+(humanWon?1:0),losses:(profile.losses||0)+(humanWon?0:1),coins:(profile.coins||0)+coinDelta});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  },[phase]);
+
+  const continueRound=()=>{
+    setRoundResult(null);
+    if(scores.a>=152||scores.b>=152){setPhase('gameOver');return;}
+    const nd=(dealer+1)%4;setDealer(nd);newHand(nd);
+  };
+
+  const onCardClick=(e,card,idx)=>{
+    if(phase!=='playing'||currentPlayer!==0||trickPlays.length>=4)return;
+    const ledSuit=trickPlays.length?trickPlays[0].card.suit.symbol:null;
+    const hasLed=ledSuit?hands[0].some(c=>c.suit.symbol===ledSuit):false;
+    if(ledSuit&&hasLed&&card.suit.symbol!==ledSuit)return;
     if(sel!==idx){setSel(idx);return;}
     const r=e.currentTarget.getBoundingClientRect();
-    spawnParticles(r.left+28,r.top+40);
-    setHand(h=>h.filter((_,i)=>i!==idx));
-    setTrick(t=>[...t,card]);
-    setSel(null);showT('أحسنت! 🎯');
+    playCard(0,card,r);
   };
 
-  const take=()=>{
-    setScores(s=>({...s,a:s.a+10}));
-    setTrick([]);showT('فزت بالضربة! ✨');
-    if(scores.a+10>=152)setTimeout(()=>setWin(true),400);
+  const humanBid=type=>{
+    if(type==='hokum'){setPendingTrumpPick(true);return;}
+    handleBid(0,{type});
   };
+  const pickTrump=suit=>{setPendingTrumpPick(false);handleBid(0,{type:'hokum',trump:suit.symbol,trumpName:suit.name});};
 
-  const players=[{name:profile.name,avatar:profile.avatar},{name:'محمد',avatar:'👲'},{name:'عبدالله',avatar:'🧔'},{name:'سعد',avatar:'🤴'}];
+  const hand=hands[0]||[];
+  const ledSuit=trickPlays.length?trickPlays[0].card.suit.symbol:null;
+  const hasLed=ledSuit?hand.some(c=>c.suit.symbol===ledSuit):false;
+  const isPlayable=card=>phase==='playing'&&currentPlayer===0&&trickPlays.length<4&&(!ledSuit||!hasLed||card.suit.symbol===ledSuit);
+
+  const trumpInfo=contract?.trump?CARD_SUITS.find(s=>s.symbol===contract.trump):null;
+  const winnerLabel=scores.a>=scores.b?'أ':'ب';
 
   return(
     <div style={{width:'100%',height:'100%',background:'radial-gradient(ellipse 90% 70% at 50% 50%,#0F2A14,#07090A)',position:'relative',overflow:'hidden',display:'flex',alignItems:'center',justifyContent:'center',fontFamily:'Tajawal,sans-serif',direction:'rtl'}}>
-      {toast&&<div key={toast.k} style={{position:'fixed',top:'calc(env(safe-area-inset-top,0px)+12px)',left:'50%',transform:'translateX(-50%)',background:'rgba(8,12,10,.95)',border:'1px solid #7A5B1A',borderRadius:10,padding:'9px 18px',fontSize:13,fontWeight:700,color:'#F0C040',whiteSpace:'nowrap',zIndex:9000,pointerEvents:'none',animation:'fadeUp .35s ease both'}}>{toast.msg}</div>}
+      {toast&&<div key={toast.k} style={{position:'fixed',top:'calc(env(safe-area-inset-top,0px) + 12px)',left:'50%',transform:'translateX(-50%)',background:'rgba(8,12,10,.95)',border:'1px solid #7A5B1A',borderRadius:10,padding:'9px 18px',fontSize:13,fontWeight:700,color:'#F0C040',whiteSpace:'nowrap',zIndex:9000,pointerEvents:'none',animation:'fadeUp .35s ease both'}}>{toast.msg}</div>}
 
-      {/* Rings */}
       <div style={{position:'absolute',top:'50%',left:'50%',transform:'translate(-50%,-50%)',width:'min(82vw,320px)',height:'min(82vw,320px)',borderRadius:'50%',border:'1px solid rgba(240,192,64,.15)',pointerEvents:'none',zIndex:1,animation:'spin 60s linear infinite'}}/>
       <div style={{position:'absolute',top:'50%',left:'50%',transform:'translate(-50%,-50%)',width:'min(65vw,260px)',height:'min(65vw,260px)',borderRadius:'50%',border:'1px dashed rgba(240,192,64,.08)',pointerEvents:'none',zIndex:1,animation:'spin 40s linear infinite reverse'}}/>
 
-      {/* Header */}
-      <div style={{position:'absolute',top:'calc(env(safe-area-inset-top,0px)+8px)',left:0,right:0,display:'flex',alignItems:'center',justifyContent:'space-between',padding:'0 10px',zIndex:20}}>
+      <div style={{position:'absolute',top:'calc(env(safe-area-inset-top,0px) + 8px)',left:0,right:0,display:'flex',alignItems:'center',justifyContent:'space-between',padding:'0 10px',zIndex:20}}>
         <button onClick={onExit} style={{...G.btn,background:'rgba(255,255,255,.08)',color:'rgba(240,237,229,.7)',border:'1px solid rgba(255,255,255,.1)',fontSize:11,padding:'5px 10px'}}>خروج</button>
-        <div style={{display:'flex',gap:6}}>
-          {['hokum','sun'].map(m=>(
-            <div key={m} onClick={()=>setMode(m)} style={{padding:'4px 12px',borderRadius:20,fontSize:11,fontWeight:700,cursor:'pointer',border:`1.5px solid ${mode===m?'#F0C040':'rgba(240,192,64,.25)'}`,background:mode===m?'rgba(240,192,64,.12)':'transparent',color:mode===m?'#F0C040':'rgba(240,192,64,.4)',touchAction:'manipulation'}}>
-              {m==='hokum'?'حكم':'صن'}
-            </div>
-          ))}
+        <div style={{padding:'5px 14px',borderRadius:20,fontSize:12,fontWeight:700,border:'1.5px solid rgba(240,192,64,.3)',background:'rgba(240,192,64,.08)',color:'#F0C040',display:'flex',alignItems:'center',gap:6}}>
+          {phase==='bidding'?<span style={{animation:'fadeUp .3s'}}>🗣️ مزايدة</span>:
+           contract?.type==='sun'?<span>☀️ صن</span>:
+           contract?trumpInfo&&<span style={{color:trumpInfo.color==='#0A0F0A'?'#F0C040':'#e08'}}>حكم {trumpInfo.symbol}</span>:
+           <span>—</span>}
         </div>
         <div style={{background:'rgba(10,14,12,.8)',border:'1px solid rgba(240,192,64,.18)',borderRadius:10,padding:'4px 10px',fontSize:13,fontWeight:900}}>
           <span style={G.gold}>{scores.a}</span><span style={G.dim}> — </span><span style={G.gold}>{scores.b}</span>
         </div>
       </div>
 
-      {/* Top player */}
-      <div style={{position:'absolute',top:'calc(env(safe-area-inset-top,0px)+54px)',left:'50%',transform:'translateX(-50%)',display:'flex',flexDirection:'column',alignItems:'center',gap:3,zIndex:10}}>
-        <div style={{width:38,height:38,borderRadius:'50%',border:'2px solid #7A5B1A',background:'rgba(16,26,18,.9)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:18}}>{players[2].avatar}</div>
-        <span style={{color:'rgba(240,237,229,.6)',fontSize:10,fontWeight:700}}>{players[2].name}</span>
-        <div style={{display:'flex'}}>{[0,1,2,3].map(i=><div key={i} style={{width:16,height:24,borderRadius:3,background:'linear-gradient(135deg,#0D5C2A,#1A3D20)',border:'1px solid rgba(240,192,64,.2)',marginRight:-6,transform:`rotate(${(i-1.5)*5}deg)`}}/>)}</div>
-      </div>
-
-      {/* Left player */}
-      <div style={{position:'absolute',left:8,top:'50%',transform:'translateY(-50%)',display:'flex',flexDirection:'column',alignItems:'center',gap:3,zIndex:10}}>
-        <div style={{width:38,height:38,borderRadius:'50%',border:'2px solid #7A5B1A',background:'rgba(16,26,18,.9)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:18}}>{players[1].avatar}</div>
-        <span style={{color:'rgba(240,237,229,.6)',fontSize:10,fontWeight:700}}>{players[1].name}</span>
-      </div>
-
-      {/* Right player */}
-      <div style={{position:'absolute',right:8,top:'50%',transform:'translateY(-50%)',display:'flex',flexDirection:'column',alignItems:'center',gap:3,zIndex:10}}>
-        <div style={{width:38,height:38,borderRadius:'50%',border:'2px solid #7A5B1A',background:'rgba(16,26,18,.9)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:18}}>{players[3].avatar}</div>
-        <span style={{color:'rgba(240,237,229,.6)',fontSize:10,fontWeight:700}}>{players[3].name}</span>
-      </div>
-
-      {/* Trump */}
-      <div style={{position:'absolute',top:'50%',right:10,transform:'translateY(-50%)',zIndex:20,display:'flex',flexDirection:'column',alignItems:'center',gap:3,background:'rgba(10,14,12,.7)',border:'1px solid rgba(240,192,64,.18)',borderRadius:10,padding:'6px 8px'}}>
-        <span style={{fontSize:9,color:'rgba(240,237,229,.5)',fontWeight:700}}>الكوز</span>
-        <span style={{fontSize:26,filter:'drop-shadow(0 0 8px rgba(240,192,64,.5))'}}>♠</span>
-      </div>
-
-      {/* Trick center */}
-      <div style={{position:'relative',width:190,height:150,zIndex:20}}>
-        {trick.map((c,i)=>(
-          <div key={i} style={{...G.card,top:[18,42,10,36][i%4],left:[34,16,54,30][i%4]+'%',transform:`rotate(${[-8,5,-3,10][i%4]}deg)`,zIndex:i+1}}>
-            <span style={{fontFamily:"'Scheherazade New',serif",fontSize:15,fontWeight:700,color:SCOLOR[c.s],alignSelf:'flex-start',lineHeight:1}}>{RANKSAR[c.r]}</span>
-            <span style={{fontSize:20,color:SCOLOR[c.s],lineHeight:1}}>{SUITS[c.s]}</span>
-            <span style={{fontFamily:"'Scheherazade New',serif",fontSize:15,fontWeight:700,color:SCOLOR[c.s],alignSelf:'flex-end',transform:'rotate(180deg)',lineHeight:1}}>{RANKSAR[c.r]}</span>
+      {[2,1,3].map(seat=>{
+        const pos=seat===2?{top:'calc(env(safe-area-inset-top,0px) + 54px)',left:'50%',transform:'translateX(-50%)'}:seat===1?{left:8,top:'50%',transform:'translateY(-50%)'}:{right:8,top:'50%',transform:'translateY(-50%)'};
+        const active=(phase==='bidding'&&currentBidder===seat)||(phase==='playing'&&currentPlayer===seat);
+        return(
+          <div key={seat} style={{position:'absolute',...pos,display:'flex',flexDirection:'column',alignItems:'center',gap:3,zIndex:10}}>
+            <div style={{width:38,height:38,borderRadius:'50%',border:`2px solid ${active?'#F0C040':'#7A5B1A'}`,background:'rgba(16,26,18,.9)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:18,animation:active?'turnGlow 1.1s ease-in-out infinite':'none'}}>{players[seat].avatar}</div>
+            <span style={{color:active?'#F0C040':'rgba(240,237,229,.6)',fontSize:10,fontWeight:700}}>{players[seat].name}</span>
+            {active&&<span style={{color:'rgba(240,192,64,.7)',fontSize:9}}>{phase==='bidding'?'يزايد…':'يفكر…'}</span>}
+            {phase==='playing'&&!active&&<div style={{fontSize:9,color:'rgba(240,237,229,.35)'}}>🂠×{hands[seat]?.length||0}</div>}
           </div>
-        ))}
-        {trick.length===0&&<div style={{position:'absolute',top:'50%',left:'50%',transform:'translate(-50%,-50%)',color:'rgba(240,237,229,.35)',fontSize:11,fontWeight:600,whiteSpace:'nowrap'}}>دورك أنت</div>}
-        {trick.length>=4&&<button onClick={take} style={{...G.btn,position:'absolute',bottom:-42,left:'50%',transform:'translateX(-50%)',background:'linear-gradient(135deg,#8B6914,#F0C040)',color:'#07090A',fontSize:12,padding:'7px 14px',whiteSpace:'nowrap',zIndex:30}}>خذ الضربة 🏆</button>}
+        );
+      })}
+
+      <div style={{position:'absolute',top:'calc(env(safe-area-inset-top,0px) + 58px)',right:8,zIndex:20,display:'flex',flexDirection:'column',alignItems:'center',gap:3,background:'rgba(10,14,12,.7)',border:'1px solid rgba(240,192,64,.18)',borderRadius:10,padding:'6px 8px'}}>
+        <span style={{fontSize:9,color:'rgba(240,237,229,.5)',fontWeight:700}}>الكوز</span>
+        <span style={{fontSize:26,filter:'drop-shadow(0 0 8px rgba(240,192,64,.5))',color:trumpInfo?(trumpInfo.isRed?'#E74C3C':'#F0EDE5'):'rgba(240,237,229,.3)'}}>{contract?.type==='sun'?'☀️':trumpInfo?trumpInfo.symbol:'?'}</span>
       </div>
 
-      {/* Action bar */}
-      <div style={{position:'absolute',bottom:'calc(env(safe-area-inset-bottom,0px)+116px)',left:0,right:0,display:'flex',justifyContent:'center',gap:8,zIndex:35,padding:'0 10px'}}>
-        <button onClick={()=>{setHand(mkDeck().slice(0,8));setTrick([]);setSel(null);showT('توزيع جديد 🃏');}} style={{...G.btn,background:'rgba(255,255,255,.08)',color:'rgba(240,237,229,.7)',border:'1px solid rgba(255,255,255,.1)',fontSize:12,padding:'7px 13px'}}>توزيع 🃏</button>
-        <button onClick={()=>setWin(true)} style={{...G.btn,background:'linear-gradient(135deg,#8B6914,#F0C040)',color:'#07090A',fontSize:12,padding:'7px 13px'}}>نهاية 🏆</button>
-      </div>
+      {phase==='playing'&&(
+        <div style={{position:'relative',width:190,height:150,zIndex:20}}>
+          {trickPlays.map((p,i)=>{
+            const pos=SEAT_POS[p.seat];
+            return(
+              <div key={p.card.id} style={{...G.card,top:pos.top,left:pos.left+'%',transform:`rotate(${pos.rot}deg)`,zIndex:i+1,animation:'popIn .3s ease both'}}>
+                <span style={{fontFamily:"'Scheherazade New',serif",fontSize:15,fontWeight:700,color:p.card.suit.color,alignSelf:'flex-start',lineHeight:1}}>{RANKAR[p.card.rank.symbol]}</span>
+                <span style={{fontSize:20,color:p.card.suit.color,lineHeight:1}}>{p.card.suit.symbol}</span>
+                <span style={{fontFamily:"'Scheherazade New',serif",fontSize:15,fontWeight:700,color:p.card.suit.color,alignSelf:'flex-end',transform:'rotate(180deg)',lineHeight:1}}>{RANKAR[p.card.rank.symbol]}</span>
+              </div>
+            );
+          })}
+          {trickPlays.length===0&&<div style={{position:'absolute',top:'50%',left:'50%',transform:'translate(-50%,-50%)',color:'rgba(240,237,229,.35)',fontSize:11,fontWeight:600,whiteSpace:'nowrap'}}>{currentPlayer===0?'دورك أنت':`دور ${players[currentPlayer].name}`}</div>}
+        </div>
+      )}
 
-      {/* Hand */}
-      <div style={{position:'absolute',bottom:'calc(env(safe-area-inset-bottom,0px)+8px)',left:0,right:0,height:106,zIndex:30,display:'flex',justifyContent:'center',alignItems:'flex-end'}}>
+      {phase==='bidding'&&currentBidder===0&&(
+        <div style={{...G.panel,position:'absolute',bottom:'calc(env(safe-area-inset-bottom,0px) + 124px)',width:'min(88vw,320px)',zIndex:40,animation:'popIn .3s ease both'}}>
+          {!pendingTrumpPick?(
+            <>
+              <div style={{textAlign:'center',fontSize:13,fontWeight:900,color:'#F0C040',marginBottom:12}}>دورك للمزايدة 🗣️</div>
+              <div style={{display:'flex',gap:8}}>
+                <button onClick={()=>humanBid('hokum')} style={{...G.btn,flex:1,background:'linear-gradient(135deg,#8B6914,#F0C040)',color:'#07090A',fontSize:13,padding:'11px 6px'}}>حكم</button>
+                <button onClick={()=>humanBid('sun')} style={{...G.btn,flex:1,background:'linear-gradient(135deg,#B8860B,#FFD166)',color:'#07090A',fontSize:13,padding:'11px 6px'}}>☀️ صن</button>
+                <button onClick={()=>humanBid('pass')} style={{...G.btn,flex:1,background:'rgba(255,255,255,.08)',color:'rgba(240,237,229,.7)',border:'1px solid rgba(255,255,255,.1)',fontSize:13,padding:'11px 6px'}}>پاس</button>
+              </div>
+            </>
+          ):(
+            <>
+              <div style={{textAlign:'center',fontSize:13,fontWeight:900,color:'#F0C040',marginBottom:12}}>اختر لون الحكم</div>
+              <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}}>
+                {CARD_SUITS.map(s=>(
+                  <button key={s.symbol} onClick={()=>pickTrump(s)} style={{...G.btn,display:'flex',alignItems:'center',justifyContent:'center',gap:8,background:'rgba(255,255,255,.06)',border:`1.5px solid ${s.isRed?'#c0392b':'#666'}`,color:s.isRed?'#E74C3C':'#F0EDE5',fontSize:13,padding:'11px 6px'}}>
+                    <span style={{fontSize:20}}>{s.symbol}</span>{s.name}
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+      )}
+
+      <div key={dealtNonce} style={{position:'absolute',bottom:'calc(env(safe-area-inset-bottom,0px) + 8px)',left:0,right:0,height:106,zIndex:30,display:'flex',justifyContent:'center',alignItems:'flex-end'}}>
         {hand.map((card,i)=>{
-          const n=hand.length,sp=Math.min(27,200/Math.max(n,1)),off=(i-(n-1)/2)*sp,rot=(i-(n-1)/2)*3.5,lft=Math.abs(i-(n-1)/2)*1.5,iS=sel===i;
+          const n=hand.length,sp=Math.min(27,200/Math.max(n,1)),off=(i-(n-1)/2)*sp,rot=(i-(n-1)/2)*3.5,lft=Math.abs(i-(n-1)/2)*1.5,iS=sel===i,playable=isPlayable(card);
           return(
-            <div key={i} onClick={e=>play(e,card,i)} style={{...G.card,left:`calc(50% + ${off}px - 27px)`,transform:`rotate(${rot}deg) translateY(${iS?-26:lft}px) scale(${iS?1.07:1})`,zIndex:iS?90:i+1,border:`1px solid ${iS?'#2ECC71':'rgba(0,0,0,.12)'}`,boxShadow:iS?'0 0 0 2px rgba(46,204,113,.35),0 8px 22px rgba(0,0,0,.7)':'0 8px 22px rgba(0,0,0,.65)',transition:'transform .25s cubic-bezier(.34,1.56,.64,1),box-shadow .2s,border-color .2s'}}>
-              <span style={{fontFamily:"'Scheherazade New',serif",fontSize:15,fontWeight:700,color:SCOLOR[card.s],alignSelf:'flex-start',lineHeight:1}}>{RANKSAR[card.r]}</span>
-              <span style={{fontSize:20,color:SCOLOR[card.s],lineHeight:1}}>{SUITS[card.s]}</span>
-              <span style={{fontFamily:"'Scheherazade New',serif",fontSize:15,fontWeight:700,color:SCOLOR[card.s],alignSelf:'flex-end',transform:'rotate(180deg)',lineHeight:1}}>{RANKSAR[card.r]}</span>
+            <div key={card.id} onClick={e=>onCardClick(e,card,i)} style={{...G.card,left:`calc(50% + ${off}px - 27px)`,transform:`rotate(${rot}deg) translateY(${iS?-26:lft}px) scale(${iS?1.07:1})`,zIndex:iS?90:i+1,border:`1px solid ${iS?'#2ECC71':'rgba(0,0,0,.12)'}`,boxShadow:iS?'0 0 0 2px rgba(46,204,113,.35),0 8px 22px rgba(0,0,0,.7)':'0 8px 22px rgba(0,0,0,.65)',opacity:phase==='playing'&&!playable?.4:1,filter:phase==='playing'&&!playable?'grayscale(.5)':'none',cursor:phase==='playing'&&!playable?'default':'pointer',transition:'transform .25s cubic-bezier(.34,1.56,.64,1),box-shadow .2s,border-color .2s,opacity .2s',animation:`dealIn .4s ${i*0.05}s ease both`}}>
+              <span style={{fontFamily:"'Scheherazade New',serif",fontSize:15,fontWeight:700,color:card.suit.color,alignSelf:'flex-start',lineHeight:1}}>{RANKAR[card.rank.symbol]}</span>
+              <span style={{fontSize:20,color:card.suit.color,lineHeight:1}}>{card.suit.symbol}</span>
+              <span style={{fontFamily:"'Scheherazade New',serif",fontSize:15,fontWeight:700,color:card.suit.color,alignSelf:'flex-end',transform:'rotate(180deg)',lineHeight:1}}>{RANKAR[card.rank.symbol]}</span>
             </div>
           );
         })}
       </div>
 
-      {/* Win overlay */}
-      {win&&(
+      {phase==='roundEnd'&&roundResult&&(
+        <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,.85)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:500,padding:20}}>
+          <div style={{...G.panel,textAlign:'center',width:'100%',maxWidth:320,animation:'popIn .4s cubic-bezier(.34,1.56,.64,1)'}}>
+            <div style={{fontSize:48,marginBottom:6}}>{roundResult.isGahwa?'☕':roundResult.made?'✅':'❌'}</div>
+            <div style={{fontFamily:"'Scheherazade New',serif",fontSize:22,color:'#F0C040',marginBottom:10}}>{roundResult.reason}</div>
+            <div style={{display:'flex',justifyContent:'center',gap:28,margin:'12px 0 18px'}}>
+              {[['أ',scores.a],['ب',scores.b]].map(([t,v])=>(
+                <div key={t} style={{display:'flex',flexDirection:'column',alignItems:'center',gap:2}}>
+                  <span style={{fontSize:30,fontWeight:900,color:'#F0C040',lineHeight:1}}>{v}</span>
+                  <span style={{color:'rgba(240,237,229,.6)',fontSize:11}}>الفريق {t}</span>
+                </div>
+              ))}
+            </div>
+            <button onClick={continueRound} style={{...G.btn,width:'100%',padding:13,fontSize:15,background:'linear-gradient(135deg,#8B6914,#F0C040)',color:'#07090A'}}>{scores.a>=152||scores.b>=152?'عرض النتيجة 🏆':'الجولة التالية ▶'}</button>
+          </div>
+        </div>
+      )}
+
+      {phase==='gameOver'&&(
         <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,.88)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:500,padding:20}}>
           <div style={{background:'radial-gradient(ellipse at top,#1A3D20,#0C1410)',border:'1px solid #F0C040',borderRadius:22,padding:'34px 26px',textAlign:'center',boxShadow:'0 0 40px rgba(240,192,64,.25),0 50px 100px rgba(0,0,0,.9)',width:'100%',maxWidth:320,animation:'popIn .5s cubic-bezier(.34,1.56,.64,1)'}}>
             <div style={{fontSize:58}}>🏆</div>
-            <div style={{fontFamily:"'Scheherazade New',serif",fontSize:28,color:'#F0C040',margin:'10px 0 5px'}}>الفريق أ يفوز!</div>
+            <div style={{fontFamily:"'Scheherazade New',serif",fontSize:28,color:'#F0C040',margin:'10px 0 5px'}}>الفريق {winnerLabel} يفوز!</div>
             <div style={{color:'rgba(240,237,229,.6)',fontSize:13}}>وصلتم إلى ١٥٢ نقطة</div>
             <div style={{display:'flex',justifyContent:'center',gap:28,margin:'18px 0'}}>
               {[['أ',scores.a,'#F0C040'],['ب',scores.b,'rgba(240,237,229,.4)']].map(([t,v,c])=>(
@@ -383,17 +580,22 @@ function GameScreen({profile,onExit}){
                 </div>
               ))}
             </div>
-            <button onClick={()=>{setWin(false);onExit();}} style={{...G.btn,width:'100%',padding:13,fontSize:15,background:'linear-gradient(135deg,#8B6914,#F0C040)',color:'#07090A'}}>العب مجدداً</button>
+            <div style={{display:'flex',gap:8}}>
+              <button onClick={()=>setShowShare(true)} style={{...G.btn,flex:1,background:'rgba(255,255,255,.08)',color:'rgba(240,237,229,.8)',border:'1px solid rgba(255,255,255,.12)',fontSize:13}}>مشاركة 📱</button>
+              <button onClick={onExit} style={{...G.btn,flex:2,padding:13,fontSize:15,background:'linear-gradient(135deg,#8B6914,#F0C040)',color:'#07090A'}}>العب مجدداً</button>
+            </div>
           </div>
         </div>
       )}
+
+      {showShare&&<ShareScoreCard winner={winnerLabel==='أ'?0:1} loser={winnerLabel==='أ'?1:0} winnerScore={Math.max(scores.a,scores.b)} loserScore={Math.min(scores.a,scores.b)} isGahwa={roundResult?.isGahwa} onClose={()=>setShowShare(false)}/>}
     </div>
   );
 }
 
 function LeaderScreen(){
   const [players,setPlayers]=useState([{id:'1',name:'أبو عبدالله',avatar:'🧔',city:'الرياض',wins:247},{id:'2',name:'محمد الغامدي',avatar:'👲',city:'جدة',wins:198},{id:'3',name:'سعد العتيبي',avatar:'🤴',city:'الدمام',wins:187},{id:'4',name:'فهد القحطاني',avatar:'🧙',city:'مكة',wins:156},{id:'5',name:'عبدالرحمن',avatar:'👨‍💼',city:'المدينة',wins:143}]);
-  useEffect(()=>{(async()=>{try{const q=query(collection(db,'users'),orderBy('wins','desc'),limit(20));const s=await getDocs(q);if(s.docs.length)setPlayers(s.docs.map(d=>({id:d.id,...d.data()})));}catch{}})();},[]);
+  useEffect(()=>{(async()=>{try{const q=query(collection(db,'users'),orderBy('wins','desc'),limit(20));const s=await getDocs(q);if(s.docs.length)setPlayers(s.docs.map(d=>({id:d.id,...d.data()})));}catch{/* ignore */}})();},[]);
   const ri=i=>i===0?'🥇':i===1?'🥈':i===2?'🥉':String(i+1);
   const rc=i=>i===0?'#FFD700':i===1?'#C0C0C0':i===2?'#CD7F32':'rgba(240,237,229,.55)';
   return(
@@ -437,24 +639,6 @@ function StoreScreen({profile}){
           </div>
         ))}
       </div>
-    </div>
-  );
-}
-
-function FriendScreen(){
-  const friends=[{n:'محمد الغامدي',a:'👲',c:'جدة',s:'متصل',sc:'#2ECC71'},{n:'سعد العتيبي',a:'🤴',c:'الدمام',s:'في لعبة',sc:'#F0C040'},{n:'فهد القحطاني',a:'🧙',c:'مكة',s:'غير متصل',sc:'#666'},{n:'خالد الزهراني',a:'🦸',c:'تبوك',s:'متصل',sc:'#2ECC71'}];
-  return(
-    <div style={{position:'absolute',inset:0,overflowY:'auto',WebkitOverflowScrolling:'touch',paddingBottom:'calc(60px + env(safe-area-inset-bottom,0px) + 12px)',paddingTop:'env(safe-area-inset-top,0px)'}}>
-      <div style={{padding:'16px 14px 8px',textAlign:'center'}}><div style={{fontFamily:"'Scheherazade New',serif",fontSize:22,color:'#F0C040'}}>👥 أصدقاء</div></div>
-      <div style={{padding:'0 12px 12px'}}><input style={G.input} placeholder="🔍 ابحث عن صديق..."/></div>
-      <div style={{height:1,background:'rgba(255,255,255,.07)',margin:'0 14px'}}/>
-      {friends.map((f,i)=>(
-        <div key={i} style={{display:'flex',alignItems:'center',gap:10,padding:'12px 14px',borderBottom:'1px solid rgba(255,255,255,.06)'}}>
-          <span style={{fontSize:28}}>{f.a}</span>
-          <div style={{flex:1,minWidth:0}}><div style={{fontSize:13,fontWeight:700}}>{f.n}</div><div style={{fontSize:10,color:f.sc}}>{f.s}</div></div>
-          {f.s==='متصل'&&<button style={{...G.btn,background:'linear-gradient(135deg,#1A5C28,#2ECC71)',color:'#fff',padding:'7px 14px',fontSize:12}}>دعوة</button>}
-        </div>
-      ))}
     </div>
   );
 }
