@@ -64,6 +64,21 @@ service cloud.firestore {
       allow read, write: if signedIn();
     }
 
+    // Match telemetry: append-only from clients; only the anti-collusion
+    // agent (Admin SDK, bypasses rules) and admins read it back.
+    match /matches/{id} {
+      allow create: if signedIn();
+      allow read: if isAdmin();
+      allow update, delete: if false;
+    }
+
+    // Anti-collusion flags: written only by the scan agent (Admin SDK),
+    // readable only by admins.
+    match /flags/{id} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+
     // Deny everything not matched above.
     match /{document=**} {
       allow read, write: if false;

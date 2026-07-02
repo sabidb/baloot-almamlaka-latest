@@ -1,12 +1,14 @@
 import { useState, useEffect, useRef } from 'react';
-import { doc, getDoc, setDoc, updateDoc, increment, collection, orderBy, limit, getDocs, query, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc, increment, collection, addDoc, orderBy, where, limit, getDocs, query, serverTimestamp } from 'firebase/firestore';
 import { db } from './firebase';
 import { listenAuth, signInGoogle, signOutUser } from './auth';
-import { SUITS as CARD_SUITS, buildDeck, shuffle, dealHands, cardValue, trickWinner, calcResult, botPickCard, botBid, sounds } from './GameLogic';
+import { SUITS as CARD_SUITS, STORE_ITEMS, buildDeck, shuffle, dealHands, cardValue, trickWinner, calcResult, botPickCard, botBid, sounds, haptics, getThemeStyles } from './GameLogic';
+import { ReactionBar } from './Reactions';
 import OnboardingTutorial, { ShareScoreCard } from './Onboarding';
 import { FriendSystem, NotificationCenter, DailyRewardPopup } from './Social';
 import TournamentScreen from './Tournament';
 import AdminPanel from './AdminPanel';
+import MultiplayerScreen from './MultiplayerGame';
 
 const AVATARS = ['🧔','👲','🧕','👨‍💼','👩‍💼','🤴','👸','🧙','🦸','🎩'];
 const CITIES  = ['الرياض','جدة','مكة','المدينة','الدمام','الخبر','أبها','تبوك','حائل','القصيم'];
@@ -42,6 +44,7 @@ export default function App(){
   const [loading,setLoading]=useState(true);
   const [tab,setTab]=useState('home');
   const [inGame,setInGame]=useState(false);
+  const [mpMode,setMpMode]=useState(null); // 'create'|'join'|'quick'
   const [inTournament,setInTournament]=useState(false);
   const [showOnboarding,setShowOnboarding]=useState(false);
   const [showAdmin,setShowAdmin]=useState(false);
@@ -62,6 +65,7 @@ export default function App(){
       @keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}
       @keyframes flyToCenter{from{opacity:1}to{opacity:0;transform:translate(var(--wx),var(--wy)) scale(.5)}}
       @keyframes ellipsis{0%{content:'.'}33%{content:'..'}66%{content:'...'}}
+      @keyframes reactFloat{0%{opacity:0;transform:translateY(0) scale(.5)}15%{opacity:1;transform:translateY(-20px) scale(1.3)}100%{opacity:0;transform:translateY(-130px) scale(1)}}
       select option{background:#0C1410}
     `;
     document.head.appendChild(style);
@@ -75,6 +79,8 @@ export default function App(){
           try{
             const snap=await getDoc(doc(db,'users',user.uid));
             setProfile(snap.exists()?{uid:user.uid,...snap.data()}:null);
+            // Heartbeat for the rank-decay agent (fire-and-forget).
+            if(snap.exists())updateDoc(doc(db,'users',user.uid),{lastActive:Date.now()}).catch(()=>{});
           }catch{setProfile(null);}
         }else{setProfile(null);}
         setLoading(false);
@@ -116,6 +122,12 @@ export default function App(){
     </div>
   );
 
+  if(mpMode)return(
+    <div style={{height:'100dvh',overflow:'hidden'}}>
+      <MultiplayerScreen profile={profile} mode={mpMode} onExit={()=>{setMpMode(null);setTab('home');}} onProfileUpdate={patch=>setProfile(p=>({...p,...patch}))}/>
+    </div>
+  );
+
   if(inGame)return(
     <div style={{height:'100dvh',overflow:'hidden'}}>
       <GameScreen profile={profile} onExit={()=>{setInGame(false);setTab('home');}} onProfileUpdate={patch=>setProfile(p=>({...p,...patch}))}/>
@@ -127,9 +139,9 @@ export default function App(){
   return(
     <div style={{height:'100dvh',display:'flex',flexDirection:'column',background:'#07090A',fontFamily:'Tajawal,sans-serif',color:'#F0EDE5',direction:'rtl',overflow:'hidden'}}>
       <div style={{flex:1,overflow:'hidden',position:'relative'}}>
-        {tab==='home'    &&<HomeScreen    profile={profile} onGame={()=>setInGame(true)} onTournament={()=>setInTournament(true)} onAdmin={()=>setShowAdmin(true)}/>}
+        {tab==='home'    &&<HomeScreen    profile={profile} onGame={()=>setInGame(true)} onMultiplayer={setMpMode} onTournament={()=>setInTournament(true)} onAdmin={()=>setShowAdmin(true)}/>}
         {tab==='board'   &&<LeaderScreen/>}
-        {tab==='store'   &&<StoreScreen   profile={profile}/>}
+        {tab==='store'   &&<StoreScreen   profile={profile} onUpdate={setProfile}/>}
         {tab==='friends' &&(
           <div style={{position:'absolute',inset:0,overflowY:'auto',WebkitOverflowScrolling:'touch',paddingBottom:'calc(60px + env(safe-area-inset-bottom,0px))'}}>
             <FriendSystem userId={profile.uid} userProfile={profile} currentRoomCode={null}/>
@@ -233,7 +245,7 @@ function AuthScreen({onDone}){
   );
 }
 
-function HomeScreen({profile,onGame,onTournament,onAdmin}){
+function HomeScreen({profile,onGame,onMultiplayer,onTournament,onAdmin}){
   const tapRef=useRef({n:0,t:0});
   const modes=[
     {id:'bot',   icon:'🤖',title:'مع الروبوت',  sub:'تدرب بدون انتظار',        color:'#9B59B6'},
@@ -270,7 +282,7 @@ function HomeScreen({profile,onGame,onTournament,onAdmin}){
       </div>
       <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,padding:'0 12px',marginBottom:12}}>
         {modes.map(m=>(
-          <div key={m.id} onClick={m.id==='bot'||m.id==='quick'?onGame:undefined}
+          <div key={m.id} onClick={m.id==='bot'?onGame:()=>onMultiplayer(m.id)}
             style={{background:'rgba(13,20,16,.8)',border:'1px solid rgba(255,255,255,.07)',borderRadius:16,padding:'16px 10px',display:'flex',flexDirection:'column',alignItems:'center',gap:6,cursor:'pointer',touchAction:'manipulation'}}>
             <span style={{fontSize:26}}>{m.icon}</span>
             <span style={{fontSize:13,fontWeight:700,color:m.color+'CC'}}>{m.title}</span>
@@ -323,6 +335,9 @@ function GameScreen({profile,onExit,onProfileUpdate}){
   const [showShare,setShowShare]=useState(false);
   const tn=useRef(0);
   const gameOverAppliedRef=useRef(false);
+  const roundsHistoryRef=useRef([]);
+  const startedAtRef=useRef(null);
+  useEffect(()=>{startedAtRef.current=Date.now();},[]);
   const showT=msg=>{tn.current++;setToast({msg,k:tn.current});setTimeout(()=>setToast(null),2400);};
 
   const newHand=(dlr)=>{
@@ -366,7 +381,7 @@ function GameScreen({profile,onExit,onProfileUpdate}){
   },[phase,currentBidder,passCount,pendingTrumpPick]);
 
   const playCard=(seat,card,rect)=>{
-    if(rect)spawnParticles(rect.left+27,rect.top+39);
+    if(rect){spawnParticles(rect.left+27,rect.top+39);haptics.slam();}
     setHands(hs=>hs.map((h,i)=>i===seat?h.filter(c=>c.id!==card.id):h));
     setTrickPlays(tp=>[...tp,{seat,card}]);
     setCurrentPlayer((seat+1)%4);
@@ -394,18 +409,19 @@ function GameScreen({profile,onExit,onProfileUpdate}){
       const newRoundScores=[...roundScores];newRoundScores[wTeam]+=trickValue;
       setRoundScores(newRoundScores);
       showT(`${players[winnerPlay.seat].name} أخذ الضربة (+${trickValue}) 🏆`);
-      sounds.win();
+      sounds.win();if(wTeam===0)haptics.win();
       const nt=tricksWon+1;
       setTricksWon(nt);
       setTrickPlays([]);
       if(nt>=8){
         const result=calcResult(newRoundScores,contract);
+        roundsHistoryRef.current.push({contract,roundScores:newRoundScores,result:{made:result.made,isGahwa:result.isGahwa}});
         setScores(s=>{
           const bidKey=TEAM_KEY[contract.bidTeam],oppKey=TEAM_KEY[1-contract.bidTeam];
           return {...s,[bidKey]:s[bidKey]+result.bidTeamFinal,[oppKey]:s[oppKey]+result.oppTeamFinal};
         });
         setRoundResult(result);
-        if(result.isGahwa)sounds.gahwa();
+        if(result.isGahwa){sounds.gahwa();haptics.gahwa();}
         setPhase('roundEnd');
       }else{
         setCurrentPlayer(winnerPlay.seat);
@@ -422,6 +438,14 @@ function GameScreen({profile,onExit,onProfileUpdate}){
     const coinDelta=humanWon?50:10;
     (async()=>{try{await updateDoc(doc(db,'users',profile.uid),{wins:increment(humanWon?1:0),losses:increment(humanWon?0:1),coins:increment(coinDelta)});}catch{/* ignore */}})();
     onProfileUpdate&&onProfileUpdate({wins:(profile.wins||0)+(humanWon?1:0),losses:(profile.losses||0)+(humanWon?0:1),coins:(profile.coins||0)+coinDelta});
+    // Match telemetry — the raw data source for the anti-collusion agent
+    (async()=>{try{
+      await addDoc(collection(db,'matches'),{
+        mode:'bot',players:[{uid:profile.uid,seat:0,isBot:false,name:profile.name}],
+        scores,history:roundsHistoryRef.current,
+        startedAt:startedAtRef.current,endedAt:Date.now(),createdAt:serverTimestamp(),
+      });
+    }catch{/* telemetry best-effort */}})();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   },[phase]);
 
@@ -454,9 +478,10 @@ function GameScreen({profile,onExit,onProfileUpdate}){
 
   const trumpInfo=contract?.trump?CARD_SUITS.find(s=>s.symbol===contract.trump):null;
   const winnerLabel=scores.a>=scores.b?'أ':'ب';
+  const theme=getThemeStyles(profile);
 
   return(
-    <div style={{width:'100%',height:'100%',background:'radial-gradient(ellipse 90% 70% at 50% 50%,#0F2A14,#07090A)',position:'relative',overflow:'hidden',display:'flex',alignItems:'center',justifyContent:'center',fontFamily:'Tajawal,sans-serif',direction:'rtl'}}>
+    <div style={{width:'100%',height:'100%',background:`radial-gradient(ellipse 90% 70% at 50% 50%,${theme.felt},#07090A)`,position:'relative',overflow:'hidden',display:'flex',alignItems:'center',justifyContent:'center',fontFamily:'Tajawal,sans-serif',direction:'rtl'}}>
       {toast&&<div key={toast.k} style={{position:'fixed',top:'calc(env(safe-area-inset-top,0px) + 12px)',left:'50%',transform:'translateX(-50%)',background:'rgba(8,12,10,.95)',border:'1px solid #7A5B1A',borderRadius:10,padding:'9px 18px',fontSize:13,fontWeight:700,color:'#F0C040',whiteSpace:'nowrap',zIndex:9000,pointerEvents:'none',animation:'fadeUp .35s ease both'}}>{toast.msg}</div>}
 
       <div style={{position:'absolute',top:'50%',left:'50%',transform:'translate(-50%,-50%)',width:'min(82vw,320px)',height:'min(82vw,320px)',borderRadius:'50%',border:'1px solid rgba(240,192,64,.15)',pointerEvents:'none',zIndex:1,animation:'spin 60s linear infinite'}}/>
@@ -497,11 +522,12 @@ function GameScreen({profile,onExit,onProfileUpdate}){
         <div style={{position:'relative',width:190,height:150,zIndex:20}}>
           {trickPlays.map((p,i)=>{
             const pos=SEAT_POS[p.seat];
+            const sc=theme.suitColor(p.card.suit);
             return(
-              <div key={p.card.id} style={{...G.card,top:pos.top,left:pos.left+'%',transform:`rotate(${pos.rot}deg)`,zIndex:i+1,animation:'popIn .3s ease both'}}>
-                <span style={{fontFamily:"'Scheherazade New',serif",fontSize:15,fontWeight:700,color:p.card.suit.color,alignSelf:'flex-start',lineHeight:1}}>{RANKAR[p.card.rank.symbol]}</span>
-                <span style={{fontSize:20,color:p.card.suit.color,lineHeight:1}}>{p.card.suit.symbol}</span>
-                <span style={{fontFamily:"'Scheherazade New',serif",fontSize:15,fontWeight:700,color:p.card.suit.color,alignSelf:'flex-end',transform:'rotate(180deg)',lineHeight:1}}>{RANKAR[p.card.rank.symbol]}</span>
+              <div key={p.card.id} style={{...G.card,background:theme.cardBg,top:pos.top,left:pos.left+'%',transform:`rotate(${pos.rot}deg)`,zIndex:i+1,animation:'popIn .3s ease both'}}>
+                <span style={{fontFamily:"'Scheherazade New',serif",fontSize:15,fontWeight:700,color:sc,alignSelf:'flex-start',lineHeight:1}}>{RANKAR[p.card.rank.symbol]}</span>
+                <span style={{fontSize:20,color:sc,lineHeight:1}}>{p.card.suit.symbol}</span>
+                <span style={{fontFamily:"'Scheherazade New',serif",fontSize:15,fontWeight:700,color:sc,alignSelf:'flex-end',transform:'rotate(180deg)',lineHeight:1}}>{RANKAR[p.card.rank.symbol]}</span>
               </div>
             );
           })}
@@ -538,11 +564,12 @@ function GameScreen({profile,onExit,onProfileUpdate}){
       <div key={dealtNonce} style={{position:'absolute',bottom:'calc(env(safe-area-inset-bottom,0px) + 8px)',left:0,right:0,height:106,zIndex:30,display:'flex',justifyContent:'center',alignItems:'flex-end'}}>
         {hand.map((card,i)=>{
           const n=hand.length,sp=Math.min(27,200/Math.max(n,1)),off=(i-(n-1)/2)*sp,rot=(i-(n-1)/2)*3.5,lft=Math.abs(i-(n-1)/2)*1.5,iS=sel===i,playable=isPlayable(card);
+          const sc=theme.suitColor(card.suit);
           return(
-            <div key={card.id} onClick={e=>onCardClick(e,card,i)} style={{...G.card,left:`calc(50% + ${off}px - 27px)`,transform:`rotate(${rot}deg) translateY(${iS?-26:lft}px) scale(${iS?1.07:1})`,zIndex:iS?90:i+1,border:`1px solid ${iS?'#2ECC71':'rgba(0,0,0,.12)'}`,boxShadow:iS?'0 0 0 2px rgba(46,204,113,.35),0 8px 22px rgba(0,0,0,.7)':'0 8px 22px rgba(0,0,0,.65)',opacity:phase==='playing'&&!playable?.4:1,filter:phase==='playing'&&!playable?'grayscale(.5)':'none',cursor:phase==='playing'&&!playable?'default':'pointer',transition:'transform .25s cubic-bezier(.34,1.56,.64,1),box-shadow .2s,border-color .2s,opacity .2s',animation:`dealIn .4s ${i*0.05}s ease both`}}>
-              <span style={{fontFamily:"'Scheherazade New',serif",fontSize:15,fontWeight:700,color:card.suit.color,alignSelf:'flex-start',lineHeight:1}}>{RANKAR[card.rank.symbol]}</span>
-              <span style={{fontSize:20,color:card.suit.color,lineHeight:1}}>{card.suit.symbol}</span>
-              <span style={{fontFamily:"'Scheherazade New',serif",fontSize:15,fontWeight:700,color:card.suit.color,alignSelf:'flex-end',transform:'rotate(180deg)',lineHeight:1}}>{RANKAR[card.rank.symbol]}</span>
+            <div key={card.id} onClick={e=>onCardClick(e,card,i)} style={{...G.card,background:theme.cardBg,left:`calc(50% + ${off}px - 27px)`,transform:`rotate(${rot}deg) translateY(${iS?-26:lft}px) scale(${iS?1.07:1})`,zIndex:iS?90:i+1,border:`1px solid ${iS?'#2ECC71':theme.cardBorder}`,boxShadow:iS?'0 0 0 2px rgba(46,204,113,.35),0 8px 22px rgba(0,0,0,.7)':'0 8px 22px rgba(0,0,0,.65)',opacity:phase==='playing'&&!playable?.4:1,filter:phase==='playing'&&!playable?'grayscale(.5)':'none',cursor:phase==='playing'&&!playable?'default':'pointer',transition:'transform .25s cubic-bezier(.34,1.56,.64,1),box-shadow .2s,border-color .2s,opacity .2s',animation:`dealIn .4s ${i*0.05}s ease both`}}>
+              <span style={{fontFamily:"'Scheherazade New',serif",fontSize:15,fontWeight:700,color:sc,alignSelf:'flex-start',lineHeight:1}}>{RANKAR[card.rank.symbol]}</span>
+              <span style={{fontSize:20,color:sc,lineHeight:1}}>{card.suit.symbol}</span>
+              <span style={{fontFamily:"'Scheherazade New',serif",fontSize:15,fontWeight:700,color:sc,alignSelf:'flex-end',transform:'rotate(180deg)',lineHeight:1}}>{RANKAR[card.rank.symbol]}</span>
             </div>
           );
         })}
@@ -588,14 +615,27 @@ function GameScreen({profile,onExit,onProfileUpdate}){
         </div>
       )}
 
+      <ReactionBar/>
+
       {showShare&&<ShareScoreCard winner={winnerLabel==='أ'?0:1} loser={winnerLabel==='أ'?1:0} winnerScore={Math.max(scores.a,scores.b)} loserScore={Math.min(scores.a,scores.b)} isGahwa={roundResult?.isGahwa} onClose={()=>setShowShare(false)}/>}
     </div>
   );
 }
 
 function LeaderScreen(){
-  const [players,setPlayers]=useState([{id:'1',name:'أبو عبدالله',avatar:'🧔',city:'الرياض',wins:247},{id:'2',name:'محمد الغامدي',avatar:'👲',city:'جدة',wins:198},{id:'3',name:'سعد العتيبي',avatar:'🤴',city:'الدمام',wins:187},{id:'4',name:'فهد القحطاني',avatar:'🧙',city:'مكة',wins:156},{id:'5',name:'عبدالرحمن',avatar:'👨‍💼',city:'المدينة',wins:143}]);
-  useEffect(()=>{(async()=>{try{const q=query(collection(db,'users'),orderBy('wins','desc'),limit(20));const s=await getDocs(q);if(s.docs.length)setPlayers(s.docs.map(d=>({id:d.id,...d.data()})));}catch{/* ignore */}})();},[]);
+  const FALLBACK=[{id:'1',name:'أبو عبدالله',avatar:'🧔',city:'الرياض',wins:247},{id:'2',name:'محمد الغامدي',avatar:'👲',city:'جدة',wins:198},{id:'3',name:'سعد العتيبي',avatar:'🤴',city:'الدمام',wins:187},{id:'4',name:'فهد القحطاني',avatar:'🧙',city:'مكة',wins:156},{id:'5',name:'عبدالرحمن',avatar:'👨‍💼',city:'المدينة',wins:143}];
+  const [players,setPlayers]=useState(FALLBACK);
+  const [region,setRegion]=useState('الكل');
+  useEffect(()=>{(async()=>{try{
+    const base=collection(db,'users');
+    const q=region==='الكل'
+      ?query(base,orderBy('wins','desc'),limit(20))
+      :query(base,where('city','==',region),orderBy('wins','desc'),limit(20));
+    const s=await getDocs(q);
+    setPlayers(s.docs.length?s.docs.map(d=>({id:d.id,...d.data()})):(region==='الكل'?FALLBACK:[]));
+  }catch{/* offline — keep current list */}})();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  },[region]);
   const ri=i=>i===0?'🥇':i===1?'🥈':i===2?'🥉':String(i+1);
   const rc=i=>i===0?'#FFD700':i===1?'#C0C0C0':i===2?'#CD7F32':'rgba(240,237,229,.55)';
   return(
@@ -604,7 +644,13 @@ function LeaderScreen(){
         <div style={{fontFamily:"'Scheherazade New',serif",fontSize:22,color:'#F0C040'}}>🏆 المتصدرون</div>
         <div style={{color:'rgba(240,237,229,.6)',fontSize:11,marginTop:4}}>أفضل لاعبي المملكة</div>
       </div>
+      <div style={{display:'flex',gap:6,overflowX:'auto',WebkitOverflowScrolling:'touch',padding:'6px 14px 10px',scrollbarWidth:'none'}}>
+        {['الكل',...CITIES].map(c=>(
+          <div key={c} onClick={()=>setRegion(c)} style={{flexShrink:0,padding:'5px 14px',borderRadius:20,fontSize:11,fontWeight:700,cursor:'pointer',border:`1px solid ${region===c?'#F0C040':'rgba(255,255,255,.12)'}`,background:region===c?'rgba(240,192,64,.12)':'transparent',color:region===c?'#F0C040':'rgba(240,237,229,.55)',touchAction:'manipulation',transition:'all .2s'}}>{c}</div>
+        ))}
+      </div>
       <div style={{height:1,background:'rgba(255,255,255,.07)',margin:'0 14px'}}/>
+      {players.length===0&&<div style={{textAlign:'center',color:'rgba(240,237,229,.4)',fontSize:12,padding:30}}>لا يوجد لاعبون في {region} بعد</div>}
       {players.map((p,i)=>(
         <div key={p.id} style={{display:'flex',alignItems:'center',gap:10,padding:'10px 14px',borderBottom:'1px solid rgba(255,255,255,.06)'}}>
           <span style={{fontSize:i<3?18:13,fontWeight:900,color:rc(i),width:24,textAlign:'center',flexShrink:0}}>{ri(i)}</span>
@@ -617,28 +663,98 @@ function LeaderScreen(){
   );
 }
 
-function StoreScreen({profile}){
-  const items=[{i:'🎴',n:'طقم ذهبي',p:'٤٩ ريال',t:'الأكثر مبيعاً',tc:'#E74C3C'},{i:'🟩',n:'طاولة زمردية',p:'٢٩ ريال',t:'جديد',tc:'#2ECC71'},{i:'👑',n:'VIP شهري',p:'٩٩ ريال',t:'الأفضل',tc:'#F0C040'},{i:'🪙',n:'٥٠٠ عملة',p:'١٠ ريال',t:'',tc:''},{i:'🎭',n:'تعابير مميزة',p:'١٩ ريال',t:'',tc:''},{i:'🏅',n:'إطار بطل',p:'٣٩ ريال',t:'نادر',tc:'#9B59B6'}];
+function StoreScreen({profile,onUpdate}){
+  const [tab,setTab]=useState('decks');
+  const [toast,setToast]=useState(null);
+  const [busy,setBusy]=useState(null);
+  const showT=msg=>{setToast(msg);setTimeout(()=>setToast(null),2200);};
+  const owned=profile.owned||{decks:['classic'],tables:['classic'],reactions:[]};
+  const coins=profile.coins||0;
+  const BADGE={hot:{l:'الأكثر طلباً',c:'#E74C3C'},new:{l:'جديد',c:'#2ECC71'},seasonal:{l:'موسمي',c:'#9B59B6'},vip:{l:'VIP',c:'#F0C040'}};
+
+  const buy=async(kind,item)=>{
+    if(busy)return;
+    const list=owned[kind]||[];
+    if(list.includes(item.id))return;
+    if(coins<item.cost){showT('رصيد غير كافٍ 🪙');return;}
+    setBusy(item.id);
+    try{
+      const newOwned={...owned,[kind]:[...list,item.id]};
+      await updateDoc(doc(db,'users',profile.uid),{coins:increment(-item.cost),owned:newOwned});
+      onUpdate({...profile,coins:coins-item.cost,owned:newOwned});
+      sounds.buy();haptics.buy();
+      showT(`تم شراء ${item.name} ✅`);
+    }catch{showT('فشل الشراء');}
+    setBusy(null);
+  };
+
+  const activate=async(kind,id)=>{
+    const field=kind==='decks'?'activeDeck':'activeTable';
+    try{
+      await updateDoc(doc(db,'users',profile.uid),{[field]:id});
+      onUpdate({...profile,[field]:id});
+      showT('تم التفعيل ✨');
+    }catch{showT('فشل');}
+  };
+
+  const renderItems=(kind,items)=>{
+    const activeField=kind==='decks'?'activeDeck':'activeTable';
+    const activeId=profile[activeField]||'classic';
+    const all=kind==='reactions'?items:[{id:'classic',name:kind==='decks'?'كلاسيك':'الكلاسيك',desc:'التصميم الأساسي',cost:0,emoji:kind==='decks'?'🃏':'🟩'},...items];
+    return(
+      <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,padding:'0 12px 16px'}}>
+        {all.map(item=>{
+          const isOwned=item.cost===0||(owned[kind]||[]).includes(item.id);
+          const isActive=kind!=='reactions'&&activeId===item.id;
+          return(
+            <div key={item.id} onClick={()=>isOwned?(kind!=='reactions'&&!isActive&&activate(kind,item.id)):buy(kind,item)}
+              style={{background:'rgba(13,20,16,.8)',border:`1px solid ${isActive?'#F0C040':'rgba(255,255,255,.07)'}`,borderRadius:16,padding:'16px 12px',display:'flex',flexDirection:'column',alignItems:'center',gap:7,cursor:'pointer',position:'relative',touchAction:'manipulation',opacity:busy===item.id?.6:1}}>
+              {item.badge&&BADGE[item.badge]&&<span style={{position:'absolute',top:8,right:8,background:BADGE[item.badge].c,color:BADGE[item.badge].c==='#F0C040'?'#000':'#fff',fontSize:8,fontWeight:700,padding:'2px 5px',borderRadius:5}}>{BADGE[item.badge].l}</span>}
+              {isActive&&<span style={{position:'absolute',top:8,left:8,fontSize:12}}>✅</span>}
+              <span style={{fontSize:30}}>{item.emoji}</span>
+              <span style={{fontSize:12,fontWeight:700,textAlign:'center'}}>{item.name}</span>
+              <span style={{color:'rgba(240,237,229,.5)',fontSize:9,textAlign:'center',lineHeight:1.4,minHeight:24}}>{item.desc}</span>
+              <span style={{fontSize:12,fontWeight:900,color:isOwned?'#2ECC71':'#F0C040',background:isOwned?'rgba(46,204,113,.1)':'rgba(240,192,64,.1)',padding:'3px 12px',borderRadius:20,border:`1px solid ${isOwned?'rgba(46,204,113,.25)':'rgba(240,192,64,.2)'}`}}>
+                {isActive?'مفعّل':isOwned?(kind==='reactions'?'مملوك':'فعّل'):`🪙 ${item.cost}`}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
+
   return(
     <div style={{position:'absolute',inset:0,overflowY:'auto',WebkitOverflowScrolling:'touch',paddingBottom:'calc(60px + env(safe-area-inset-bottom,0px) + 12px)',paddingTop:'env(safe-area-inset-top,0px)'}}>
       <div style={{padding:'16px 14px 8px',textAlign:'center'}}><div style={{fontFamily:"'Scheherazade New',serif",fontSize:22,color:'#F0C040'}}>🛍️ المتجر</div></div>
       <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',background:'rgba(13,20,16,.8)',border:'1px solid #7A5B1A',borderRadius:12,margin:'0 12px 12px',padding:'10px 14px'}}>
         <span style={{color:'rgba(240,237,229,.6)'}}>رصيدك</span>
-        <div style={{display:'flex',alignItems:'center',gap:10}}>
-          <span style={{fontSize:16,fontWeight:900,color:'#F0C040'}}>🪙 {profile.coins||500}</span>
-          <button style={{...G.btn,background:'linear-gradient(135deg,#8B6914,#F0C040)',color:'#07090A',padding:'6px 14px',fontSize:12}}>شحن</button>
-        </div>
+        <span style={{fontSize:16,fontWeight:900,color:'#F0C040'}}>🪙 {coins}</span>
       </div>
-      <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,padding:'0 12px 16px'}}>
-        {items.map((item,idx)=>(
-          <div key={idx} style={{background:'rgba(13,20,16,.8)',border:'1px solid rgba(255,255,255,.07)',borderRadius:16,padding:'16px 12px',display:'flex',flexDirection:'column',alignItems:'center',gap:7,cursor:'pointer',position:'relative',touchAction:'manipulation'}}>
-            {item.t&&<span style={{position:'absolute',top:8,right:8,background:item.tc,color:item.tc==='#F0C040'?'#000':'#fff',fontSize:8,fontWeight:700,padding:'2px 5px',borderRadius:5}}>{item.t}</span>}
-            <span style={{fontSize:30}}>{item.i}</span>
-            <span style={{fontSize:12,fontWeight:700,textAlign:'center'}}>{item.n}</span>
-            <span style={{fontSize:13,fontWeight:900,color:'#F0C040',background:'rgba(240,192,64,.1)',padding:'3px 10px',borderRadius:20,border:'1px solid rgba(240,192,64,.2)'}}>{item.p}</span>
-          </div>
+      <div style={{display:'flex',gap:6,padding:'0 12px 12px'}}>
+        {[{id:'decks',l:'🎴 سكنات'},{id:'tables',l:'🟩 طاولات'},{id:'coins',l:'🪙 رصيد'}].map(t=>(
+          <div key={t.id} onClick={()=>setTab(t.id)} style={{flex:1,textAlign:'center',padding:'8px 4px',borderRadius:12,fontSize:12,fontWeight:700,cursor:'pointer',border:`1px solid ${tab===t.id?'#F0C040':'rgba(255,255,255,.1)'}`,background:tab===t.id?'rgba(240,192,64,.12)':'transparent',color:tab===t.id?'#F0C040':'rgba(240,237,229,.55)',touchAction:'manipulation'}}>{t.l}</div>
         ))}
       </div>
+      {tab==='decks'&&renderItems('decks',STORE_ITEMS.decks)}
+      {tab==='tables'&&renderItems('tables',STORE_ITEMS.tables)}
+      {tab==='coins'&&(
+        <div style={{display:'flex',flexDirection:'column',gap:10,padding:'0 12px 16px'}}>
+          {STORE_ITEMS.coins.map(pack=>(
+            <div key={pack.id} onClick={()=>showT('الدفع متوفر قريباً — Apple Pay & مدى 💳')} style={{display:'flex',alignItems:'center',gap:12,background:'rgba(13,20,16,.8)',border:`1px solid ${pack.best?'rgba(240,192,64,.4)':'rgba(255,255,255,.07)'}`,borderRadius:16,padding:'14px 16px',cursor:'pointer',touchAction:'manipulation',position:'relative'}}>
+              {pack.best&&<span style={{position:'absolute',top:-8,right:14,background:'#F0C040',color:'#000',fontSize:9,fontWeight:900,padding:'2px 8px',borderRadius:8}}>الأفضل قيمة</span>}
+              <span style={{fontSize:28}}>{pack.emoji}</span>
+              <div style={{flex:1}}>
+                <div style={{fontSize:13,fontWeight:700}}>{pack.name}</div>
+                <div style={{color:'rgba(240,237,229,.5)',fontSize:10,marginTop:2}}>{pack.desc}</div>
+              </div>
+              <span style={{fontSize:14,fontWeight:900,color:'#2ECC71',whiteSpace:'nowrap'}}>{pack.price} ر.س</span>
+            </div>
+          ))}
+          <div style={{textAlign:'center',color:'rgba(240,237,229,.4)',fontSize:10,marginTop:4}}>💳 Apple Pay ومدى — قريباً</div>
+        </div>
+      )}
+      {toast&&<div style={{position:'fixed',bottom:'calc(70px + env(safe-area-inset-bottom,0px))',left:'50%',transform:'translateX(-50%)',background:'linear-gradient(135deg,#8B6914,#F0C040)',color:'#07090A',fontWeight:900,fontSize:13,padding:'10px 22px',borderRadius:24,zIndex:9999,whiteSpace:'nowrap',animation:'fadeUp .3s ease both'}}>{toast}</div>}
     </div>
   );
 }

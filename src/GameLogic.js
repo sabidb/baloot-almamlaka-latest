@@ -62,15 +62,39 @@ export const STORE_ITEMS = {
   ],
 };
 
+// Resolve the player's active cosmetics into concrete styles.
+// Dark decks need light pips or black suits become invisible.
+export function getThemeStyles(profile){
+  const deckId=profile?.activeDeck||'classic';
+  const tableId=profile?.activeTable||'classic';
+  const deck=DECK_THEMES[deckId]||DECK_THEMES.classic;
+  const darkDeck=['ramadan','royal'].includes(deckId);
+  return{
+    felt:tableId==='classic'?'#0F2A14':(TABLE_THEMES[tableId]||TABLE_THEMES.classic).felt,
+    cardBg:deckId==='classic'?'linear-gradient(145deg,#FEFDF8,#F0EBE0)':`linear-gradient(145deg,${deck.bg},${deck.bg})`,
+    cardBorder:deck.border,
+    darkDeck,
+    suitColor:(suit)=>darkDeck?(suit.isRed?'#FF7B6B':'#F0EDE5'):suit.color,
+  };
+}
+
 export function buildDeck() {
   const d=[];
   for(const suit of SUITS) for(const rank of RANKS)
     d.push({suit,rank,id:`${rank.symbol}${suit.symbol}`});
   return d;
 }
+// Cryptographically secure Fisher-Yates: rejection sampling avoids modulo bias.
+function secureRandInt(maxExclusive){
+  if(typeof crypto==='undefined'||!crypto.getRandomValues)return Math.floor(Math.random()*maxExclusive);
+  const limit=Math.floor(0x100000000/maxExclusive)*maxExclusive;
+  const buf=new Uint32Array(1);
+  do{crypto.getRandomValues(buf);}while(buf[0]>=limit);
+  return buf[0]%maxExclusive;
+}
 export function shuffle(deck) {
   const d=[...deck];
-  for(let i=d.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[d[i],d[j]]=[d[j],d[i]];}
+  for(let i=d.length-1;i>0;i--){const j=secureRandInt(i+1);[d[i],d[j]]=[d[j],d[i]];}
   return d;
 }
 export function dealHands(deck) {
@@ -140,7 +164,7 @@ export function playTone(freq,vol=0.1,type='sine'){
       gain.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+i*0.12+0.15);
       osc.start(ctx.currentTime+i*0.12);osc.stop(ctx.currentTime+i*0.12+0.15);
     });
-  }catch(e){}
+  }catch{/* audio unavailable */}
 }
 export const sounds={
   deal:()=>playTone(440,0.1,'triangle'),
@@ -149,4 +173,16 @@ export const sounds={
   gahwa:()=>playTone([784,659,523,659,784],0.2,'triangle'),
   tick:()=>playTone(880,0.05,'square'),
   buy: ()=>playTone([523,659],0.1,'sine'),
+};
+
+// Haptic feedback — the "slam" mechanic. No-op where unsupported (iOS Safari).
+export function vibrate(pattern){
+  try{if(navigator.vibrate)navigator.vibrate(pattern);}catch{/* unsupported */}
+}
+export const haptics={
+  play:()=>vibrate(18),
+  slam:()=>vibrate([10,25,45]),
+  win: ()=>vibrate([30,40,30,40,80]),
+  gahwa:()=>vibrate([50,60,50,60,50,60,120]),
+  buy: ()=>vibrate([15,30,15]),
 };
