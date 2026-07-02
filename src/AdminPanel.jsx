@@ -1,6 +1,8 @@
 import React,{useState,useEffect}from'react';
 import{db}from'./firebase';
-import{collection,getDocs,doc,updateDoc,deleteDoc,query,orderBy,limit,getDoc,setDoc}from'firebase/firestore';
+import{collection,getDocs,doc,updateDoc,deleteDoc,query,orderBy,limit}from'firebase/firestore';
+import{getAuth}from'firebase/auth';
+import{getApp}from'firebase/app';
 
 const T={gold:'#C9A84C',goldL:'#F0C060',green:'#006C35',greenL:'#1a8a4a',night:'#07070F',bg2:'#0D0D1A',cream:'#F0EEE8',red:'#C0392B',redL:'#E74C3C',smoke:'#888',border:'#C9A84C33'};
 
@@ -19,6 +21,7 @@ function StatCard({label,value,color,icon}){
 export default function AdminPanel(){
   const[pin,setPin]=useState('');
   const[auth,setAuth]=useState(false);
+  const[claim,setClaim]=useState('checking'); // 'checking'|'admin'|'denied'
   const[players,setPlayers]=useState([]);
   const[loading,setLoading]=useState(false);
   const[search,setSearch]=useState('');
@@ -48,6 +51,17 @@ export default function AdminPanel(){
   };
 
   useEffect(()=>{if(auth)loadPlayers();},[auth]);
+
+  // Real security: verify the server-set `admin` custom claim. The PIN is
+  // only a secondary lock on top of it — writes are enforced by rules.
+  useEffect(()=>{(async()=>{
+    try{
+      const user=getAuth(getApp()).currentUser;
+      if(!user){setClaim('denied');return;}
+      const token=await user.getIdTokenResult(true);
+      setClaim(token.claims.admin?'admin':'denied');
+    }catch{setClaim('denied');}
+  })();},[]);
 
   const updateCoins=async(uid,coins)=>{
     try{
@@ -105,24 +119,42 @@ export default function AdminPanel(){
   );
 
   if(!auth)return(
-    <div style={{minHeight:'100vh',background:T.night,display:'flex',alignItems:'center',justifyContent:'center',fontFamily:'Segoe UI,Tahoma,Arial,sans-serif'}}>
-      <div style={{background:T.bg2,border:`2px solid ${T.gold}`,borderRadius:20,padding:40,maxWidth:340,width:'100%',textAlign:'center',boxShadow:`0 0 60px ${T.gold}22`}}>
+    <div style={{minHeight:'100vh',background:T.night,display:'flex',alignItems:'center',justifyContent:'center',fontFamily:'Segoe UI,Tahoma,Arial,sans-serif',padding:16}}>
+      <div style={{background:T.bg2,border:`2px solid ${T.gold}`,borderRadius:20,padding:40,maxWidth:360,width:'100%',textAlign:'center',boxShadow:`0 0 60px ${T.gold}22`}}>
         <div style={{fontSize:48,marginBottom:12}}>🔐</div>
         <div style={{color:T.gold,fontSize:22,fontWeight:900,marginBottom:4}}>لوحة التحكم</div>
         <div style={{color:T.smoke,fontSize:13,marginBottom:24}}>بلوت المملكة — Admin</div>
-        <input
-          type="password"
-          value={pin}
-          onChange={e=>setPin(e.target.value)}
-          onKeyDown={e=>e.key==='Enter'&&(pin===ADMIN_PIN?setAuth(true):showToast('❌ رمز خاطئ'))}
-          placeholder="أدخل رمز الدخول..."
-          style={{background:'#0a1a0a',border:`1.5px solid ${T.greenL}`,borderRadius:12,padding:'13px 16px',color:'#fff',fontSize:16,textAlign:'center',outline:'none',fontFamily:'inherit',width:'100%',marginBottom:12,boxSizing:'border-box'}}
-        />
-        <button
-          onClick={()=>pin===ADMIN_PIN?setAuth(true):showToast('❌ رمز خاطئ')}
-          style={{background:`linear-gradient(135deg,${T.gold},${T.goldL})`,color:T.night,border:'none',borderRadius:12,padding:'14px',fontWeight:900,cursor:'pointer',fontSize:16,width:'100%',fontFamily:'inherit'}}>
-          دخول
-        </button>
+
+        {claim==='checking'&&<div style={{color:T.smoke,fontSize:14,padding:'20px 0'}}>جارٍ التحقق من الصلاحية…</div>}
+
+        {claim==='denied'&&(
+          <div style={{background:'rgba(192,57,43,0.1)',border:`1px solid ${T.red}44`,borderRadius:12,padding:16}}>
+            <div style={{color:T.redL,fontSize:15,fontWeight:700,marginBottom:8}}>🚫 لا تملك صلاحية المشرف</div>
+            <div style={{color:T.smoke,fontSize:12,lineHeight:1.7}}>
+              هذا الحساب لا يملك صلاحية المشرف. امنحها عبر
+              <span style={{color:T.goldL}}> scripts/set-admin.js </span>
+              (راجع BACKEND.md) ثم سجّل الخروج والدخول مرة أخرى.
+            </div>
+          </div>
+        )}
+
+        {claim==='admin'&&(
+          <>
+            <input
+              type="password"
+              value={pin}
+              onChange={e=>setPin(e.target.value)}
+              onKeyDown={e=>e.key==='Enter'&&(pin===ADMIN_PIN?setAuth(true):showToast('❌ رمز خاطئ'))}
+              placeholder="أدخل رمز الدخول..."
+              style={{background:'#0a1a0a',border:`1.5px solid ${T.greenL}`,borderRadius:12,padding:'13px 16px',color:'#fff',fontSize:16,textAlign:'center',outline:'none',fontFamily:'inherit',width:'100%',marginBottom:12,boxSizing:'border-box'}}
+            />
+            <button
+              onClick={()=>pin===ADMIN_PIN?setAuth(true):showToast('❌ رمز خاطئ')}
+              style={{background:`linear-gradient(135deg,${T.gold},${T.goldL})`,color:T.night,border:'none',borderRadius:12,padding:'14px',fontWeight:900,cursor:'pointer',fontSize:16,width:'100%',fontFamily:'inherit'}}>
+              دخول
+            </button>
+          </>
+        )}
         {toast&&<div style={{marginTop:12,color:T.redL,fontSize:13}}>{toast}</div>}
       </div>
     </div>

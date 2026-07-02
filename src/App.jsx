@@ -4,6 +4,7 @@ import { db } from './firebase';
 import { listenAuth, signInGoogle, signOutUser } from './auth';
 import { SUITS as CARD_SUITS, STORE_ITEMS, buildDeck, shuffle, dealHands, cardValue, trickWinner, calcResult, botPickCard, botBid, sounds, haptics, getThemeStyles } from './GameLogic';
 import { ReactionBar } from './Reactions';
+import { settleBotGame } from './functions';
 import OnboardingTutorial, { ShareScoreCard } from './Onboarding';
 import { FriendSystem, NotificationCenter, DailyRewardPopup } from './Social';
 import TournamentScreen from './Tournament';
@@ -436,7 +437,8 @@ function GameScreen({profile,onExit,onProfileUpdate}){
     gameOverAppliedRef.current=true;
     const humanWon=scores.a>=scores.b;
     const coinDelta=humanWon?50:10;
-    (async()=>{try{await updateDoc(doc(db,'users',profile.uid),{wins:increment(humanWon?1:0),losses:increment(humanWon?0:1),coins:increment(coinDelta)});}catch{/* ignore */}})();
+    // Route through the server referee (rate-limited) — clients can't mint.
+    (async()=>{try{await settleBotGame(humanWon);}catch{/* rate-limited or offline */}})();
     onProfileUpdate&&onProfileUpdate({wins:(profile.wins||0)+(humanWon?1:0),losses:(profile.losses||0)+(humanWon?0:1),coins:(profile.coins||0)+coinDelta});
     // Match telemetry — the raw data source for the anti-collusion agent
     (async()=>{try{

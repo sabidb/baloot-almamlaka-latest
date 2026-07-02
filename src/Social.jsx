@@ -1,6 +1,7 @@
 import React,{useState,useEffect,useRef}from'react';
 import{db}from'./firebase';
-import{doc,getDoc,setDoc,updateDoc,collection,query,where,getDocs,addDoc,onSnapshot,orderBy,limit,serverTimestamp,increment}from'firebase/firestore';
+import{doc,getDoc,setDoc,updateDoc,collection,query,where,getDocs,addDoc,onSnapshot,orderBy,limit}from'firebase/firestore';
+import{claimDailyReward}from'./functions';
 
 const T={gold:'#C9A84C',goldL:'#F0C060',green:'#006C35',greenL:'#1a8a4a',night:'#07070F',bg2:'#0D0D1A',cream:'#F0EEE8',red:'#C0392B',redL:'#E74C3C',smoke:'#888',border:'#C9A84C33',blueL:'#2E86C1'};
 
@@ -50,17 +51,13 @@ export function DailyRewardPopup({userId,profile,onClaim,onClose}){
   const claim=async()=>{
     if(claimed||!userId)return;
     try{
-      const newCoins=(profile?.coins||0)+reward.coins;
-      await updateDoc(doc(db,'users',userId),{
-        coins:newCoins,
-        dailyStreak:streak,
-        lastDailyClaim:Date.now(),
-        totalDailysClaimed:increment(1),
-      });
+      // Server computes streak + reward and grants the coins authoritatively.
+      const res=await claimDailyReward();
+      const newCoins=(profile?.coins||0)+(res?.reward??reward.coins);
       setClaimed(true);
-      onClaim&&onClaim({coins:newCoins,dailyStreak:streak});
+      onClaim&&onClaim({coins:newCoins,dailyStreak:res?.dailyStreak??streak});
       setTimeout(onClose,2000);
-    }catch(e){}
+    }catch(e){/* already claimed or offline */}
   };
 
   return(

@@ -7,10 +7,12 @@ const { onCall, HttpsError } = require('firebase-functions/v2/https');
 const { onDocumentUpdated } = require('firebase-functions/v2/firestore');
 const { setGlobalOptions } = require('firebase-functions/v2');
 const { defineSecret } = require('firebase-functions/params');
-const admin = require('firebase-admin');
+const { initializeApp } = require('firebase-admin/app');
+const { getFirestore, FieldValue } = require('firebase-admin/firestore');
+const { getAuth } = require('firebase-admin/auth');
 
-admin.initializeApp();
-const db = admin.firestore();
+initializeApp();
+const db = getFirestore();
 
 // PDPL note: pin compute to the closest region to KSA data.
 setGlobalOptions({ region: 'me-central1', maxInstances: 10 });
@@ -59,8 +61,8 @@ exports.advanceTournaments = onSchedule('every 5 minutes', async () => {
       podium.forEach((p, i) => {
         if (!p || p.uid.startsWith('bot-')) return;
         batch.update(db.doc(`users/${p.uid}`), {
-          coins: admin.firestore.FieldValue.increment(Math.floor(prizeCoins * PRIZE_SPLIT[i])),
-          tournamentWins: admin.firestore.FieldValue.increment(i === 0 ? 1 : 0),
+          coins: FieldValue.increment(Math.floor(prizeCoins * PRIZE_SPLIT[i])),
+          tournamentWins: FieldValue.increment(i === 0 ? 1 : 0),
         });
       });
       batch.update(docSnap.ref, { status: 'completed', winner: champion, completedAt: Date.now() });
@@ -125,8 +127,8 @@ exports.rankDecay = onSchedule({ schedule: '0 3 * * *', timeZone: 'Asia/Riyadh' 
     if (lastActive > cutoff) return;
     const decay = Math.max(1, Math.floor((d.wins || 0) * 0.02));
     batch.update(u.ref, {
-      wins: admin.firestore.FieldValue.increment(-decay),
-      decayedWins: admin.firestore.FieldValue.increment(decay),
+      wins: FieldValue.increment(-decay),
+      decayedWins: FieldValue.increment(decay),
     });
     decayed++;
   });
@@ -195,38 +197,107 @@ exports.setAdminClaim = onCall({ secrets: [ADMIN_SETUP_SECRET] }, async (request
   const secretOk = secret && secret === ADMIN_SETUP_SECRET.value();
   if (!callerIsAdmin && !secretOk) throw new HttpsError('permission-denied', 'not authorized');
 
-  await admin.auth().setCustomUserClaims(targetUid, { admin: true });
+  await getAuth().setCustomUserClaims(targetUid, { admin: true });
   return { ok: true, uid: targetUid };
 });
 
-// ── Server-authoritative settlement (migration target) ───────────────
-// Clients currently self-report wins/coins; once this is deployed, move
-// game-end writes here and tighten firestore.rules so users can no
-// longer increment their own coins/wins.
+// ── Server-authoritative settlement — the "referee" ──────────────────
+// Rewards: win = 50 coins + 1 win, loss = 10 coins + 1 loss.
+const WIN_COINS = 50;
+const LOSS_COINS = 10;
+
+// Multiplayer: the room doc holds the authoritative game state, so the
+// server reads it directly — the client cannot lie about who won.
 exports.settleGame = onCall(async (request) => {
   if (!request.auth) throw new HttpsError('unauthenticated', 'sign in first');
   const { roomCode } = request.data || {};
   if (!roomCode) throw new HttpsError('invalid-argument', 'roomCode required');
 
-  const roomSnap = await db.doc(`rooms/${roomCode}`).get();
-  if (!roomSnap.exists) throw new HttpsError('not-found', 'room not found');
-  const room = roomSnap.data();
-  if (room.gd?.phase !== 'gameOver') throw new HttpsError('failed-precondition', 'game not over');
-  if (room.settled) return { ok: true, already: true };
+  return await db.runTransaction(async (tx) => {
+    const roomRef = db.doc(`rooms/${roomCode}`);
+    const roomSnap = await tx.get(roomRef);
+    if (!roomSnap.exists) throw new HttpsError('not-found', 'room not found');
+    const room = roomSnap.data();
+    if (room.gd?.phase !== 'gameOver') throw new HttpsError('failed-precondition', 'game not over');
+    // Caller must actually be a player in this room.
+    if (!(room.players || []).some(p => p.uid === request.auth.uid)) {
+      throw new HttpsError('permission-denied', 'not a player in this room');
+    }
+    if (room.settled) return { ok: true, already: true };
 
-  const winTeam = room.gd.scores.a >= room.gd.scores.b ? 0 : 1;
-  const batch = db.batch();
-  (room.players || []).forEach(p => {
-    if (p.isBot) return;
-    const won = p.seat % 2 === winTeam;
-    batch.update(db.doc(`users/${p.uid}`), {
-      wins: admin.firestore.FieldValue.increment(won ? 1 : 0),
-      losses: admin.firestore.FieldValue.increment(won ? 0 : 1),
-      coins: admin.firestore.FieldValue.increment(won ? 50 : 10),
-      lastActive: Date.now(),
+    const winTeam = room.gd.scores.a >= room.gd.scores.b ? 0 : 1;
+    (room.players || []).forEach(p => {
+      if (p.isBot) return;
+      const won = p.seat % 2 === winTeam;
+      tx.update(db.doc(`users/${p.uid}`), {
+        wins: FieldValue.increment(won ? 1 : 0),
+        losses: FieldValue.increment(won ? 0 : 1),
+        coins: FieldValue.increment(won ? WIN_COINS : LOSS_COINS),
+        lastActive: Date.now(),
+      });
     });
+    tx.update(roomRef, { settled: true });
+    return { ok: true, winTeam };
   });
-  batch.update(roomSnap.ref, { settled: true });
-  await batch.commit();
-  return { ok: true, winTeam };
+});
+
+// Bot games have no shared server state, so the outcome can't be verified
+// the same way. We still route rewards through the server (so clients
+// can't mint coins directly) and rate-limit to block scripted farming.
+// A real Baloot game to 152 takes minutes; 20s is a generous floor.
+const BOT_SETTLE_COOLDOWN_MS = 20000;
+exports.settleBotGame = onCall(async (request) => {
+  if (!request.auth) throw new HttpsError('unauthenticated', 'sign in first');
+  const won = !!(request.data && request.data.won);
+  const uid = request.auth.uid;
+
+  return await db.runTransaction(async (tx) => {
+    const ref = db.doc(`users/${uid}`);
+    const snap = await tx.get(ref);
+    if (!snap.exists) throw new HttpsError('not-found', 'profile missing');
+    const now = Date.now();
+    const last = snap.data().lastBotSettleAt || 0;
+    if (now - last < BOT_SETTLE_COOLDOWN_MS) {
+      throw new HttpsError('resource-exhausted', 'too soon');
+    }
+    tx.update(ref, {
+      wins: FieldValue.increment(won ? 1 : 0),
+      losses: FieldValue.increment(won ? 0 : 1),
+      coins: FieldValue.increment(won ? WIN_COINS : LOSS_COINS),
+      lastActive: now,
+      lastBotSettleAt: now,
+    });
+    return { ok: true, coins: won ? WIN_COINS : LOSS_COINS };
+  });
+});
+
+// Daily reward: streak and payout computed server-side so the coin grant
+// is authoritative (clients can no longer self-award).
+const DAILY_COINS = [50, 75, 100, 150, 200, 300, 500];
+exports.claimDailyReward = onCall(async (request) => {
+  if (!request.auth) throw new HttpsError('unauthenticated', 'sign in first');
+  const uid = request.auth.uid;
+
+  return await db.runTransaction(async (tx) => {
+    const ref = db.doc(`users/${uid}`);
+    const snap = await tx.get(ref);
+    if (!snap.exists) throw new HttpsError('not-found', 'profile missing');
+    const d = snap.data();
+    const now = Date.now();
+    const hoursSince = (now - (d.lastDailyClaim || 0)) / 3600000;
+    if (hoursSince < 20) throw new HttpsError('failed-precondition', 'already claimed today');
+
+    const streakBroken = hoursSince > 48;
+    const newStreak = streakBroken ? 1 : Math.min((d.dailyStreak || 0) + 1, 7);
+    const reward = DAILY_COINS[newStreak - 1];
+
+    tx.update(ref, {
+      coins: FieldValue.increment(reward),
+      dailyStreak: newStreak,
+      lastDailyClaim: now,
+      lastActive: now,
+      totalDailysClaimed: FieldValue.increment(1),
+    });
+    return { ok: true, reward, dailyStreak: newStreak };
+  });
 });

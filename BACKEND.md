@@ -47,7 +47,26 @@ firebase deploy --only functions
 | `rankDecay` | daily 03:00 KSA | Decays wins of top players inactive 14+ days |
 | `collusionScan` | daily 03:30 KSA | Scans 24h of match telemetry, flags suspicious same-team pairs |
 | `setAdminClaim` | callable | Grants the `admin` custom claim |
-| `settleGame` | callable | Server-authoritative win/coin settlement (migration target) |
+| `settleGame` | callable | Server-authoritative multiplayer settlement (reads the room's authoritative state) |
+| `settleBotGame` | callable | Bot-game reward, rate-limited (20s floor) to block farming |
+| `claimDailyReward` | callable | Server-computed daily streak + coin grant |
+
+### The economy is now server-authoritative ("the referee")
+Clients can no longer write their own `coins`/`wins`/`losses`. `firestore.rules`
+lets a client only *lower* its coins (spending in the store / tournament entry)
+and never touch wins/losses/isVip; all increases go through the callables above,
+which run with Admin SDK privileges and bypass the rules. This closes the
+"open the console and mint 999,999 coins" hole.
+
+- **Multiplayer** is fully refereed: `settleGame` reads the room doc's
+  `gd.phase === 'gameOver'` and scores, so the client cannot lie about who won.
+- **Bot games** have no shared server state to verify, so `settleBotGame`
+  instead rate-limits (one settle per 20s) and centralizes the grant. The
+  anti-collusion/telemetry pipeline catches abnormal patterns.
+
+The region for callables is set in both `functions/index.js`
+(`setGlobalOptions`) and `src/functions.js` (`FUNCTIONS_REGION`) — keep them
+identical, and ideally matching your Firestore location.
 
 ### Anti-collusion logic (summary)
 For each multiplayer match in the last 24h, every same-team human pair is
@@ -85,8 +104,18 @@ used during development connect explicitly via `connectFirestoreEmulator`.
 
 - **Payments / ZATCA** — Apple Pay + Mada checkout and ZATCA Phase-2
   e-invoicing are not implemented; the coin-pack store shows "coming soon".
-- **Server-authoritative economy** — clients currently self-report
-  wins/coins. Migrate game-end writes to `settleGame` and then tighten
-  `firestore.rules` to forbid client-side `coins`/`wins` increments.
+  This is the only remaining major backend track.
 - **Provably-fair RNG** — shuffles now use `crypto.getRandomValues`; a
   commit-reveal seed scheme would make fairness verifiable by players.
+
+## 7. Deploy order (first time)
+
+```
+firebase deploy --only firestore:rules,firestore:indexes   # security first
+cd functions && npm install && cd ..
+firebase deploy --only functions                           # referee + agents
+node scripts/set-admin.js ./serviceAccount.json <your-uid> # become admin
+```
+The rules assume the referee callables exist, so deploy functions in the same
+session. Until then, game rewards will fail silently (rules deny the client
+writes) — expected, not a bug.

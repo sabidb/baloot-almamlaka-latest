@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
-import { doc, setDoc, getDocs, updateDoc, deleteDoc, onSnapshot, runTransaction, collection, query, where, limit, increment, serverTimestamp, addDoc } from 'firebase/firestore';
+import { doc, setDoc, getDocs, updateDoc, deleteDoc, onSnapshot, runTransaction, collection, query, where, limit, serverTimestamp, addDoc } from 'firebase/firestore';
 import { db } from './firebase';
 import { SUITS as CARD_SUITS, buildDeck, shuffle, dealHands, getHands, cardValue, trickWinner, calcResult, botPickCard, botBid, genCode, sounds, haptics, getThemeStyles } from './GameLogic';
 import { ReactionBar, spawnReaction } from './Reactions';
+import { settleMultiplayerGame } from './functions';
 
 const RANKAR = {A:'أ',K:'ك',Q:'ق',J:'ج','10':'١٠','9':'٩','8':'٨','7':'٧'};
 const BOT_NAMES = [{name:'محمد',avatar:'👲'},{name:'عبدالله',avatar:'🧔'},{name:'سعد',avatar:'🤴'},{name:'فهد',avatar:'🧙'}];
@@ -379,16 +380,18 @@ function MPGame({profile,code,onExit,onProfileUpdate}){
     // eslint-disable-next-line react-hooks/exhaustive-deps
   },[gd?.rev]);
 
-  // Settlement: each human applies own profile once at gameOver;
-  // host also writes the match telemetry doc.
+  // Settlement: the server referee credits every player from the
+  // authoritative room state (idempotent, so all clients may call it).
+  // The host additionally writes the match telemetry doc.
   useEffect(()=>{
     if(gd?.phase!=='gameOver'||settledRef.current)return;
     settledRef.current=true;
     const myTeamWon=(gd.scores.a>=gd.scores.b?0:1)===seatTeam(mySeat);
     const coinDelta=myTeamWon?50:10;
     (async()=>{
-      try{await updateDoc(doc(db,'users',profile.uid),{wins:increment(myTeamWon?1:0),losses:increment(myTeamWon?0:1),coins:increment(coinDelta)});}catch{/* offline */}
+      try{await settleMultiplayerGame(code);}catch{/* referee unreachable — server reconciles later */}
     })();
+    // Optimistic local update; refreshed from Firestore on next profile read.
     onProfileUpdate&&onProfileUpdate({wins:(profile.wins||0)+(myTeamWon?1:0),losses:(profile.losses||0)+(myTeamWon?0:1),coins:(profile.coins||0)+coinDelta});
     if(isHost){
       (async()=>{

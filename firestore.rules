@@ -10,13 +10,34 @@ service cloud.firestore {
     function isAdmin() { return signedIn() && request.auth.token.admin == true; }
     function notBanned() { return !('banned' in resource.data) || resource.data.banned != true; }
 
+    // A client may edit its own profile but must NOT be able to mint
+    // currency or fake a record. coins may only go down (spending);
+    // wins/losses/isVip are server-only. The referee (Cloud Functions via
+    // Admin SDK) and admins bypass all of this.
+    function noEconomyCheat() {
+      let d = request.resource.data;
+      let o = resource.data;
+      return d.get('coins', 0) <= o.get('coins', 0)
+        && d.get('wins', 0) == o.get('wins', 0)
+        && d.get('losses', 0) == o.get('losses', 0)
+        && d.get('isVip', false) == o.get('isVip', false)
+        && d.get('banned', false) == o.get('banned', false);
+    }
+
     match /users/{uid} {
       // Any signed-in player can read profiles (leaderboard, friend search)
       allow read: if signedIn();
-      allow create: if isSelf(uid);
-      // Players update their own doc (profile edits, game results, daily
-      // rewards). Banned users cannot write. Admins can update anyone.
-      allow update: if (isSelf(uid) && notBanned()) || isAdmin();
+      // New profiles start with at most the 500-coin welcome bonus and a
+      // clean record — no self-granted VIP or inflated stats.
+      allow create: if isSelf(uid)
+        && request.resource.data.get('coins', 0) <= 500
+        && request.resource.data.get('wins', 0) == 0
+        && request.resource.data.get('losses', 0) == 0
+        && request.resource.data.get('isVip', false) == false
+        && request.resource.data.get('banned', false) == false;
+      // Players edit their own doc (profile, spending, cosmetics) but the
+      // economy fields are locked. Banned users cannot write.
+      allow update: if (isSelf(uid) && notBanned() && noEconomyCheat()) || isAdmin();
       allow delete: if isAdmin();
 
       match /friends/{friendId} {
