@@ -152,7 +152,18 @@ export function botBid(hand,passCount){
   return{type:'pass'};
 }
 export function genCode(){return Math.floor(100000+Math.random()*900000).toString();}
+// User preferences (sound / haptics / notifications), persisted locally.
+const PREF_DEFAULTS={sound:true,haptics:true,notifications:true};
+export function getPref(key){
+  try{const v=localStorage.getItem('baloot_pref_'+key);return v===null?PREF_DEFAULTS[key]:v==='1';}
+  catch{return PREF_DEFAULTS[key];}
+}
+export function setPref(key,val){
+  try{localStorage.setItem('baloot_pref_'+key,val?'1':'0');}catch{/* ignore */}
+}
+
 export function playTone(freq,vol=0.1,type='sine'){
+  if(!getPref('sound'))return;
   try{
     const ctx=new(window.AudioContext||window.webkitAudioContext)();
     const freqs=Array.isArray(freq)?freq:[freq];
@@ -177,6 +188,7 @@ export const sounds={
 
 // Haptic feedback — the "slam" mechanic. No-op where unsupported (iOS Safari).
 export function vibrate(pattern){
+  if(!getPref('haptics'))return;
   try{if(navigator.vibrate)navigator.vibrate(pattern);}catch{/* unsupported */}
 }
 export const haptics={

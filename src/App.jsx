@@ -10,9 +10,32 @@ import { FriendSystem, NotificationCenter, DailyRewardPopup } from './Social';
 import TournamentScreen from './Tournament';
 import AdminPanel from './AdminPanel';
 import MultiplayerScreen from './MultiplayerGame';
+import { useLang, applyDir } from './i18n';
+import SettingsScreen from './Settings';
 
 const AVATARS = ['🧔','👲','🧕','👨‍💼','👩‍💼','🤴','👸','🧙','🦸','🎩'];
+// Cities carry an English label so the picker/leaderboard work in both langs
+// while the stored value stays the canonical Arabic string.
 const CITIES  = ['الرياض','جدة','مكة','المدينة','الدمام','الخبر','أبها','تبوك','حائل','القصيم'];
+const CITY_EN = {'الرياض':'Riyadh','جدة':'Jeddah','مكة':'Makkah','المدينة':'Madinah','الدمام':'Dammam','الخبر':'Khobar','أبها':'Abha','تبوك':'Tabuk','حائل':'Hail','القصيم':'Qassim'};
+const cityLabel=(c,lang)=>lang==='en'?(CITY_EN[c]||c):c;
+
+// Derived progression shown across the profile/home.
+function playerLevel(profile){
+  const xp=(profile?.wins||0)*10+(profile?.losses||0)*3;
+  const level=Math.floor(Math.sqrt(xp/8))+1;
+  const cur=(level-1)*(level-1)*8, next=level*level*8;
+  const pct=Math.min(100,Math.max(0,Math.round((xp-cur)/Math.max(1,next-cur)*100)));
+  return {level,xp,pct};
+}
+function playerRank(wins=0){
+  if(wins>=500)return{key:'rank_legend',icon:'👑',color:'#F0C040'};
+  if(wins>=250)return{key:'rank_diamond',icon:'💎',color:'#5DE0E6'};
+  if(wins>=120)return{key:'rank_platinum',icon:'🏆',color:'#E5E4E2'};
+  if(wins>=50) return{key:'rank_gold',icon:'🥇',color:'#FFD700'};
+  if(wins>=15) return{key:'rank_silver',icon:'🥈',color:'#C0C0C0'};
+  return{key:'rank_bronze',icon:'🥉',color:'#CD7F32'};
+}
 const RANKAR  = {A:'أ',K:'ك',Q:'ق',J:'ج','10':'١٠','9':'٩','8':'٨','7':'٧'};
 const SEAT_POS = {0:{top:76,left:37,rot:-4},1:{top:40,left:4,rot:9},2:{top:2,left:37,rot:-7},3:{top:40,left:66,rot:6}};
 
@@ -41,6 +64,7 @@ const G={
 function Spin(){return <div style={{width:30,height:30,border:'3px solid rgba(240,192,64,.2)',borderTopColor:'#F0C040',borderRadius:'50%',animation:'spin .8s linear infinite'}}/>;}
 
 export default function App(){
+  const {t,dir}=useLang();
   const [profile,setProfile]=useState(null);
   const [authUser,setAuthUser]=useState(null);
   const [authErr,setAuthErr]=useState('');
@@ -51,12 +75,15 @@ export default function App(){
   const [inTournament,setInTournament]=useState(false);
   const [showOnboarding,setShowOnboarding]=useState(false);
   const [showAdmin,setShowAdmin]=useState(false);
+  const [showSettings,setShowSettings]=useState(false);
   const [showDaily,setShowDaily]=useState(false);
+
+  useEffect(()=>{applyDir();},[]);
 
   useEffect(()=>{
     const style=document.createElement('style');
     style.textContent=`
-      @import url('https://fonts.googleapis.com/css2?family=Scheherazade+New:wght@400;700&family=Tajawal:wght@400;700;900&display=swap');
+      @import url('https://fonts.googleapis.com/css2?family=Scheherazade+New:wght@400;700&family=Tajawal:wght@400;700;900&family=Inter:wght@400;600;800;900&display=swap');
       *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
       html,body,#root{height:100%;background:#07090A;overflow:hidden}
       @keyframes spin{to{transform:rotate(360deg)}}
@@ -69,6 +96,10 @@ export default function App(){
       @keyframes flyToCenter{from{opacity:1}to{opacity:0;transform:translate(var(--wx),var(--wy)) scale(.5)}}
       @keyframes ellipsis{0%{content:'.'}33%{content:'..'}66%{content:'...'}}
       @keyframes reactFloat{0%{opacity:0;transform:translateY(0) scale(.5)}15%{opacity:1;transform:translateY(-20px) scale(1.3)}100%{opacity:0;transform:translateY(-130px) scale(1)}}
+      @keyframes floaty{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
+      @keyframes glowPulse{0%,100%{opacity:.55}50%{opacity:1}}
+      @keyframes sheen{0%{transform:translateX(-120%)}60%,100%{transform:translateX(220%)}}
+      *::-webkit-scrollbar{width:0;height:0}
       select option{background:#0C1410}
     `;
     document.head.appendChild(style);
@@ -104,8 +135,8 @@ export default function App(){
   },[profile,showOnboarding]);
 
   if(loading)return(
-    <div style={{height:'100dvh',background:'#07090A',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:20,fontFamily:'Tajawal,sans-serif'}}>
-      <div style={{fontFamily:"'Scheherazade New',serif",fontSize:44,color:'#F0C040',textShadow:'0 0 24px rgba(240,192,64,.4)'}}>بلوت</div>
+    <div style={{height:'100dvh',background:'radial-gradient(ellipse 90% 60% at 50% 35%,#0F2A14,#07090A)',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:22,fontFamily:'Tajawal,sans-serif',direction:dir}}>
+      <div style={{fontFamily:"'Scheherazade New',serif",fontSize:'clamp(44px,12vw,64px)',color:'#F0C040',textShadow:'0 0 34px rgba(240,192,64,.5)',animation:'floaty 3s ease-in-out infinite'}}>{t('appShort')}</div>
       <Spin/>
     </div>
   );
@@ -114,16 +145,18 @@ export default function App(){
 
   if(showOnboarding)return <OnboardingTutorial onComplete={()=>setShowOnboarding(false)}/>;
 
+  if(showSettings)return <SettingsScreen profile={profile} onUpdate={setProfile} onClose={()=>setShowSettings(false)} onLogout={async()=>{try{await signOutUser();}catch{/* ignore */}setProfile(null);setShowSettings(false);}}/>;
+
   if(showAdmin)return(
-    <div style={{height:'100dvh',overflowY:'auto',position:'relative'}}>
-      <button onClick={()=>setShowAdmin(false)} style={{position:'fixed',top:12,left:12,zIndex:2000,...G.btn,background:'rgba(0,0,0,.6)',color:'#F0EDE5',border:'1px solid rgba(240,192,64,.3)',fontSize:12,padding:'6px 12px'}}>✕ رجوع</button>
+    <div style={{height:'100dvh',overflowY:'auto',position:'relative',direction:dir}}>
+      <button onClick={()=>setShowAdmin(false)} style={{position:'fixed',top:12,insetInlineStart:12,zIndex:2000,...G.btn,background:'rgba(0,0,0,.6)',color:'#F0EDE5',border:'1px solid rgba(240,192,64,.3)',fontSize:12,padding:'6px 12px'}}>✕ {t('back')}</button>
       <AdminPanel/>
     </div>
   );
 
   if(inTournament)return(
-    <div style={{height:'100dvh',overflowY:'auto',position:'relative'}}>
-      <button onClick={()=>setInTournament(false)} style={{position:'fixed',top:'calc(env(safe-area-inset-top,0px) + 12px)',left:12,zIndex:2000,...G.btn,background:'rgba(0,0,0,.6)',color:'#F0EDE5',border:'1px solid rgba(240,192,64,.3)',fontSize:12,padding:'6px 12px'}}>✕ رجوع</button>
+    <div style={{height:'100dvh',overflowY:'auto',position:'relative',direction:dir}}>
+      <button onClick={()=>setInTournament(false)} style={{position:'fixed',top:'calc(env(safe-area-inset-top,0px) + 12px)',insetInlineStart:12,zIndex:2000,...G.btn,background:'rgba(0,0,0,.6)',color:'#F0EDE5',border:'1px solid rgba(240,192,64,.3)',fontSize:12,padding:'6px 12px'}}>✕ {t('back')}</button>
       <TournamentScreen userId={profile.uid} userProfile={profile} onUpdateProfile={patch=>setProfile(p=>({...p,...patch}))}/>
     </div>
   );
@@ -140,12 +173,12 @@ export default function App(){
     </div>
   );
 
-  const NAV=[{id:'home',i:'🏠',l:'الرئيسية'},{id:'board',i:'🏆',l:'المتصدرون'},{id:'store',i:'🛍️',l:'المتجر'},{id:'friends',i:'👥',l:'أصدقاء'},{id:'profile',i:'👤',l:'ملفي'}];
+  const NAV=[{id:'home',i:'🏠',l:t('nav_home')},{id:'board',i:'🏆',l:t('nav_board')},{id:'store',i:'🛍️',l:t('nav_store')},{id:'friends',i:'👥',l:t('nav_friends')},{id:'profile',i:'👤',l:t('nav_profile')}];
 
   return(
-    <div style={{height:'100dvh',display:'flex',flexDirection:'column',background:'#07090A',fontFamily:'Tajawal,sans-serif',color:'#F0EDE5',direction:'rtl',overflow:'hidden'}}>
+    <div style={{height:'100dvh',display:'flex',flexDirection:'column',background:'#07090A',fontFamily:'Tajawal,sans-serif',color:'#F0EDE5',direction:dir,overflow:'hidden'}}>
       <div style={{flex:1,overflow:'hidden',position:'relative'}}>
-        {tab==='home'    &&<HomeScreen    profile={profile} onGame={()=>setInGame(true)} onMultiplayer={setMpMode} onTournament={()=>setInTournament(true)} onAdmin={()=>setShowAdmin(true)}/>}
+        {tab==='home'    &&<HomeScreen    profile={profile} onGame={()=>setInGame(true)} onMultiplayer={setMpMode} onTournament={()=>setInTournament(true)} onAdmin={()=>setShowAdmin(true)} onSettings={()=>setShowSettings(true)}/>}
         {tab==='board'   &&<LeaderScreen/>}
         {tab==='store'   &&<StoreScreen   profile={profile} onUpdate={setProfile}/>}
         {tab==='friends' &&(
@@ -153,14 +186,15 @@ export default function App(){
             <FriendSystem userId={profile.uid} userProfile={profile} currentRoomCode={null}/>
           </div>
         )}
-        {tab==='profile' &&<ProfileScreen profile={profile} onUpdate={setProfile} onLogout={async()=>{try{await signOutUser();}catch{/* ignore */}setProfile(null);}}/>}
+        {tab==='profile' &&<ProfileScreen profile={profile} onUpdate={setProfile} onSettings={()=>setShowSettings(true)} onLogout={async()=>{try{await signOutUser();}catch{/* ignore */}setProfile(null);}}/>}
       </div>
-      <nav style={{flexShrink:0,height:'calc(60px + env(safe-area-inset-bottom,0px))',paddingBottom:'env(safe-area-inset-bottom,0px)',background:'rgba(8,12,10,.97)',borderTop:'1px solid rgba(240,192,64,.12)',display:'flex'}}>
+      <nav style={{flexShrink:0,height:'calc(62px + env(safe-area-inset-bottom,0px))',paddingBottom:'env(safe-area-inset-bottom,0px)',background:'linear-gradient(180deg,rgba(10,15,12,.98),rgba(6,9,8,.99))',borderTop:'1px solid rgba(240,192,64,.14)',display:'flex',boxShadow:'0 -8px 24px rgba(0,0,0,.5)'}}>
         {NAV.map(n=>{const a=tab===n.id;return(
-          <div key={n.id} onClick={()=>setTab(n.id)} style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:3,cursor:'pointer',padding:'6px 0',position:'relative'}}>
-            <span style={{fontSize:19,transform:a?'translateY(-3px) scale(1.15)':'none',transition:'transform .25s'}}>{n.i}</span>
-            <span style={{fontSize:9,fontWeight:700,color:a?'#F0C040':'rgba(240,237,229,.5)'}}>{n.l}</span>
-            {a&&<div style={{position:'absolute',bottom:0,left:'50%',transform:'translateX(-50%)',width:26,height:2,borderRadius:2,background:'#F0C040'}}/>}
+          <div key={n.id} onClick={()=>{setTab(n.id);haptics.play();}} style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:3,cursor:'pointer',padding:'6px 0',position:'relative'}}>
+            {a&&<div style={{position:'absolute',top:6,width:42,height:42,borderRadius:'50%',background:'radial-gradient(circle,rgba(240,192,64,.22),transparent 70%)'}}/>}
+            <span style={{fontSize:20,transform:a?'translateY(-3px) scale(1.18)':'none',transition:'transform .25s cubic-bezier(.34,1.56,.64,1)',filter:a?'drop-shadow(0 4px 8px rgba(240,192,64,.4))':'none'}}>{n.i}</span>
+            <span style={{fontSize:9.5,fontWeight:800,color:a?'#F0C040':'rgba(240,237,229,.5)'}}>{n.l}</span>
+            {a&&<div style={{position:'absolute',bottom:2,width:22,height:3,borderRadius:3,background:'#F0C040',boxShadow:'0 0 8px #F0C040'}}/>}
           </div>
         );})}
       </nav>
@@ -170,6 +204,7 @@ export default function App(){
 }
 
 function AuthScreen({authUser,authErr,onDone}){
+  const {t,dir,lang}=useLang();
   // If we already have a signed-in Firebase user (e.g. returned from a
   // mobile redirect) but no Firestore profile yet, go straight to setup.
   const step=authUser?'setup':'login';
@@ -197,28 +232,28 @@ function AuthScreen({authUser,authErr,onDone}){
     }catch(e){setErr(e.message);setBusy(false);}
   };
 
-  const bg={minHeight:'100dvh',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:'28px 20px',background:'radial-gradient(ellipse 80% 60% at 50% 40%,#0F2A14,#07090A)',fontFamily:'Tajawal,sans-serif',direction:'rtl'};
-  const box={width:'100%',maxWidth:360,background:'rgba(12,20,16,.92)',border:'1px solid rgba(240,192,64,.14)',borderRadius:20,padding:'22px 18px'};
+  const bg={minHeight:'100dvh',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:'28px 20px',background:'radial-gradient(ellipse 80% 60% at 50% 40%,#0F2A14,#07090A)',fontFamily:'Tajawal,sans-serif',direction:dir};
+  const box={width:'100%',maxWidth:380,background:'linear-gradient(180deg,rgba(16,26,18,.95),rgba(10,15,12,.96))',border:'1px solid rgba(240,192,64,.18)',borderRadius:22,padding:'24px 20px',boxShadow:'0 24px 70px rgba(0,0,0,.6)'};
 
   if(step==='setup')return(
     <div style={bg}>
-      <div style={{fontFamily:"'Scheherazade New',serif",fontSize:46,color:'#F0C040',textShadow:'0 0 24px rgba(240,192,64,.4)',marginBottom:6}}>بلوت</div>
-      <div style={{color:'rgba(240,237,229,.6)',fontSize:12,letterSpacing:2,marginBottom:26}}>أكمل ملفك</div>
+      <div style={{fontFamily:"'Scheherazade New',serif",fontSize:'clamp(40px,11vw,56px)',color:'#F0C040',textShadow:'0 0 26px rgba(240,192,64,.45)',marginBottom:6,animation:'floaty 3s ease-in-out infinite'}}>{t('appShort')}</div>
+      <div style={{color:'rgba(240,237,229,.6)',fontSize:12,letterSpacing:2,marginBottom:24}}>{t('completeProfile')}</div>
       <div style={box}>
-        <div style={{fontSize:16,fontWeight:900,textAlign:'center',marginBottom:18}}>مرحباً {authUser?.displayName?.split(' ')[0]||'لاعب'} 👋</div>
+        <div style={{fontSize:17,fontWeight:900,textAlign:'center',marginBottom:18}}>{t('welcome')} {authUser?.displayName?.split(' ')[0]||''} 👋</div>
         <div style={{marginBottom:12}}>
-          <div style={{color:'rgba(240,237,229,.6)',fontSize:11,fontWeight:700,marginBottom:4}}>مدينتك</div>
-          <select style={G.input} value={city} onChange={e=>setCity(e.target.value)}>{CITIES.map(c=><option key={c}>{c}</option>)}</select>
+          <div style={{color:'rgba(240,237,229,.6)',fontSize:11,fontWeight:700,marginBottom:4}}>{t('yourCity')}</div>
+          <select style={G.input} value={city} onChange={e=>setCity(e.target.value)}>{CITIES.map(c=><option key={c} value={c}>{cityLabel(c,lang)}</option>)}</select>
         </div>
         <div style={{marginBottom:18}}>
-          <div style={{color:'rgba(240,237,229,.6)',fontSize:11,fontWeight:700,marginBottom:8}}>اختر رمزك</div>
+          <div style={{color:'rgba(240,237,229,.6)',fontSize:11,fontWeight:700,marginBottom:8}}>{t('chooseAvatar')}</div>
           <div style={{display:'flex',flexWrap:'wrap',gap:8,justifyContent:'center'}}>
-            {AVATARS.map(a=><div key={a} onClick={()=>setAv(a)} style={{width:44,height:44,borderRadius:'50%',background:'rgba(16,26,18,.9)',border:`2px solid ${av===a?'#F0C040':'rgba(255,255,255,.08)'}`,display:'flex',alignItems:'center',justifyContent:'center',fontSize:22,cursor:'pointer',transform:av===a?'scale(1.1)':'none',transition:'all .2s'}}>{a}</div>)}
+            {AVATARS.map(a=><div key={a} onClick={()=>setAv(a)} style={{width:46,height:46,borderRadius:'50%',background:'rgba(16,26,18,.9)',border:`2px solid ${av===a?'#F0C040':'rgba(255,255,255,.08)'}`,display:'flex',alignItems:'center',justifyContent:'center',fontSize:23,cursor:'pointer',transform:av===a?'scale(1.12)':'none',boxShadow:av===a?'0 0 14px rgba(240,192,64,.4)':'none',transition:'all .2s'}}>{a}</div>)}
           </div>
         </div>
         {err&&<div style={{color:'#E74C3C',fontSize:12,textAlign:'center',marginBottom:10}}>{err}</div>}
-        <button onClick={finish} disabled={busy} style={{...G.btn,width:'100%',padding:14,fontSize:15,background:'linear-gradient(135deg,#8B6914,#F0C040)',color:'#07090A',display:'flex',alignItems:'center',justifyContent:'center',gap:8}}>
-          {busy?<Spin/>:'ابدأ اللعب 🃏'}
+        <button onClick={finish} disabled={busy} style={{...G.btn,width:'100%',padding:15,fontSize:15,background:'linear-gradient(135deg,#8B6914,#F0C040)',color:'#07090A',display:'flex',alignItems:'center',justifyContent:'center',gap:8,boxShadow:'0 8px 24px rgba(240,192,64,.3)'}}>
+          {busy?<Spin/>:`${t('startPlaying')} 🃏`}
         </button>
       </div>
     </div>
@@ -226,13 +261,13 @@ function AuthScreen({authUser,authErr,onDone}){
 
   return(
     <div style={bg}>
-      <div style={{fontFamily:"'Scheherazade New',serif",fontSize:50,color:'#F0C040',textShadow:'0 0 28px rgba(240,192,64,.45)',marginBottom:6}}>بلوت</div>
-      <div style={{color:'rgba(240,237,229,.6)',fontSize:12,letterSpacing:2,marginBottom:30}}>المملكة العربية السعودية</div>
+      <div style={{fontFamily:"'Scheherazade New',serif",fontSize:'clamp(46px,13vw,64px)',color:'#F0C040',textShadow:'0 0 30px rgba(240,192,64,.5)',marginBottom:6,animation:'floaty 3s ease-in-out infinite'}}>{t('appShort')}</div>
+      <div style={{color:'rgba(240,237,229,.6)',fontSize:12,letterSpacing:2,marginBottom:28}}>{t('kingdom')}</div>
       <div style={box}>
-        <div style={{fontSize:17,fontWeight:900,textAlign:'center',marginBottom:8}}>سجّل دخولك</div>
-        <div style={{color:'rgba(240,237,229,.6)',fontSize:12,textAlign:'center',lineHeight:1.6,marginBottom:20}}>سجّل باستخدام Google للحفاظ على تقدمك</div>
+        <div style={{fontSize:18,fontWeight:900,textAlign:'center',marginBottom:8}}>{t('signInTitle')}</div>
+        <div style={{color:'rgba(240,237,229,.6)',fontSize:12,textAlign:'center',lineHeight:1.6,marginBottom:20}}>{t('signInSub')}</div>
         {err&&<div style={{color:'#E74C3C',fontSize:12,textAlign:'center',background:'rgba(231,76,60,.1)',borderRadius:8,padding:8,marginBottom:12}}>{err}</div>}
-        <button onClick={doGoogle} disabled={busy} style={{display:'flex',alignItems:'center',justifyContent:'center',gap:10,width:'100%',padding:14,borderRadius:12,background:'#fff',color:'#1a1a1a',border:'none',cursor:'pointer',fontFamily:'Tajawal,sans-serif',fontSize:15,fontWeight:700,boxShadow:'0 4px 18px rgba(0,0,0,.4)',opacity:busy?.7:1,touchAction:'manipulation'}}>
+        <button onClick={doGoogle} disabled={busy} style={{display:'flex',alignItems:'center',justifyContent:'center',gap:10,width:'100%',padding:15,borderRadius:12,background:'#fff',color:'#1a1a1a',border:'none',cursor:'pointer',fontFamily:'inherit',fontSize:15,fontWeight:800,boxShadow:'0 4px 18px rgba(0,0,0,.4)',opacity:busy?.7:1,touchAction:'manipulation'}}>
           {busy?<Spin/>:(
             <>
               <svg width="22" height="22" viewBox="0 0 48 48">
@@ -241,23 +276,26 @@ function AuthScreen({authUser,authErr,onDone}){
                 <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
                 <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.35-8.16 2.35-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
               </svg>
-              تسجيل الدخول بـ Google
+              {t('signInGoogle')}
             </>
           )}
         </button>
-        <div style={{color:'rgba(240,237,229,.6)',fontSize:10,textAlign:'center',marginTop:12}}>بالمتابعة توافق على شروط الاستخدام</div>
+        <div style={{color:'rgba(240,237,229,.6)',fontSize:10,textAlign:'center',marginTop:12}}>{t('terms')}</div>
       </div>
     </div>
   );
 }
 
-function HomeScreen({profile,onGame,onMultiplayer,onTournament,onAdmin}){
+function HomeScreen({profile,onGame,onMultiplayer,onTournament,onAdmin,onSettings}){
+  const {t,lang,toggleLang}=useLang();
   const tapRef=useRef({n:0,t:0});
+  const {level,pct}=playerLevel(profile);
+  const rank=playerRank(profile.wins||0);
   const modes=[
-    {id:'bot',   icon:'🤖',title:'مع الروبوت',  sub:'تدرب بدون انتظار',        color:'#9B59B6'},
-    {id:'create',icon:'👥',title:'مع الأصدقاء', sub:'أنشئ غرفة وشارك الكود',  color:'#F0C040'},
-    {id:'join',  icon:'🔑',title:'انضم لغرفة',  sub:'أدخل كود الغرفة',         color:'#3498DB'},
-    {id:'quick', icon:'⚡',title:'لعبة سريعة',  sub:'العب مع لاعبين عشوائيين',color:'#2ECC71'},
+    {id:'bot',   icon:'🤖',title:t('mode_bot'),    sub:t('mode_bot_sub'),    color:'#9B59B6',bg:'linear-gradient(145deg,rgba(155,89,182,.18),rgba(13,20,16,.6))'},
+    {id:'create',icon:'👥',title:t('mode_create'), sub:t('mode_create_sub'), color:'#F0C040',bg:'linear-gradient(145deg,rgba(240,192,64,.16),rgba(13,20,16,.6))'},
+    {id:'join',  icon:'🔑',title:t('mode_join'),   sub:t('mode_join_sub'),   color:'#3498DB',bg:'linear-gradient(145deg,rgba(52,152,219,.16),rgba(13,20,16,.6))'},
+    {id:'quick', icon:'⚡',title:t('mode_quick'),  sub:t('mode_quick_sub'),  color:'#2ECC71',bg:'linear-gradient(145deg,rgba(46,204,113,.16),rgba(13,20,16,.6))'},
   ];
 
   const onLogoTap=()=>{
@@ -268,46 +306,70 @@ function HomeScreen({profile,onGame,onMultiplayer,onTournament,onAdmin}){
     if(r.n>=7){r.n=0;onAdmin();}
   };
 
+  const pill={display:'flex',alignItems:'center',justifyContent:'center',gap:5,width:38,height:38,borderRadius:'50%',background:'rgba(240,192,64,.08)',border:'1px solid rgba(240,192,64,.2)',cursor:'pointer',fontSize:16,touchAction:'manipulation'};
+
   return(
-    <div style={{position:'absolute',inset:0,overflowY:'auto',WebkitOverflowScrolling:'touch',paddingBottom:'calc(60px + env(safe-area-inset-bottom,0px) + 12px)',paddingTop:'env(safe-area-inset-top,0px)'}}>
-      <div style={{textAlign:'center',padding:'18px 14px 0'}}>
-        <div onClick={onLogoTap} style={{fontFamily:"'Scheherazade New',serif",fontSize:'clamp(28px,9vw,44px)',background:'linear-gradient(135deg,#7A5B1A,#F0C040,#FFE08A,#F0C040,#7A5B1A)',WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent',backgroundClip:'text',lineHeight:1.1,marginBottom:4,userSelect:'none'}}>بلوت المملكة</div>
-        <div style={{color:'rgba(240,237,229,.6)',fontSize:11,letterSpacing:2,marginBottom:8}}>العب · تنافس · افوز</div>
-        <div style={{width:60,height:1,margin:'0 auto 16px',background:'linear-gradient(90deg,transparent,#7A5B1A,transparent)'}}/>
-      </div>
-      <div style={{display:'flex',alignItems:'center',gap:10,padding:'0 14px',marginBottom:12}}>
-        <span style={{fontSize:28}}>{profile.avatar}</span>
-        <div style={{flex:1}}>
-          <div style={{fontWeight:900,fontSize:14}}>{profile.name}</div>
-          <div style={{color:'rgba(240,237,229,.6)',fontSize:11}}>{profile.city} · {profile.wins||0} انتصار</div>
-        </div>
+    <div style={{position:'absolute',inset:0,overflowY:'auto',WebkitOverflowScrolling:'touch',paddingBottom:'calc(66px + env(safe-area-inset-bottom,0px) + 12px)',paddingTop:'env(safe-area-inset-top,0px)'}}>
+      {/* top bar: quick actions */}
+      <div style={{display:'flex',alignItems:'center',gap:8,padding:'12px 14px 0'}}>
+        <div onClick={toggleLang} style={{...pill,width:'auto',padding:'0 12px',fontSize:12,fontWeight:800,color:'#F0C040'}}>🌐 {lang==='ar'?'EN':'ع'}</div>
+        <div onClick={onSettings} style={pill}>⚙️</div>
+        <div style={{flex:1}}/>
         <NotificationCenter userId={profile.uid}/>
-        <div style={{display:'flex',alignItems:'center',gap:5,background:'rgba(240,192,64,.1)',border:'1px solid rgba(240,192,64,.2)',borderRadius:20,padding:'5px 10px'}}>
-          <span>🪙</span><span style={{fontSize:13,fontWeight:900,color:'#F0C040'}}>{profile.coins||500}</span>
+      </div>
+      <div style={{textAlign:'center',padding:'6px 14px 0'}}>
+        <div onClick={onLogoTap} style={{fontFamily:"'Scheherazade New',serif",fontSize:'clamp(28px,9vw,46px)',background:'linear-gradient(135deg,#7A5B1A,#F0C040,#FFE08A,#F0C040,#7A5B1A)',backgroundSize:'200% auto',WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent',backgroundClip:'text',lineHeight:1.1,marginBottom:4,userSelect:'none',animation:'shimmer 6s linear infinite'}}>{t('appName')}</div>
+        <div style={{color:'rgba(240,237,229,.55)',fontSize:11,letterSpacing:2,marginBottom:14}}>{t('tagline')}</div>
+      </div>
+
+      {/* player card with level + rank */}
+      <div style={{margin:'0 12px 14px',borderRadius:18,padding:'14px',background:'linear-gradient(135deg,rgba(26,61,32,.55),rgba(13,20,16,.85))',border:'1px solid rgba(240,192,64,.18)',boxShadow:'0 10px 30px rgba(0,0,0,.4)'}}>
+        <div style={{display:'flex',alignItems:'center',gap:12}}>
+          <div style={{position:'relative',flexShrink:0}}>
+            <div style={{width:54,height:54,borderRadius:'50%',background:'rgba(16,26,18,.9)',border:`2.5px solid ${rank.color}`,display:'flex',alignItems:'center',justifyContent:'center',fontSize:28,boxShadow:`0 0 16px ${rank.color}55`}}>{profile.avatar}</div>
+            <div style={{position:'absolute',bottom:-4,insetInlineEnd:-4,background:'#0C1410',border:`1.5px solid ${rank.color}`,borderRadius:9,fontSize:9,fontWeight:900,color:rank.color,padding:'1px 5px'}}>{t('level')} {level}</div>
+          </div>
+          <div style={{flex:1,minWidth:0}}>
+            <div style={{fontWeight:900,fontSize:15,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{profile.name}</div>
+            <div style={{display:'flex',alignItems:'center',gap:6,marginTop:3}}>
+              <span style={{fontSize:12}}>{rank.icon}</span>
+              <span style={{fontSize:11,fontWeight:700,color:rank.color}}>{t(rank.key)}</span>
+              <span style={{color:'rgba(240,237,229,.4)',fontSize:10}}>· 📍 {cityLabel(profile.city,lang)}</span>
+            </div>
+          </div>
+          <div style={{display:'flex',flexDirection:'column',alignItems:'center',gap:2,background:'rgba(240,192,64,.1)',border:'1px solid rgba(240,192,64,.25)',borderRadius:12,padding:'6px 12px',flexShrink:0}}>
+            <span style={{fontSize:14,fontWeight:900,color:'#F0C040'}}>🪙 {profile.coins||0}</span>
+          </div>
+        </div>
+        {/* XP bar */}
+        <div style={{height:6,background:'rgba(0,0,0,.35)',borderRadius:4,marginTop:12,overflow:'hidden'}}>
+          <div style={{height:'100%',width:`${pct}%`,borderRadius:4,background:'linear-gradient(90deg,#8B6914,#F0C040,#FFE08A)',boxShadow:'0 0 8px rgba(240,192,64,.5)',transition:'width .6s ease'}}/>
         </div>
       </div>
-      <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,padding:'0 12px',marginBottom:12}}>
+
+      <div style={{fontSize:12,fontWeight:800,color:'rgba(240,237,229,.5)',padding:'0 16px 8px'}}>{t('playModes')}</div>
+      <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(150px,1fr))',gap:10,padding:'0 12px',marginBottom:14}}>
         {modes.map(m=>(
-          <div key={m.id} onClick={m.id==='bot'?onGame:()=>onMultiplayer(m.id)}
-            style={{background:'rgba(13,20,16,.8)',border:'1px solid rgba(255,255,255,.07)',borderRadius:16,padding:'16px 10px',display:'flex',flexDirection:'column',alignItems:'center',gap:6,cursor:'pointer',touchAction:'manipulation'}}>
-            <span style={{fontSize:26}}>{m.icon}</span>
-            <span style={{fontSize:13,fontWeight:700,color:m.color+'CC'}}>{m.title}</span>
-            <span style={{color:'rgba(240,237,229,.6)',fontSize:10,textAlign:'center',lineHeight:1.3}}>{m.sub}</span>
+          <div key={m.id} onClick={()=>{haptics.play();(m.id==='bot'?onGame():onMultiplayer(m.id));}}
+            style={{background:m.bg,border:`1px solid ${m.color}33`,borderRadius:16,padding:'18px 12px',display:'flex',flexDirection:'column',alignItems:'center',gap:7,cursor:'pointer',touchAction:'manipulation',position:'relative',overflow:'hidden'}}>
+            <span style={{fontSize:30,filter:`drop-shadow(0 4px 10px ${m.color}66)`}}>{m.icon}</span>
+            <span style={{fontSize:14,fontWeight:800,color:m.color}}>{m.title}</span>
+            <span style={{color:'rgba(240,237,229,.6)',fontSize:10.5,textAlign:'center',lineHeight:1.35}}>{m.sub}</span>
           </div>
         ))}
       </div>
-      <div onClick={onTournament} style={{margin:'0 12px 12px',borderRadius:16,padding:'16px 18px',cursor:'pointer',touchAction:'manipulation',position:'relative',overflow:'hidden',border:'1px solid rgba(240,192,64,.3)',background:'linear-gradient(120deg,#1a0f00 0%,#2a1a00 25%,#3a2400 50%,#2a1a00 75%,#1a0f00 100%)',backgroundSize:'200% 100%',animation:'shimmer 5s linear infinite',display:'flex',alignItems:'center',gap:12}}>
-        <span style={{fontSize:30}}>🏆</span>
+      <div onClick={onTournament} style={{margin:'0 12px 14px',borderRadius:16,padding:'16px 18px',cursor:'pointer',touchAction:'manipulation',position:'relative',overflow:'hidden',border:'1px solid rgba(240,192,64,.32)',background:'linear-gradient(120deg,#1a0f00 0%,#2a1a00 25%,#3a2400 50%,#2a1a00 75%,#1a0f00 100%)',backgroundSize:'200% 100%',animation:'shimmer 5s linear infinite',display:'flex',alignItems:'center',gap:12}}>
+        <span style={{fontSize:32}}>🏆</span>
         <div style={{flex:1}}>
-          <div style={{fontSize:14,fontWeight:900,color:'#F0C040'}}>البطولات</div>
-          <div style={{color:'rgba(240,237,229,.65)',fontSize:11,marginTop:2}}>تنافس واربح جوائز نقدية وعملات</div>
+          <div style={{fontSize:15,fontWeight:900,color:'#F0C040'}}>{t('tournaments')}</div>
+          <div style={{color:'rgba(240,237,229,.65)',fontSize:11,marginTop:2}}>{t('tournaments_sub')}</div>
         </div>
-        <span style={{color:'#F0C040',fontSize:18}}>‹</span>
+        <span style={{color:'#F0C040',fontSize:20}}>{lang==='ar'?'‹':'›'}</span>
       </div>
       <div style={{display:'flex',background:'rgba(13,20,16,.75)',border:'1px solid rgba(240,192,64,.1)',borderRadius:14,margin:'0 12px',overflow:'hidden'}}>
-        {[['٦.٢م','لاعب'],['٩٨٤','مباراة الآن'],['٤.٨','التقييم']].map(([n,l],i)=>(
-          <div key={i} style={{flex:1,textAlign:'center',padding:'10px 4px',borderRight:i<2?'1px solid rgba(255,255,255,.06)':'none'}}>
-            <div style={{fontSize:15,fontWeight:900,color:'#F0C040'}}>{n}</div>
+        {[[lang==='ar'?'٦.٢م':'6.2M',t('stat_players')],[lang==='ar'?'٩٨٤':'984',t('stat_live')],[lang==='ar'?'٤.٨':'4.8',t('stat_rating')]].map(([n,l],i)=>(
+          <div key={i} style={{flex:1,textAlign:'center',padding:'12px 4px',borderInlineEnd:i<2?'1px solid rgba(255,255,255,.06)':'none'}}>
+            <div style={{fontSize:16,fontWeight:900,color:'#F0C040'}}>{n}</div>
             <div style={{color:'rgba(240,237,229,.6)',fontSize:9,marginTop:1}}>{l}</div>
           </div>
         ))}
@@ -320,7 +382,10 @@ const seatTeam=s=>s%2;
 const TEAM_KEY=['a','b'];
 
 function GameScreen({profile,onExit,onProfileUpdate}){
-  const players=[{name:profile.name,avatar:profile.avatar},{name:'محمد',avatar:'👲'},{name:'عبدالله',avatar:'🧔'},{name:'سعد',avatar:'🤴'}];
+  const {t,dir,lang}=useLang();
+  const BOTS=lang==='ar'?[['محمد','👲'],['عبدالله','🧔'],['سعد','🤴']]:[['Mohammed','👲'],['Abdullah','🧔'],['Saad','🤴']];
+  const players=[{name:profile.name,avatar:profile.avatar},{name:BOTS[0][0],avatar:BOTS[0][1]},{name:BOTS[1][0],avatar:BOTS[1][1]},{name:BOTS[2][0],avatar:BOTS[2][1]}];
+  const suitName=(s)=>{if(!s)return '';const map={'♠':{ar:'بستوني',en:'Spades'},'♥':{ar:'كبة',en:'Hearts'},'♦':{ar:'ديناري',en:'Diamonds'},'♣':{ar:'جاروني',en:'Clubs'}};return map[s.symbol]?map[s.symbol][lang]:s.name;};
 
   const [dealer,setDealer]=useState(3);
   const [dealtNonce,setDealtNonce]=useState(0);
@@ -364,16 +429,16 @@ function GameScreen({profile,onExit,onProfileUpdate}){
 
   const handleBid=(seat,bid)=>{
     if(bid.type==='pass'){
-      showT(`${players[seat].name}: پاس`);
+      showT(`${players[seat].name}: ${t('pass')}`);
       const np=passCount+1;
-      if(np>=4){showT('الكل مرر — توزيع جديد 🃏');const nd=(dealer+1)%4;setDealer(nd);newHand(nd);return;}
+      if(np>=4){showT(t('allPassed')+' 🃏');const nd=(dealer+1)%4;setDealer(nd);newHand(nd);return;}
       setPassCount(np);
       setCurrentBidder((seat+1)%4);
     }else{
       const bidTeam=seatTeam(seat);
       setContract({type:bid.type,trump:bid.trump||null,bidTeam,bidderSeat:seat});
       const suitInfo=bid.trump?CARD_SUITS.find(s=>s.symbol===bid.trump):null;
-      showT(bid.type==='sun'?`${players[seat].name}: صن ☀️`:`${players[seat].name}: حكم ${suitInfo?.symbol||''}`);
+      showT(bid.type==='sun'?`${players[seat].name}: ${t('sun')} ☀️`:`${players[seat].name}: ${t('hokum')} ${suitInfo?.symbol||''}`);
       setCurrentPlayer((dealer+1)%4);
       setPhase('playing');
     }
@@ -414,7 +479,7 @@ function GameScreen({profile,onExit,onProfileUpdate}){
       const wTeam=seatTeam(winnerPlay.seat);
       const newRoundScores=[...roundScores];newRoundScores[wTeam]+=trickValue;
       setRoundScores(newRoundScores);
-      showT(`${players[winnerPlay.seat].name} أخذ الضربة (+${trickValue}) 🏆`);
+      showT(`${players[winnerPlay.seat].name} ${t('tookTrick')} (+${trickValue}) 🏆`);
       sounds.win();if(wTeam===0)haptics.win();
       const nt=tricksWon+1;
       setTricksWon(nt);
@@ -488,18 +553,18 @@ function GameScreen({profile,onExit,onProfileUpdate}){
   const theme=getThemeStyles(profile);
 
   return(
-    <div style={{width:'100%',height:'100%',background:`radial-gradient(ellipse 90% 70% at 50% 50%,${theme.felt},#07090A)`,position:'relative',overflow:'hidden',display:'flex',alignItems:'center',justifyContent:'center',fontFamily:'Tajawal,sans-serif',direction:'rtl'}}>
+    <div style={{width:'100%',height:'100%',background:`radial-gradient(ellipse 90% 70% at 50% 50%,${theme.felt},#07090A)`,position:'relative',overflow:'hidden',display:'flex',alignItems:'center',justifyContent:'center',fontFamily:'Tajawal,sans-serif',direction:dir}}>
       {toast&&<div key={toast.k} style={{position:'fixed',top:'calc(env(safe-area-inset-top,0px) + 12px)',left:'50%',transform:'translateX(-50%)',background:'rgba(8,12,10,.95)',border:'1px solid #7A5B1A',borderRadius:10,padding:'9px 18px',fontSize:13,fontWeight:700,color:'#F0C040',whiteSpace:'nowrap',zIndex:9000,pointerEvents:'none',animation:'fadeUp .35s ease both'}}>{toast.msg}</div>}
 
       <div style={{position:'absolute',top:'50%',left:'50%',transform:'translate(-50%,-50%)',width:'min(82vw,320px)',height:'min(82vw,320px)',borderRadius:'50%',border:'1px solid rgba(240,192,64,.15)',pointerEvents:'none',zIndex:1,animation:'spin 60s linear infinite'}}/>
       <div style={{position:'absolute',top:'50%',left:'50%',transform:'translate(-50%,-50%)',width:'min(65vw,260px)',height:'min(65vw,260px)',borderRadius:'50%',border:'1px dashed rgba(240,192,64,.08)',pointerEvents:'none',zIndex:1,animation:'spin 40s linear infinite reverse'}}/>
 
       <div style={{position:'absolute',top:'calc(env(safe-area-inset-top,0px) + 8px)',left:0,right:0,display:'flex',alignItems:'center',justifyContent:'space-between',padding:'0 10px',zIndex:20}}>
-        <button onClick={onExit} style={{...G.btn,background:'rgba(255,255,255,.08)',color:'rgba(240,237,229,.7)',border:'1px solid rgba(255,255,255,.1)',fontSize:11,padding:'5px 10px'}}>خروج</button>
+        <button onClick={onExit} style={{...G.btn,background:'rgba(255,255,255,.08)',color:'rgba(240,237,229,.7)',border:'1px solid rgba(255,255,255,.1)',fontSize:11,padding:'5px 10px'}}>{t('exit')}</button>
         <div style={{padding:'5px 14px',borderRadius:20,fontSize:12,fontWeight:700,border:'1.5px solid rgba(240,192,64,.3)',background:'rgba(240,192,64,.08)',color:'#F0C040',display:'flex',alignItems:'center',gap:6}}>
-          {phase==='bidding'?<span style={{animation:'fadeUp .3s'}}>🗣️ مزايدة</span>:
-           contract?.type==='sun'?<span>☀️ صن</span>:
-           contract?trumpInfo&&<span style={{color:trumpInfo.color==='#0A0F0A'?'#F0C040':'#e08'}}>حكم {trumpInfo.symbol}</span>:
+          {phase==='bidding'?<span style={{animation:'fadeUp .3s'}}>🗣️ {t('bidding')}</span>:
+           contract?.type==='sun'?<span>☀️ {t('sun')}</span>:
+           contract?trumpInfo&&<span style={{color:trumpInfo.color==='#0A0F0A'?'#F0C040':'#e08'}}>{t('hokum')} {trumpInfo.symbol}</span>:
            <span>—</span>}
         </div>
         <div style={{background:'rgba(10,14,12,.8)',border:'1px solid rgba(240,192,64,.18)',borderRadius:10,padding:'4px 10px',fontSize:13,fontWeight:900}}>
@@ -514,14 +579,14 @@ function GameScreen({profile,onExit,onProfileUpdate}){
           <div key={seat} style={{position:'absolute',...pos,display:'flex',flexDirection:'column',alignItems:'center',gap:3,zIndex:10}}>
             <div style={{width:38,height:38,borderRadius:'50%',border:`2px solid ${active?'#F0C040':'#7A5B1A'}`,background:'rgba(16,26,18,.9)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:18,animation:active?'turnGlow 1.1s ease-in-out infinite':'none'}}>{players[seat].avatar}</div>
             <span style={{color:active?'#F0C040':'rgba(240,237,229,.6)',fontSize:10,fontWeight:700}}>{players[seat].name}</span>
-            {active&&<span style={{color:'rgba(240,192,64,.7)',fontSize:9}}>{phase==='bidding'?'يزايد…':'يفكر…'}</span>}
+            {active&&<span style={{color:'rgba(240,192,64,.7)',fontSize:9}}>{phase==='bidding'?t('bidding_ing'):t('thinking')}</span>}
             {phase==='playing'&&!active&&<div style={{fontSize:9,color:'rgba(240,237,229,.35)'}}>🂠×{hands[seat]?.length||0}</div>}
           </div>
         );
       })}
 
       <div style={{position:'absolute',top:'calc(env(safe-area-inset-top,0px) + 58px)',right:8,zIndex:20,display:'flex',flexDirection:'column',alignItems:'center',gap:3,background:'rgba(10,14,12,.7)',border:'1px solid rgba(240,192,64,.18)',borderRadius:10,padding:'6px 8px'}}>
-        <span style={{fontSize:9,color:'rgba(240,237,229,.5)',fontWeight:700}}>الكوز</span>
+        <span style={{fontSize:9,color:'rgba(240,237,229,.5)',fontWeight:700}}>{t('trump')}</span>
         <span style={{fontSize:26,filter:'drop-shadow(0 0 8px rgba(240,192,64,.5))',color:trumpInfo?(trumpInfo.isRed?'#E74C3C':'#F0EDE5'):'rgba(240,237,229,.3)'}}>{contract?.type==='sun'?'☀️':trumpInfo?trumpInfo.symbol:'?'}</span>
       </div>
 
@@ -538,7 +603,7 @@ function GameScreen({profile,onExit,onProfileUpdate}){
               </div>
             );
           })}
-          {trickPlays.length===0&&<div style={{position:'absolute',top:'50%',left:'50%',transform:'translate(-50%,-50%)',color:'rgba(240,237,229,.35)',fontSize:11,fontWeight:600,whiteSpace:'nowrap'}}>{currentPlayer===0?'دورك أنت':`دور ${players[currentPlayer].name}`}</div>}
+          {trickPlays.length===0&&<div style={{position:'absolute',top:'50%',left:'50%',transform:'translate(-50%,-50%)',color:'rgba(240,237,229,.35)',fontSize:11,fontWeight:600,whiteSpace:'nowrap'}}>{currentPlayer===0?t('yourTurn'):`${t('turnOf')} ${players[currentPlayer].name}`}</div>}
         </div>
       )}
 
@@ -546,20 +611,20 @@ function GameScreen({profile,onExit,onProfileUpdate}){
         <div style={{...G.panel,position:'absolute',bottom:'calc(env(safe-area-inset-bottom,0px) + 124px)',width:'min(88vw,320px)',zIndex:40,animation:'popIn .3s ease both'}}>
           {!pendingTrumpPick?(
             <>
-              <div style={{textAlign:'center',fontSize:13,fontWeight:900,color:'#F0C040',marginBottom:12}}>دورك للمزايدة 🗣️</div>
+              <div style={{textAlign:'center',fontSize:13,fontWeight:900,color:'#F0C040',marginBottom:12}}>{t('yourBidTurn')} 🗣️</div>
               <div style={{display:'flex',gap:8}}>
-                <button onClick={()=>humanBid('hokum')} style={{...G.btn,flex:1,background:'linear-gradient(135deg,#8B6914,#F0C040)',color:'#07090A',fontSize:13,padding:'11px 6px'}}>حكم</button>
-                <button onClick={()=>humanBid('sun')} style={{...G.btn,flex:1,background:'linear-gradient(135deg,#B8860B,#FFD166)',color:'#07090A',fontSize:13,padding:'11px 6px'}}>☀️ صن</button>
-                <button onClick={()=>humanBid('pass')} style={{...G.btn,flex:1,background:'rgba(255,255,255,.08)',color:'rgba(240,237,229,.7)',border:'1px solid rgba(255,255,255,.1)',fontSize:13,padding:'11px 6px'}}>پاس</button>
+                <button onClick={()=>humanBid('hokum')} style={{...G.btn,flex:1,background:'linear-gradient(135deg,#8B6914,#F0C040)',color:'#07090A',fontSize:13,padding:'11px 6px'}}>{t('hokum')}</button>
+                <button onClick={()=>humanBid('sun')} style={{...G.btn,flex:1,background:'linear-gradient(135deg,#B8860B,#FFD166)',color:'#07090A',fontSize:13,padding:'11px 6px'}}>☀️ {t('sun')}</button>
+                <button onClick={()=>humanBid('pass')} style={{...G.btn,flex:1,background:'rgba(255,255,255,.08)',color:'rgba(240,237,229,.7)',border:'1px solid rgba(255,255,255,.1)',fontSize:13,padding:'11px 6px'}}>{t('pass')}</button>
               </div>
             </>
           ):(
             <>
-              <div style={{textAlign:'center',fontSize:13,fontWeight:900,color:'#F0C040',marginBottom:12}}>اختر لون الحكم</div>
+              <div style={{textAlign:'center',fontSize:13,fontWeight:900,color:'#F0C040',marginBottom:12}}>{t('chooseTrump')}</div>
               <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}}>
                 {CARD_SUITS.map(s=>(
                   <button key={s.symbol} onClick={()=>pickTrump(s)} style={{...G.btn,display:'flex',alignItems:'center',justifyContent:'center',gap:8,background:'rgba(255,255,255,.06)',border:`1.5px solid ${s.isRed?'#c0392b':'#666'}`,color:s.isRed?'#E74C3C':'#F0EDE5',fontSize:13,padding:'11px 6px'}}>
-                    <span style={{fontSize:20}}>{s.symbol}</span>{s.name}
+                    <span style={{fontSize:20}}>{s.symbol}</span>{suitName(s)}
                   </button>
                 ))}
               </div>
@@ -588,14 +653,14 @@ function GameScreen({profile,onExit,onProfileUpdate}){
             <div style={{fontSize:48,marginBottom:6}}>{roundResult.isGahwa?'☕':roundResult.made?'✅':'❌'}</div>
             <div style={{fontFamily:"'Scheherazade New',serif",fontSize:22,color:'#F0C040',marginBottom:10}}>{roundResult.reason}</div>
             <div style={{display:'flex',justifyContent:'center',gap:28,margin:'12px 0 18px'}}>
-              {[['أ',scores.a],['ب',scores.b]].map(([t,v])=>(
-                <div key={t} style={{display:'flex',flexDirection:'column',alignItems:'center',gap:2}}>
+              {[[t('teamA'),scores.a],[t('teamB'),scores.b]].map(([tl,v])=>(
+                <div key={tl} style={{display:'flex',flexDirection:'column',alignItems:'center',gap:2}}>
                   <span style={{fontSize:30,fontWeight:900,color:'#F0C040',lineHeight:1}}>{v}</span>
-                  <span style={{color:'rgba(240,237,229,.6)',fontSize:11}}>الفريق {t}</span>
+                  <span style={{color:'rgba(240,237,229,.6)',fontSize:11}}>{t('team')} {tl}</span>
                 </div>
               ))}
             </div>
-            <button onClick={continueRound} style={{...G.btn,width:'100%',padding:13,fontSize:15,background:'linear-gradient(135deg,#8B6914,#F0C040)',color:'#07090A'}}>{scores.a>=152||scores.b>=152?'عرض النتيجة 🏆':'الجولة التالية ▶'}</button>
+            <button onClick={continueRound} style={{...G.btn,width:'100%',padding:13,fontSize:15,background:'linear-gradient(135deg,#8B6914,#F0C040)',color:'#07090A'}}>{scores.a>=152||scores.b>=152?`${t('showResult')} 🏆`:`${t('nextRound')} ▶`}</button>
           </div>
         </div>
       )}
@@ -604,19 +669,19 @@ function GameScreen({profile,onExit,onProfileUpdate}){
         <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,.88)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:500,padding:20}}>
           <div style={{background:'radial-gradient(ellipse at top,#1A3D20,#0C1410)',border:'1px solid #F0C040',borderRadius:22,padding:'34px 26px',textAlign:'center',boxShadow:'0 0 40px rgba(240,192,64,.25),0 50px 100px rgba(0,0,0,.9)',width:'100%',maxWidth:320,animation:'popIn .5s cubic-bezier(.34,1.56,.64,1)'}}>
             <div style={{fontSize:58}}>🏆</div>
-            <div style={{fontFamily:"'Scheherazade New',serif",fontSize:28,color:'#F0C040',margin:'10px 0 5px'}}>الفريق {winnerLabel} يفوز!</div>
-            <div style={{color:'rgba(240,237,229,.6)',fontSize:13}}>وصلتم إلى ١٥٢ نقطة</div>
+            <div style={{fontFamily:"'Scheherazade New',serif",fontSize:28,color:'#F0C040',margin:'10px 0 5px'}}>{t('team')} {winnerLabel===' أ'||winnerLabel==='أ'?t('teamA'):t('teamB')} {t('wonGame')}</div>
+            <div style={{color:'rgba(240,237,229,.6)',fontSize:13}}>{t('reached152')}</div>
             <div style={{display:'flex',justifyContent:'center',gap:28,margin:'18px 0'}}>
-              {[['أ',scores.a,'#F0C040'],['ب',scores.b,'rgba(240,237,229,.4)']].map(([t,v,c])=>(
-                <div key={t} style={{display:'flex',flexDirection:'column',alignItems:'center',gap:2}}>
+              {[[t('teamA'),scores.a,'#F0C040'],[t('teamB'),scores.b,'rgba(240,237,229,.4)']].map(([tl,v,c])=>(
+                <div key={tl} style={{display:'flex',flexDirection:'column',alignItems:'center',gap:2}}>
                   <span style={{fontSize:34,fontWeight:900,color:c,lineHeight:1}}>{v}</span>
-                  <span style={{color:'rgba(240,237,229,.6)',fontSize:11}}>الفريق {t}</span>
+                  <span style={{color:'rgba(240,237,229,.6)',fontSize:11}}>{t('team')} {tl}</span>
                 </div>
               ))}
             </div>
             <div style={{display:'flex',gap:8}}>
-              <button onClick={()=>setShowShare(true)} style={{...G.btn,flex:1,background:'rgba(255,255,255,.08)',color:'rgba(240,237,229,.8)',border:'1px solid rgba(255,255,255,.12)',fontSize:13}}>مشاركة 📱</button>
-              <button onClick={onExit} style={{...G.btn,flex:2,padding:13,fontSize:15,background:'linear-gradient(135deg,#8B6914,#F0C040)',color:'#07090A'}}>العب مجدداً</button>
+              <button onClick={()=>setShowShare(true)} style={{...G.btn,flex:1,background:'rgba(255,255,255,.08)',color:'rgba(240,237,229,.8)',border:'1px solid rgba(255,255,255,.12)',fontSize:13}}>{t('share')} 📱</button>
+              <button onClick={onExit} style={{...G.btn,flex:2,padding:13,fontSize:15,background:'linear-gradient(135deg,#8B6914,#F0C040)',color:'#07090A'}}>{t('playAgain')}</button>
             </div>
           </div>
         </div>
@@ -630,40 +695,42 @@ function GameScreen({profile,onExit,onProfileUpdate}){
 }
 
 function LeaderScreen(){
+  const {t,lang}=useLang();
   const FALLBACK=[{id:'1',name:'أبو عبدالله',avatar:'🧔',city:'الرياض',wins:247},{id:'2',name:'محمد الغامدي',avatar:'👲',city:'جدة',wins:198},{id:'3',name:'سعد العتيبي',avatar:'🤴',city:'الدمام',wins:187},{id:'4',name:'فهد القحطاني',avatar:'🧙',city:'مكة',wins:156},{id:'5',name:'عبدالرحمن',avatar:'👨‍💼',city:'المدينة',wins:143}];
   const [players,setPlayers]=useState(FALLBACK);
-  const [region,setRegion]=useState('الكل');
+  const [region,setRegion]=useState('__all');
   useEffect(()=>{(async()=>{try{
     const base=collection(db,'users');
-    const q=region==='الكل'
+    const q=region==='__all'
       ?query(base,orderBy('wins','desc'),limit(20))
       :query(base,where('city','==',region),orderBy('wins','desc'),limit(20));
     const s=await getDocs(q);
-    setPlayers(s.docs.length?s.docs.map(d=>({id:d.id,...d.data()})):(region==='الكل'?FALLBACK:[]));
+    setPlayers(s.docs.length?s.docs.map(d=>({id:d.id,...d.data()})):(region==='__all'?FALLBACK:[]));
   }catch{/* offline — keep current list */}})();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   },[region]);
   const ri=i=>i===0?'🥇':i===1?'🥈':i===2?'🥉':String(i+1);
   const rc=i=>i===0?'#FFD700':i===1?'#C0C0C0':i===2?'#CD7F32':'rgba(240,237,229,.55)';
+  const chips=[{v:'__all',l:t('region_all')},...CITIES.map(c=>({v:c,l:cityLabel(c,lang)}))];
   return(
-    <div style={{position:'absolute',inset:0,overflowY:'auto',WebkitOverflowScrolling:'touch',paddingBottom:'calc(60px + env(safe-area-inset-bottom,0px) + 12px)',paddingTop:'env(safe-area-inset-top,0px)'}}>
-      <div style={{padding:'16px 14px 8px',textAlign:'center'}}>
-        <div style={{fontFamily:"'Scheherazade New',serif",fontSize:22,color:'#F0C040'}}>🏆 المتصدرون</div>
-        <div style={{color:'rgba(240,237,229,.6)',fontSize:11,marginTop:4}}>أفضل لاعبي المملكة</div>
+    <div style={{position:'absolute',inset:0,overflowY:'auto',WebkitOverflowScrolling:'touch',paddingBottom:'calc(66px + env(safe-area-inset-bottom,0px) + 12px)',paddingTop:'env(safe-area-inset-top,0px)'}}>
+      <div style={{padding:'18px 14px 8px',textAlign:'center'}}>
+        <div style={{fontFamily:"'Scheherazade New',serif",fontSize:24,color:'#F0C040'}}>🏆 {t('leaderboard')}</div>
+        <div style={{color:'rgba(240,237,229,.6)',fontSize:11,marginTop:4}}>{t('leaderboard_sub')}</div>
       </div>
-      <div style={{display:'flex',gap:6,overflowX:'auto',WebkitOverflowScrolling:'touch',padding:'6px 14px 10px',scrollbarWidth:'none'}}>
-        {['الكل',...CITIES].map(c=>(
-          <div key={c} onClick={()=>setRegion(c)} style={{flexShrink:0,padding:'5px 14px',borderRadius:20,fontSize:11,fontWeight:700,cursor:'pointer',border:`1px solid ${region===c?'#F0C040':'rgba(255,255,255,.12)'}`,background:region===c?'rgba(240,192,64,.12)':'transparent',color:region===c?'#F0C040':'rgba(240,237,229,.55)',touchAction:'manipulation',transition:'all .2s'}}>{c}</div>
+      <div style={{display:'flex',gap:6,overflowX:'auto',WebkitOverflowScrolling:'touch',padding:'6px 14px 10px'}}>
+        {chips.map(c=>(
+          <div key={c.v} onClick={()=>setRegion(c.v)} style={{flexShrink:0,padding:'6px 15px',borderRadius:20,fontSize:11,fontWeight:800,cursor:'pointer',border:`1px solid ${region===c.v?'#F0C040':'rgba(255,255,255,.12)'}`,background:region===c.v?'rgba(240,192,64,.14)':'transparent',color:region===c.v?'#F0C040':'rgba(240,237,229,.55)',touchAction:'manipulation',transition:'all .2s',whiteSpace:'nowrap'}}>{c.l}</div>
         ))}
       </div>
       <div style={{height:1,background:'rgba(255,255,255,.07)',margin:'0 14px'}}/>
-      {players.length===0&&<div style={{textAlign:'center',color:'rgba(240,237,229,.4)',fontSize:12,padding:30}}>لا يوجد لاعبون في {region} بعد</div>}
+      {players.length===0&&<div style={{textAlign:'center',color:'rgba(240,237,229,.4)',fontSize:12,padding:30}}>{t('noPlayers')}</div>}
       {players.map((p,i)=>(
-        <div key={p.id} style={{display:'flex',alignItems:'center',gap:10,padding:'10px 14px',borderBottom:'1px solid rgba(255,255,255,.06)'}}>
-          <span style={{fontSize:i<3?18:13,fontWeight:900,color:rc(i),width:24,textAlign:'center',flexShrink:0}}>{ri(i)}</span>
-          <span style={{fontSize:26,flexShrink:0}}>{p.avatar||'🧔'}</span>
-          <div style={{flex:1,minWidth:0}}><div style={{fontSize:13,fontWeight:700,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{p.name}</div><div style={{color:'rgba(240,237,229,.6)',fontSize:10}}>{p.city}</div></div>
-          <span style={{fontSize:13,fontWeight:900,color:'#F0C040',flexShrink:0}}>{p.wins} ✓</span>
+        <div key={p.id} style={{display:'flex',alignItems:'center',gap:11,padding:'11px 14px',borderBottom:'1px solid rgba(255,255,255,.06)',background:i<3?`linear-gradient(90deg,${rc(i)}12,transparent)`:'transparent'}}>
+          <span style={{fontSize:i<3?19:13,fontWeight:900,color:rc(i),width:26,textAlign:'center',flexShrink:0}}>{ri(i)}</span>
+          <span style={{fontSize:28,flexShrink:0}}>{p.avatar||'🧔'}</span>
+          <div style={{flex:1,minWidth:0}}><div style={{fontSize:13.5,fontWeight:800,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{p.name}</div><div style={{color:'rgba(240,237,229,.55)',fontSize:10}}>{cityLabel(p.city,lang)}</div></div>
+          <span style={{fontSize:13,fontWeight:900,color:'#F0C040',flexShrink:0}}>{p.wins} 🏆</span>
         </div>
       ))}
     </div>
@@ -671,27 +738,28 @@ function LeaderScreen(){
 }
 
 function StoreScreen({profile,onUpdate}){
+  const {t,lang}=useLang();
   const [tab,setTab]=useState('decks');
   const [toast,setToast]=useState(null);
   const [busy,setBusy]=useState(null);
   const showT=msg=>{setToast(msg);setTimeout(()=>setToast(null),2200);};
   const owned=profile.owned||{decks:['classic'],tables:['classic'],reactions:[]};
   const coins=profile.coins||0;
-  const BADGE={hot:{l:'الأكثر طلباً',c:'#E74C3C'},new:{l:'جديد',c:'#2ECC71'},seasonal:{l:'موسمي',c:'#9B59B6'},vip:{l:'VIP',c:'#F0C040'}};
+  const BADGE={hot:{l:lang==='ar'?'الأكثر طلباً':'Hot',c:'#E74C3C'},new:{l:lang==='ar'?'جديد':'New',c:'#2ECC71'},seasonal:{l:lang==='ar'?'موسمي':'Seasonal',c:'#9B59B6'},vip:{l:'VIP',c:'#F0C040'}};
 
   const buy=async(kind,item)=>{
     if(busy)return;
     const list=owned[kind]||[];
     if(list.includes(item.id))return;
-    if(coins<item.cost){showT('رصيد غير كافٍ 🪙');return;}
+    if(coins<item.cost){showT(t('insufficient')+' 🪙');return;}
     setBusy(item.id);
     try{
       const newOwned={...owned,[kind]:[...list,item.id]};
       await updateDoc(doc(db,'users',profile.uid),{coins:increment(-item.cost),owned:newOwned});
       onUpdate({...profile,coins:coins-item.cost,owned:newOwned});
       sounds.buy();haptics.buy();
-      showT(`تم شراء ${item.name} ✅`);
-    }catch{showT('فشل الشراء');}
+      showT(t('purchased')+' ✅');
+    }catch{showT(t('loginFailed'));}
     setBusy(null);
   };
 
@@ -700,29 +768,29 @@ function StoreScreen({profile,onUpdate}){
     try{
       await updateDoc(doc(db,'users',profile.uid),{[field]:id});
       onUpdate({...profile,[field]:id});
-      showT('تم التفعيل ✨');
-    }catch{showT('فشل');}
+      showT(t('activated')+' ✨');
+    }catch{showT('!');}
   };
 
   const renderItems=(kind,items)=>{
     const activeField=kind==='decks'?'activeDeck':'activeTable';
     const activeId=profile[activeField]||'classic';
-    const all=kind==='reactions'?items:[{id:'classic',name:kind==='decks'?'كلاسيك':'الكلاسيك',desc:'التصميم الأساسي',cost:0,emoji:kind==='decks'?'🃏':'🟩'},...items];
+    const all=kind==='reactions'?items:[{id:'classic',name:lang==='ar'?'كلاسيك':'Classic',desc:lang==='ar'?'التصميم الأساسي':'The default design',cost:0,emoji:kind==='decks'?'🃏':'🟩'},...items];
     return(
-      <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,padding:'0 12px 16px'}}>
+      <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(150px,1fr))',gap:10,padding:'0 12px 16px'}}>
         {all.map(item=>{
           const isOwned=item.cost===0||(owned[kind]||[]).includes(item.id);
           const isActive=kind!=='reactions'&&activeId===item.id;
           return(
             <div key={item.id} onClick={()=>isOwned?(kind!=='reactions'&&!isActive&&activate(kind,item.id)):buy(kind,item)}
-              style={{background:'rgba(13,20,16,.8)',border:`1px solid ${isActive?'#F0C040':'rgba(255,255,255,.07)'}`,borderRadius:16,padding:'16px 12px',display:'flex',flexDirection:'column',alignItems:'center',gap:7,cursor:'pointer',position:'relative',touchAction:'manipulation',opacity:busy===item.id?.6:1}}>
-              {item.badge&&BADGE[item.badge]&&<span style={{position:'absolute',top:8,right:8,background:BADGE[item.badge].c,color:BADGE[item.badge].c==='#F0C040'?'#000':'#fff',fontSize:8,fontWeight:700,padding:'2px 5px',borderRadius:5}}>{BADGE[item.badge].l}</span>}
-              {isActive&&<span style={{position:'absolute',top:8,left:8,fontSize:12}}>✅</span>}
-              <span style={{fontSize:30}}>{item.emoji}</span>
-              <span style={{fontSize:12,fontWeight:700,textAlign:'center'}}>{item.name}</span>
+              style={{background:'linear-gradient(160deg,rgba(16,26,18,.9),rgba(10,15,12,.85))',border:`1px solid ${isActive?'#F0C040':'rgba(255,255,255,.07)'}`,borderRadius:16,padding:'16px 12px',display:'flex',flexDirection:'column',alignItems:'center',gap:7,cursor:'pointer',position:'relative',touchAction:'manipulation',opacity:busy===item.id?.6:1,boxShadow:isActive?'0 0 16px rgba(240,192,64,.2)':'none'}}>
+              {item.badge&&BADGE[item.badge]&&<span style={{position:'absolute',top:8,insetInlineEnd:8,background:BADGE[item.badge].c,color:BADGE[item.badge].c==='#F0C040'?'#000':'#fff',fontSize:8,fontWeight:700,padding:'2px 5px',borderRadius:5}}>{BADGE[item.badge].l}</span>}
+              {isActive&&<span style={{position:'absolute',top:8,insetInlineStart:8,fontSize:12}}>✅</span>}
+              <span style={{fontSize:32}}>{item.emoji}</span>
+              <span style={{fontSize:12,fontWeight:800,textAlign:'center'}}>{item.name}</span>
               <span style={{color:'rgba(240,237,229,.5)',fontSize:9,textAlign:'center',lineHeight:1.4,minHeight:24}}>{item.desc}</span>
               <span style={{fontSize:12,fontWeight:900,color:isOwned?'#2ECC71':'#F0C040',background:isOwned?'rgba(46,204,113,.1)':'rgba(240,192,64,.1)',padding:'3px 12px',borderRadius:20,border:`1px solid ${isOwned?'rgba(46,204,113,.25)':'rgba(240,192,64,.2)'}`}}>
-                {isActive?'مفعّل':isOwned?(kind==='reactions'?'مملوك':'فعّل'):`🪙 ${item.cost}`}
+                {isActive?t('active'):isOwned?(kind==='reactions'?t('owned'):t('activate')):`🪙 ${item.cost}`}
               </span>
             </div>
           );
@@ -732,15 +800,15 @@ function StoreScreen({profile,onUpdate}){
   };
 
   return(
-    <div style={{position:'absolute',inset:0,overflowY:'auto',WebkitOverflowScrolling:'touch',paddingBottom:'calc(60px + env(safe-area-inset-bottom,0px) + 12px)',paddingTop:'env(safe-area-inset-top,0px)'}}>
-      <div style={{padding:'16px 14px 8px',textAlign:'center'}}><div style={{fontFamily:"'Scheherazade New',serif",fontSize:22,color:'#F0C040'}}>🛍️ المتجر</div></div>
-      <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',background:'rgba(13,20,16,.8)',border:'1px solid #7A5B1A',borderRadius:12,margin:'0 12px 12px',padding:'10px 14px'}}>
-        <span style={{color:'rgba(240,237,229,.6)'}}>رصيدك</span>
-        <span style={{fontSize:16,fontWeight:900,color:'#F0C040'}}>🪙 {coins}</span>
+    <div style={{position:'absolute',inset:0,overflowY:'auto',WebkitOverflowScrolling:'touch',paddingBottom:'calc(66px + env(safe-area-inset-bottom,0px) + 12px)',paddingTop:'env(safe-area-inset-top,0px)'}}>
+      <div style={{padding:'18px 14px 8px',textAlign:'center'}}><div style={{fontFamily:"'Scheherazade New',serif",fontSize:24,color:'#F0C040'}}>🛍️ {t('store')}</div></div>
+      <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',background:'linear-gradient(135deg,rgba(26,20,4,.9),rgba(13,20,16,.85))',border:'1px solid #7A5B1A',borderRadius:14,margin:'0 12px 12px',padding:'12px 16px'}}>
+        <span style={{color:'rgba(240,237,229,.6)',fontSize:12}}>{t('yourBalance')}</span>
+        <span style={{fontSize:17,fontWeight:900,color:'#F0C040'}}>🪙 {coins}</span>
       </div>
       <div style={{display:'flex',gap:6,padding:'0 12px 12px'}}>
-        {[{id:'decks',l:'🎴 سكنات'},{id:'tables',l:'🟩 طاولات'},{id:'coins',l:'🪙 رصيد'}].map(t=>(
-          <div key={t.id} onClick={()=>setTab(t.id)} style={{flex:1,textAlign:'center',padding:'8px 4px',borderRadius:12,fontSize:12,fontWeight:700,cursor:'pointer',border:`1px solid ${tab===t.id?'#F0C040':'rgba(255,255,255,.1)'}`,background:tab===t.id?'rgba(240,192,64,.12)':'transparent',color:tab===t.id?'#F0C040':'rgba(240,237,229,.55)',touchAction:'manipulation'}}>{t.l}</div>
+        {[{id:'decks',l:'🎴 '+t('tab_decks')},{id:'tables',l:'🟩 '+t('tab_tables')},{id:'coins',l:'🪙 '+t('tab_coins')}].map(tb=>(
+          <div key={tb.id} onClick={()=>setTab(tb.id)} style={{flex:1,textAlign:'center',padding:'9px 4px',borderRadius:12,fontSize:12,fontWeight:800,cursor:'pointer',border:`1px solid ${tab===tb.id?'#F0C040':'rgba(255,255,255,.1)'}`,background:tab===tb.id?'rgba(240,192,64,.12)':'transparent',color:tab===tb.id?'#F0C040':'rgba(240,237,229,.55)',touchAction:'manipulation'}}>{tb.l}</div>
         ))}
       </div>
       {tab==='decks'&&renderItems('decks',STORE_ITEMS.decks)}
@@ -748,62 +816,97 @@ function StoreScreen({profile,onUpdate}){
       {tab==='coins'&&(
         <div style={{display:'flex',flexDirection:'column',gap:10,padding:'0 12px 16px'}}>
           {STORE_ITEMS.coins.map(pack=>(
-            <div key={pack.id} onClick={()=>showT('الدفع متوفر قريباً — Apple Pay & مدى 💳')} style={{display:'flex',alignItems:'center',gap:12,background:'rgba(13,20,16,.8)',border:`1px solid ${pack.best?'rgba(240,192,64,.4)':'rgba(255,255,255,.07)'}`,borderRadius:16,padding:'14px 16px',cursor:'pointer',touchAction:'manipulation',position:'relative'}}>
-              {pack.best&&<span style={{position:'absolute',top:-8,right:14,background:'#F0C040',color:'#000',fontSize:9,fontWeight:900,padding:'2px 8px',borderRadius:8}}>الأفضل قيمة</span>}
-              <span style={{fontSize:28}}>{pack.emoji}</span>
+            <div key={pack.id} onClick={()=>showT(t('paymentSoon')+' 💳')} style={{display:'flex',alignItems:'center',gap:12,background:'linear-gradient(160deg,rgba(16,26,18,.9),rgba(10,15,12,.85))',border:`1px solid ${pack.best?'rgba(240,192,64,.4)':'rgba(255,255,255,.07)'}`,borderRadius:16,padding:'14px 16px',cursor:'pointer',touchAction:'manipulation',position:'relative'}}>
+              {pack.best&&<span style={{position:'absolute',top:-8,insetInlineEnd:14,background:'#F0C040',color:'#000',fontSize:9,fontWeight:900,padding:'2px 8px',borderRadius:8}}>{t('bestValue')}</span>}
+              <span style={{fontSize:30}}>{pack.emoji}</span>
               <div style={{flex:1}}>
-                <div style={{fontSize:13,fontWeight:700}}>{pack.name}</div>
+                <div style={{fontSize:13,fontWeight:800}}>{pack.name}</div>
                 <div style={{color:'rgba(240,237,229,.5)',fontSize:10,marginTop:2}}>{pack.desc}</div>
               </div>
-              <span style={{fontSize:14,fontWeight:900,color:'#2ECC71',whiteSpace:'nowrap'}}>{pack.price} ر.س</span>
+              <span style={{fontSize:14,fontWeight:900,color:'#2ECC71',whiteSpace:'nowrap'}}>{pack.price} {lang==='ar'?'ر.س':'SAR'}</span>
             </div>
           ))}
-          <div style={{textAlign:'center',color:'rgba(240,237,229,.4)',fontSize:10,marginTop:4}}>💳 Apple Pay ومدى — قريباً</div>
+          <div style={{textAlign:'center',color:'rgba(240,237,229,.4)',fontSize:10,marginTop:4}}>💳 {t('paymentComingSoon')}</div>
         </div>
       )}
-      {toast&&<div style={{position:'fixed',bottom:'calc(70px + env(safe-area-inset-bottom,0px))',left:'50%',transform:'translateX(-50%)',background:'linear-gradient(135deg,#8B6914,#F0C040)',color:'#07090A',fontWeight:900,fontSize:13,padding:'10px 22px',borderRadius:24,zIndex:9999,whiteSpace:'nowrap',animation:'fadeUp .3s ease both'}}>{toast}</div>}
+      {toast&&<div style={{position:'fixed',bottom:'calc(76px + env(safe-area-inset-bottom,0px))',left:'50%',transform:'translateX(-50%)',background:'linear-gradient(135deg,#8B6914,#F0C040)',color:'#07090A',fontWeight:900,fontSize:13,padding:'10px 22px',borderRadius:24,zIndex:9999,whiteSpace:'nowrap',animation:'fadeUp .3s ease both'}}>{toast}</div>}
     </div>
   );
 }
 
-function ProfileScreen({profile,onUpdate,onLogout}){
+function ProfileScreen({profile,onUpdate,onSettings,onLogout}){
+  const {t,lang}=useLang();
   const [editing,setEditing]=useState(false);
   const [name,setName]=useState(profile.name);
   const [av,setAv]=useState(profile.avatar);
   const [city,setCity]=useState(profile.city);
-  const save=async()=>{try{await updateDoc(doc(db,'users',profile.uid),{name,avatar:av,city});onUpdate({...profile,name,avatar:av,city});setEditing(false);}catch(e){alert(e.message);}};
+  const save=async()=>{try{await updateDoc(doc(db,'users',profile.uid),{name,avatar:av,city});onUpdate({...profile,name,avatar:av,city});setEditing(false);haptics.buy();}catch(e){alert(e.message);}};
+
+  const {level,pct,xp}=playerLevel(profile);
+  const rank=playerRank(profile.wins||0);
+  const wins=profile.wins||0, losses=profile.losses||0, games=wins+losses;
+  const winRate=games?Math.round(wins/games*100):0;
+  const arrow=lang==='ar'?'‹':'›';
+
+  const statTile=(icon,val,label,color)=>(
+    <div style={{flex:1,background:'linear-gradient(160deg,rgba(16,26,18,.9),rgba(10,15,12,.9))',border:`1px solid ${color}33`,borderRadius:14,padding:'12px 6px',textAlign:'center'}}>
+      <div style={{fontSize:16,marginBottom:3}}>{icon}</div>
+      <div style={{fontSize:19,fontWeight:900,color}}>{val}</div>
+      <div style={{color:'rgba(240,237,229,.55)',fontSize:9.5,marginTop:2}}>{label}</div>
+    </div>
+  );
+
   return(
-    <div style={{position:'absolute',inset:0,overflowY:'auto',WebkitOverflowScrolling:'touch',paddingBottom:'calc(60px + env(safe-area-inset-bottom,0px) + 12px)',paddingTop:'env(safe-area-inset-top,0px)'}}>
-      <div style={{textAlign:'center',padding:'22px 14px 16px',background:'linear-gradient(180deg,rgba(26,61,32,.5),transparent)'}}>
-        <div style={{fontSize:58,marginBottom:8}}>{profile.avatar}</div>
-        <div style={{fontSize:20,fontWeight:900,marginBottom:2}}>{profile.name}</div>
-        <div style={{color:'rgba(240,237,229,.6)',fontSize:12,marginBottom:14}}>📍 {profile.city}</div>
-        <div style={{display:'flex',justifyContent:'center',gap:22}}>
-          {[['انتصار',profile.wins||0],['هزيمة',profile.losses||0],['🪙',profile.coins||500]].map(([l,v])=>(
-            <div key={l} style={{display:'flex',flexDirection:'column',alignItems:'center',gap:2}}>
-              <span style={{fontSize:22,fontWeight:900,color:'#F0C040'}}>{v}</span>
-              <span style={{color:'rgba(240,237,229,.6)',fontSize:10}}>{l}</span>
-            </div>
-          ))}
+    <div style={{position:'absolute',inset:0,overflowY:'auto',WebkitOverflowScrolling:'touch',paddingBottom:'calc(66px + env(safe-area-inset-bottom,0px) + 12px)',paddingTop:'env(safe-area-inset-top,0px)'}}>
+      {/* hero */}
+      <div style={{textAlign:'center',padding:'22px 14px 18px',position:'relative',background:'radial-gradient(ellipse 70% 100% at 50% 0%,rgba(26,61,32,.6),transparent)'}}>
+        <div style={{position:'relative',display:'inline-block',marginBottom:8}}>
+          <div style={{width:96,height:96,borderRadius:'50%',background:'rgba(16,26,18,.9)',border:`3px solid ${rank.color}`,display:'flex',alignItems:'center',justifyContent:'center',fontSize:52,boxShadow:`0 0 26px ${rank.color}55`,margin:'0 auto'}}>{profile.avatar}</div>
+          <div style={{position:'absolute',bottom:0,insetInlineEnd:'50%',transform:'translateX(50%) translateY(30%)',background:'#0C1410',border:`2px solid ${rank.color}`,borderRadius:12,fontSize:11,fontWeight:900,color:rank.color,padding:'2px 10px',whiteSpace:'nowrap'}}>{rank.icon} {t('level')} {level}</div>
+        </div>
+        <div style={{fontSize:22,fontWeight:900,marginTop:8}}>{profile.name}</div>
+        <div style={{display:'flex',alignItems:'center',justifyContent:'center',gap:8,marginTop:4}}>
+          <span style={{fontSize:12,fontWeight:700,color:rank.color}}>{rank.icon} {t(rank.key)}</span>
+          <span style={{color:'rgba(240,237,229,.45)',fontSize:11}}>· 📍 {cityLabel(profile.city,lang)}</span>
+        </div>
+        {/* XP bar */}
+        <div style={{maxWidth:280,margin:'14px auto 0'}}>
+          <div style={{height:8,background:'rgba(0,0,0,.4)',borderRadius:5,overflow:'hidden',border:'1px solid rgba(240,192,64,.15)'}}>
+            <div style={{height:'100%',width:`${pct}%`,borderRadius:5,background:'linear-gradient(90deg,#8B6914,#F0C040,#FFE08A)',transition:'width .6s ease'}}/>
+          </div>
+          <div style={{color:'rgba(240,237,229,.4)',fontSize:9,marginTop:4}}>{xp} XP · {pct}%</div>
         </div>
       </div>
+
+      {/* stat tiles */}
+      <div style={{display:'flex',gap:8,padding:'0 12px',marginBottom:8}}>
+        {statTile('🏆',wins,t('wins'),'#2ECC71')}
+        {statTile('💔',losses,t('losses'),'#E74C3C')}
+        {statTile('🪙',profile.coins||0,t('coins'),'#F0C040')}
+      </div>
+      <div style={{display:'flex',gap:8,padding:'0 12px',marginBottom:14}}>
+        {statTile('📊',winRate+'%',t('winRate'),'#3498DB')}
+        {statTile('🎮',games,t('gamesPlayed'),'#9B59B6')}
+        {statTile('⭐',level,t('level'),'#F0C040')}
+      </div>
+
       {editing?(
         <div style={{padding:'0 14px'}}>
-          <div style={{marginBottom:10}}><div style={{color:'rgba(240,237,229,.6)',fontSize:11,fontWeight:700,marginBottom:4}}>الاسم</div><input style={G.input} value={name} onChange={e=>setName(e.target.value)} maxLength={20}/></div>
-          <div style={{marginBottom:10}}><div style={{color:'rgba(240,237,229,.6)',fontSize:11,fontWeight:700,marginBottom:4}}>المدينة</div><select style={G.input} value={city} onChange={e=>setCity(e.target.value)}>{CITIES.map(c=><option key={c}>{c}</option>)}</select></div>
-          <div style={{marginBottom:16}}><div style={{color:'rgba(240,237,229,.6)',fontSize:11,fontWeight:700,marginBottom:8}}>الرمز</div><div style={{display:'flex',flexWrap:'wrap',gap:8,justifyContent:'center'}}>{AVATARS.map(a=><div key={a} onClick={()=>setAv(a)} style={{width:44,height:44,borderRadius:'50%',background:'rgba(16,26,18,.9)',border:`2px solid ${av===a?'#F0C040':'rgba(255,255,255,.08)'}`,display:'flex',alignItems:'center',justifyContent:'center',fontSize:22,cursor:'pointer',transform:av===a?'scale(1.1)':'none',transition:'all .2s'}}>{a}</div>)}</div></div>
+          <div style={{marginBottom:10}}><div style={{color:'rgba(240,237,229,.6)',fontSize:11,fontWeight:700,marginBottom:4}}>{t('name')}</div><input style={G.input} value={name} onChange={e=>setName(e.target.value)} maxLength={20}/></div>
+          <div style={{marginBottom:10}}><div style={{color:'rgba(240,237,229,.6)',fontSize:11,fontWeight:700,marginBottom:4}}>{t('city')}</div><select style={G.input} value={city} onChange={e=>setCity(e.target.value)}>{CITIES.map(c=><option key={c} value={c}>{cityLabel(c,lang)}</option>)}</select></div>
+          <div style={{marginBottom:16}}><div style={{color:'rgba(240,237,229,.6)',fontSize:11,fontWeight:700,marginBottom:8}}>{t('symbol')}</div><div style={{display:'flex',flexWrap:'wrap',gap:8,justifyContent:'center'}}>{AVATARS.map(a=><div key={a} onClick={()=>setAv(a)} style={{width:46,height:46,borderRadius:'50%',background:'rgba(16,26,18,.9)',border:`2px solid ${av===a?'#F0C040':'rgba(255,255,255,.08)'}`,display:'flex',alignItems:'center',justifyContent:'center',fontSize:23,cursor:'pointer',transform:av===a?'scale(1.12)':'none',transition:'all .2s'}}>{a}</div>)}</div></div>
           <div style={{display:'flex',gap:8}}>
-            <button onClick={()=>setEditing(false)} style={{...G.btn,flex:1,background:'rgba(255,255,255,.08)',color:'rgba(240,237,229,.7)',border:'1px solid rgba(255,255,255,.1)'}}>إلغاء</button>
-            <button onClick={save} style={{...G.btn,flex:1,background:'linear-gradient(135deg,#8B6914,#F0C040)',color:'#07090A'}}>حفظ</button>
+            <button onClick={()=>setEditing(false)} style={{...G.btn,flex:1,background:'rgba(255,255,255,.08)',color:'rgba(240,237,229,.7)',border:'1px solid rgba(255,255,255,.1)'}}>{t('cancel')}</button>
+            <button onClick={save} style={{...G.btn,flex:1,background:'linear-gradient(135deg,#8B6914,#F0C040)',color:'#07090A'}}>{t('save')}</button>
           </div>
         </div>
       ):(
-        <div style={{padding:'0 14px',marginTop:8}}>
-          {[{i:'✏️',t:'تعديل الملف',s:'الاسم، الرمز، المدينة',a:()=>setEditing(true)},{i:'📊',t:'إحصائياتي',s:'نسبة الفوز وتفاصيل اللعب',a:()=>{}},{i:'🔔',t:'الإشعارات',s:'تحكم في التنبيهات',a:()=>{}},{i:'🚪',t:'تسجيل الخروج',s:'',a:onLogout,red:true}].map((item,i)=>(
-            <div key={i} onClick={item.a} style={{display:'flex',alignItems:'center',gap:10,padding:12,background:'rgba(16,26,18,.85)',border:'1px solid rgba(255,255,255,.07)',borderRadius:12,marginBottom:8,cursor:'pointer',touchAction:'manipulation'}}>
-              <span style={{fontSize:20,flexShrink:0}}>{item.i}</span>
-              <div style={{flex:1}}><div style={{fontSize:13,fontWeight:700,color:item.red?'#E74C3C':undefined}}>{item.t}</div>{item.s&&<div style={{color:'rgba(240,237,229,.6)',fontSize:11}}>{item.s}</div>}</div>
-              {!item.red&&<span style={{color:'rgba(240,237,229,.6)'}}>›</span>}
+        <div style={{padding:'0 14px',marginTop:4}}>
+          {[{i:'✏️',ti:t('editProfile'),s:t('editProfileSub'),a:()=>setEditing(true)},{i:'⚙️',ti:t('settings'),s:t('settingsSub'),a:onSettings},{i:'🚪',ti:t('logout'),s:'',a:onLogout,red:true}].map((item,i)=>(
+            <div key={i} onClick={item.a} style={{display:'flex',alignItems:'center',gap:12,padding:14,background:'rgba(16,26,18,.85)',border:`1px solid ${item.red?'rgba(231,76,60,.2)':'rgba(255,255,255,.07)'}`,borderRadius:14,marginBottom:9,cursor:'pointer',touchAction:'manipulation'}}>
+              <span style={{fontSize:22,flexShrink:0}}>{item.i}</span>
+              <div style={{flex:1}}><div style={{fontSize:14,fontWeight:800,color:item.red?'#E74C3C':undefined}}>{item.ti}</div>{item.s&&<div style={{color:'rgba(240,237,229,.55)',fontSize:11,marginTop:1}}>{item.s}</div>}</div>
+              {!item.red&&<span style={{color:'rgba(240,237,229,.5)',fontSize:18}}>{arrow}</span>}
             </div>
           ))}
         </div>
