@@ -7,10 +7,10 @@ import { getFirestore } from 'firebase/firestore';
 // override) so a mistyped/garbled .env can't break the live app.
 const firebaseConfig = {
   apiKey:            import.meta.env.VITE_FIREBASE_API_KEY            || 'AIzaSyDOoqrkTftkGyV3tDotnqpd82s4GGNg8UQ',
-  // Same origin as where the app is hosted, so the redirect sign-in
-  // handshake stays first-party (firebaseapp.com would be cross-domain and
-  // the result gets dropped on the way back on mobile browsers).
-  authDomain:        import.meta.env.VITE_FIREBASE_AUTH_DOMAIN        || 'baloot-almamlaka.web.app',
+  // Default Firebase auth domain. Open the app at the matching URL
+  // (https://baloot-almamlaka.firebaseapp.com) so the redirect sign-in is
+  // fully same-origin with Google's default OAuth configuration.
+  authDomain:        import.meta.env.VITE_FIREBASE_AUTH_DOMAIN        || 'baloot-almamlaka.firebaseapp.com',
   projectId:         import.meta.env.VITE_FIREBASE_PROJECT_ID         || 'baloot-almamlaka',
   storageBucket:     import.meta.env.VITE_FIREBASE_STORAGE_BUCKET     || 'baloot-almamlaka.firebasestorage.app',
   messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || '941544975543',
