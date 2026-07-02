@@ -4,7 +4,6 @@
 
 const { onSchedule } = require('firebase-functions/v2/scheduler');
 const { onCall, HttpsError } = require('firebase-functions/v2/https');
-const { onDocumentUpdated } = require('firebase-functions/v2/firestore');
 const { setGlobalOptions } = require('firebase-functions/v2');
 const { defineSecret } = require('firebase-functions/params');
 const { initializeApp } = require('firebase-admin/app');
@@ -36,8 +35,25 @@ exports.advanceTournaments = onSchedule('every 5 minutes', async () => {
     const current = rounds[rounds.length - 1];
     const matches = current.matches || [];
 
-    // BYE auto-advance
     let changed = false;
+
+    // Resolve matches whose game room has finished. This replaces a live
+    // Firestore trigger — Cloud Functions/Eventarc are not available in the
+    // me-central2 (Dammam) database region, so the scheduler polls instead.
+    for (const m of matches) {
+      if (m.room && !m.winner) {
+        const rs = await db.doc(`rooms/${m.room}`).get();
+        const rd = rs.exists ? rs.data() : null;
+        if (rd?.gd?.phase === 'gameOver') {
+          const winTeam = rd.gd.scores.a >= rd.gd.scores.b ? 0 : 1;
+          const winnerUids = (rd.players || []).filter(p => p.seat % 2 === winTeam).map(p => p.uid);
+          m.winner = winnerUids.includes(m.p1?.uid) ? m.p1.uid : m.p2?.uid;
+          changed = true;
+        }
+      }
+    }
+
+    // BYE auto-advance
     for (const m of matches) {
       if (!m.winner && m.p1 && !m.p2) { m.winner = m.p1.uid; changed = true; }
     }
@@ -81,37 +97,10 @@ exports.advanceTournaments = onSchedule('every 5 minutes', async () => {
   }
 });
 
-// Bridges finished tournament rooms into the bracket: when a room tied to
-// a tournament match reaches gameOver, record the match winner.
-// Firestore-triggered functions MUST run in the database's region
-// (me-central2 / Dammam) — unlike the callables, they can't sit in a
-// different region from the data.
-exports.onRoomFinished = onDocumentUpdated(
-  { document: 'rooms/{code}', region: 'me-central2' },
-  async (event) => {
-  const after = event.data.after.data();
-  const before = event.data.before.data();
-  if (!after?.tournamentId || after.gd?.phase !== 'gameOver' || before.gd?.phase === 'gameOver') return;
-
-  const winTeam = after.gd.scores.a >= after.gd.scores.b ? 0 : 1;
-  const winnerUids = (after.players || []).filter(p => p.seat % 2 === winTeam).map(p => p.uid);
-
-  const tRef = db.doc(`tournaments/${after.tournamentId}`);
-  await db.runTransaction(async (tx) => {
-    const tSnap = await tx.get(tRef);
-    if (!tSnap.exists) return;
-    const t = tSnap.data();
-    const rounds = t.rounds || [];
-    const current = rounds[rounds.length - 1];
-    if (!current) return;
-    for (const m of current.matches) {
-      if (m.room === event.params.code && !m.winner) {
-        m.winner = winnerUids.includes(m.p1?.uid) ? m.p1.uid : m.p2?.uid;
-      }
-    }
-    tx.update(tRef, { rounds });
-  });
-});
+// (Tournament match rooms are resolved by polling inside
+// advanceTournaments above — see note there. A live Firestore trigger
+// isn't possible because Cloud Functions aren't offered in the
+// me-central2 database region.)
 
 // ── Agent 2: Rank decay ───────────────────────────────────────────────
 // Daily 03:00 KSA. Top players who go inactive for 14+ days lose 2% of

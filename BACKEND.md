@@ -32,8 +32,17 @@ firebase deploy --only firestore:rules,firestore:indexes
 
 ## 3. Autonomous agents (`functions/index.js`)
 
-Requires the **Blaze** (pay-as-you-go) plan. `me-central1` region is set
-for KSA data-locality (PDPL). Deploy:
+Requires the **Blaze** (pay-as-you-go) plan.
+
+**Region note:** the Firestore database lives in **me-central2 (Dammam,
+Saudi Arabia)** — so player data residency satisfies PDPL. Cloud Functions
+are **not** offered in me-central2, so they run in **me-central1 (Doha)**;
+`src/functions.js` must use the same region. Because live Firestore
+triggers require the function to be in the database region (impossible
+here), tournament-room results are handled by polling inside the scheduled
+`advanceTournaments` instead of a trigger.
+
+Deploy:
 
 ```
 cd functions && npm install && cd ..
@@ -42,8 +51,7 @@ firebase deploy --only functions
 
 | Function | Trigger | Job |
 |----------|---------|-----|
-| `advanceTournaments` | every 5 min | Auto-advance brackets, seed next round, settle prizes on completion |
-| `onRoomFinished` | room update | Records a tournament match winner when its room hits `gameOver` |
+| `advanceTournaments` | every 5 min | Records finished match-room winners, auto-advances brackets, seeds next round, settles prizes on completion |
 | `rankDecay` | daily 03:00 KSA | Decays wins of top players inactive 14+ days |
 | `collusionScan` | daily 03:30 KSA | Scans 24h of match telemetry, flags suspicious same-team pairs |
 | `setAdminClaim` | callable | Grants the `admin` custom claim |
