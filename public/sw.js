@@ -1,24 +1,20 @@
-const CACHE_NAME = 'baloot-v2';
-const ASSETS = ['/', '/index.html'];
+// Self-destructing service worker. The previous version cached stale
+// builds and left users on a blank page after redeploys. This version
+// takes over, deletes all caches, unregisters itself, and reloads open
+// tabs so everyone ends up on a clean, freshly-fetched app.
+self.addEventListener('install', () => self.skipWaiting());
 
-self.addEventListener('install', e => {
-  e.waitUntil(
-    caches.open(CACHE_NAME).then(cache => cache.addAll(ASSETS))
-  );
-  self.skipWaiting();
+self.addEventListener('activate', (event) => {
+  event.waitUntil((async () => {
+    const keys = await caches.keys();
+    await Promise.all(keys.map((k) => caches.delete(k)));
+    await self.registration.unregister();
+    const clients = await self.clients.matchAll({ type: 'window' });
+    clients.forEach((c) => c.navigate(c.url));
+  })());
 });
 
-self.addEventListener('activate', e => {
-  e.waitUntil(
-    caches.keys().then(keys =>
-      Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k)))
-    )
-  );
-  self.clients.claim();
-});
-
-self.addEventListener('fetch', e => {
-  e.respondWith(
-    fetch(e.request).catch(() => caches.match(e.request))
-  );
+// Always go to the network; never serve from cache.
+self.addEventListener('fetch', (event) => {
+  event.respondWith(fetch(event.request));
 });

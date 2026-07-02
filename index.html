@@ -25,12 +25,12 @@
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
     <script>
+      // Service worker disabled: the old one cached stale builds and blanked
+      // the app after redeploys. Actively unregister any existing SW and
+      // clear its caches so returning users self-heal to a fresh load.
       if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-          navigator.serviceWorker.register('/sw.js')
-            .then(() => console.log('SW registered'))
-            .catch(err => console.log('SW failed:', err));
-        });
+        navigator.serviceWorker.getRegistrations().then(rs => rs.forEach(r => r.unregister()));
+        if (window.caches) caches.keys().then(ks => ks.forEach(k => caches.delete(k)));
       }
     </script>
   </body>
