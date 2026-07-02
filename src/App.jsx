@@ -63,6 +63,35 @@ const G={
 
 function Spin(){return <div style={{width:30,height:30,border:'3px solid rgba(240,192,64,.2)',borderTopColor:'#F0C040',borderRadius:'50%',animation:'spin .8s linear infinite'}}/>;}
 
+// Cinematic ambient backdrop: drifting suit glyphs + slow aurora glows.
+const SUIT_GLYPHS=['♠','♥','♦','♣'];
+const SUIT_COL={'♠':'#F0C040','♥':'#E0506A','♦':'#E0A060','♣':'#5FBF7A'};
+function CinematicBG(){
+  const suits=useRef(Array.from({length:9},(_,i)=>({
+    g:SUIT_GLYPHS[i%4], left:(i*11+7)%96, size:22+((i*13)%26), dur:9+((i*7)%10), delay:-(i*2.3),
+    rot:((i*37)%40)-20,
+  })));
+  return(
+    <div style={{position:'absolute',inset:0,overflow:'hidden',pointerEvents:'none',zIndex:0}}>
+      <div style={{position:'absolute',top:'-14%',insetInlineStart:'-12%',width:'70%',height:'50%',borderRadius:'50%',background:'radial-gradient(circle,rgba(30,110,60,.45),transparent 65%)',filter:'blur(28px)',animation:'aurora 16s ease-in-out infinite'}}/>
+      <div style={{position:'absolute',bottom:'-16%',insetInlineEnd:'-14%',width:'75%',height:'55%',borderRadius:'50%',background:'radial-gradient(circle,rgba(240,192,64,.18),transparent 65%)',filter:'blur(32px)',animation:'aurora 22s ease-in-out infinite reverse'}}/>
+      {suits.current.map((s,i)=>(
+        <span key={i} style={{position:'absolute',bottom:'-40px',left:s.left+'%',fontSize:s.size,color:SUIT_COL[s.g],opacity:0,'--r':s.rot+'deg',animation:`drift ${s.dur}s linear ${s.delay}s infinite`,textShadow:`0 0 12px ${SUIT_COL[s.g]}66`}}>{s.g}</span>
+      ))}
+    </div>
+  );
+}
+
+// Glowing circular icon medallion used across the dashboard.
+function Medallion({emoji,color,size=54,spin=false}){
+  return(
+    <div style={{position:'relative',width:size,height:size,flexShrink:0,animation:'bob 4s ease-in-out infinite'}}>
+      <div style={{position:'absolute',inset:-4,borderRadius:'50%',border:`1.5px dashed ${color}55`,animation:spin?'ringspin 12s linear infinite':'none'}}/>
+      <div style={{width:size,height:size,borderRadius:'50%',background:`radial-gradient(circle at 35% 30%,${color}44,rgba(8,12,10,.9))`,border:`2px solid ${color}`,display:'flex',alignItems:'center',justifyContent:'center',fontSize:size*0.5,boxShadow:`0 6px 18px ${color}55,inset 0 2px 8px rgba(255,255,255,.12)`}}>{emoji}</div>
+    </div>
+  );
+}
+
 export default function App(){
   const {t,dir}=useLang();
   const [profile,setProfile]=useState(null);
@@ -99,6 +128,12 @@ export default function App(){
       @keyframes floaty{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
       @keyframes glowPulse{0%,100%{opacity:.55}50%{opacity:1}}
       @keyframes sheen{0%{transform:translateX(-120%)}60%,100%{transform:translateX(220%)}}
+      @keyframes drift{0%{transform:translateY(20px) rotate(var(--r,0deg));opacity:0}12%{opacity:.5}88%{opacity:.5}100%{transform:translateY(-120px) rotate(var(--r,0deg));opacity:0}}
+      @keyframes aurora{0%,100%{transform:translate(0,0) scale(1)}33%{transform:translate(8%,-6%) scale(1.15)}66%{transform:translate(-6%,5%) scale(.95)}}
+      @keyframes bob{0%,100%{transform:translateY(0) rotate(-2deg)}50%{transform:translateY(-9px) rotate(2deg)}}
+      @keyframes ringspin{to{transform:rotate(360deg)}}
+      @keyframes pressPop{0%{transform:scale(.94)}60%{transform:scale(1.03)}100%{transform:scale(1)}}
+      @keyframes titleGlow{0%,100%{filter:drop-shadow(0 0 12px rgba(240,192,64,.35))}50%{filter:drop-shadow(0 0 26px rgba(240,192,64,.7))}}
       *::-webkit-scrollbar{width:0;height:0}
       select option{background:#0C1410}
     `;
@@ -306,73 +341,93 @@ function HomeScreen({profile,onGame,onMultiplayer,onTournament,onAdmin,onSetting
     if(r.n>=7){r.n=0;onAdmin();}
   };
 
-  const pill={display:'flex',alignItems:'center',justifyContent:'center',gap:5,width:38,height:38,borderRadius:'50%',background:'rgba(240,192,64,.08)',border:'1px solid rgba(240,192,64,.2)',cursor:'pointer',fontSize:16,touchAction:'manipulation'};
+  const pill={display:'flex',alignItems:'center',justifyContent:'center',gap:5,width:40,height:40,borderRadius:'50%',background:'rgba(240,192,64,.1)',border:'1px solid rgba(240,192,64,.25)',cursor:'pointer',fontSize:16,touchAction:'manipulation',backdropFilter:'blur(6px)'};
 
   return(
-    <div style={{position:'absolute',inset:0,overflowY:'auto',WebkitOverflowScrolling:'touch',paddingBottom:'calc(66px + env(safe-area-inset-bottom,0px) + 12px)',paddingTop:'env(safe-area-inset-top,0px)'}}>
+    <div style={{position:'absolute',inset:0,overflowY:'auto',WebkitOverflowScrolling:'touch',paddingBottom:'calc(66px + env(safe-area-inset-bottom,0px) + 12px)',paddingTop:'env(safe-area-inset-top,0px)',background:'radial-gradient(ellipse 100% 55% at 50% 0%,#12331B,#07090A 70%)'}}>
+      <CinematicBG/>
+      <div style={{position:'relative',zIndex:1}}>
       {/* top bar: quick actions */}
       <div style={{display:'flex',alignItems:'center',gap:8,padding:'12px 14px 0'}}>
-        <div onClick={toggleLang} style={{...pill,width:'auto',padding:'0 12px',fontSize:12,fontWeight:800,color:'#F0C040'}}>🌐 {lang==='ar'?'EN':'ع'}</div>
+        <div onClick={toggleLang} style={{...pill,width:'auto',padding:'0 13px',fontSize:12,fontWeight:800,color:'#F0C040'}}>🌐 {lang==='ar'?'EN':'ع'}</div>
         <div onClick={onSettings} style={pill}>⚙️</div>
         <div style={{flex:1}}/>
         <NotificationCenter userId={profile.uid}/>
       </div>
-      <div style={{textAlign:'center',padding:'6px 14px 0'}}>
-        <div onClick={onLogoTap} style={{fontFamily:"'Scheherazade New',serif",fontSize:'clamp(28px,9vw,46px)',background:'linear-gradient(135deg,#7A5B1A,#F0C040,#FFE08A,#F0C040,#7A5B1A)',backgroundSize:'200% auto',WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent',backgroundClip:'text',lineHeight:1.1,marginBottom:4,userSelect:'none',animation:'shimmer 6s linear infinite'}}>{t('appName')}</div>
-        <div style={{color:'rgba(240,237,229,.55)',fontSize:11,letterSpacing:2,marginBottom:14}}>{t('tagline')}</div>
+
+      {/* hero title with crown */}
+      <div style={{textAlign:'center',padding:'8px 14px 0',position:'relative'}}>
+        <div style={{fontSize:26,marginBottom:-6,animation:'bob 4s ease-in-out infinite'}}>👑</div>
+        <div onClick={onLogoTap} style={{fontFamily:"'Scheherazade New',serif",fontSize:'clamp(34px,11vw,54px)',background:'linear-gradient(135deg,#7A5B1A,#F0C040,#FFF3C4,#F0C040,#7A5B1A)',backgroundSize:'200% auto',WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent',backgroundClip:'text',lineHeight:1.1,marginBottom:4,userSelect:'none',animation:'shimmer 6s linear infinite,titleGlow 4s ease-in-out infinite'}}>{t('appName')}</div>
+        <div style={{color:'rgba(240,220,150,.7)',fontSize:11,letterSpacing:3,marginBottom:14,fontWeight:700}}>{t('tagline')}</div>
       </div>
 
       {/* player card with level + rank */}
-      <div style={{margin:'0 12px 14px',borderRadius:18,padding:'14px',background:'linear-gradient(135deg,rgba(26,61,32,.55),rgba(13,20,16,.85))',border:'1px solid rgba(240,192,64,.18)',boxShadow:'0 10px 30px rgba(0,0,0,.4)'}}>
-        <div style={{display:'flex',alignItems:'center',gap:12}}>
+      <div style={{margin:'0 12px 16px',borderRadius:20,padding:'14px',background:'linear-gradient(135deg,rgba(26,61,32,.7),rgba(13,20,16,.9))',border:'1px solid rgba(240,192,64,.22)',boxShadow:'0 14px 34px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.05)',position:'relative',overflow:'hidden'}}>
+        <div style={{position:'absolute',top:0,insetInlineStart:0,width:'40%',height:'100%',background:'linear-gradient(90deg,rgba(255,255,255,.08),transparent)',transform:'skewX(-20deg)',animation:'sheen 6s ease-in-out infinite'}}/>
+        <div style={{display:'flex',alignItems:'center',gap:12,position:'relative'}}>
           <div style={{position:'relative',flexShrink:0}}>
-            <div style={{width:54,height:54,borderRadius:'50%',background:'rgba(16,26,18,.9)',border:`2.5px solid ${rank.color}`,display:'flex',alignItems:'center',justifyContent:'center',fontSize:28,boxShadow:`0 0 16px ${rank.color}55`}}>{profile.avatar}</div>
-            <div style={{position:'absolute',bottom:-4,insetInlineEnd:-4,background:'#0C1410',border:`1.5px solid ${rank.color}`,borderRadius:9,fontSize:9,fontWeight:900,color:rank.color,padding:'1px 5px'}}>{t('level')} {level}</div>
+            <div style={{position:'absolute',inset:-5,borderRadius:'50%',border:`1.5px dashed ${rank.color}66`,animation:'ringspin 14s linear infinite'}}/>
+            <div style={{width:56,height:56,borderRadius:'50%',background:`radial-gradient(circle at 35% 30%,${rank.color}33,rgba(16,26,18,.95))`,border:`2.5px solid ${rank.color}`,display:'flex',alignItems:'center',justifyContent:'center',fontSize:28,boxShadow:`0 0 18px ${rank.color}66`}}>{profile.avatar}</div>
+            <div style={{position:'absolute',bottom:-5,insetInlineEnd:-5,background:'#0C1410',border:`1.5px solid ${rank.color}`,borderRadius:9,fontSize:9,fontWeight:900,color:rank.color,padding:'1px 6px'}}>⭐{level}</div>
           </div>
           <div style={{flex:1,minWidth:0}}>
-            <div style={{fontWeight:900,fontSize:15,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{profile.name}</div>
+            <div style={{fontWeight:900,fontSize:16,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{profile.name}</div>
             <div style={{display:'flex',alignItems:'center',gap:6,marginTop:3}}>
               <span style={{fontSize:12}}>{rank.icon}</span>
-              <span style={{fontSize:11,fontWeight:700,color:rank.color}}>{t(rank.key)}</span>
+              <span style={{fontSize:11,fontWeight:800,color:rank.color}}>{t(rank.key)}</span>
               <span style={{color:'rgba(240,237,229,.4)',fontSize:10}}>· 📍 {cityLabel(profile.city,lang)}</span>
             </div>
           </div>
-          <div style={{display:'flex',flexDirection:'column',alignItems:'center',gap:2,background:'rgba(240,192,64,.1)',border:'1px solid rgba(240,192,64,.25)',borderRadius:12,padding:'6px 12px',flexShrink:0}}>
-            <span style={{fontSize:14,fontWeight:900,color:'#F0C040'}}>🪙 {profile.coins||0}</span>
+          <div style={{display:'flex',flexDirection:'column',alignItems:'center',gap:2,background:'rgba(240,192,64,.12)',border:'1px solid rgba(240,192,64,.3)',borderRadius:12,padding:'7px 13px',flexShrink:0,boxShadow:'0 0 14px rgba(240,192,64,.15)'}}>
+            <span style={{fontSize:15,fontWeight:900,color:'#F0C040'}}>🪙 {profile.coins||0}</span>
           </div>
         </div>
-        {/* XP bar */}
-        <div style={{height:6,background:'rgba(0,0,0,.35)',borderRadius:4,marginTop:12,overflow:'hidden'}}>
-          <div style={{height:'100%',width:`${pct}%`,borderRadius:4,background:'linear-gradient(90deg,#8B6914,#F0C040,#FFE08A)',boxShadow:'0 0 8px rgba(240,192,64,.5)',transition:'width .6s ease'}}/>
+        <div style={{height:6,background:'rgba(0,0,0,.4)',borderRadius:4,marginTop:12,overflow:'hidden',position:'relative'}}>
+          <div style={{height:'100%',width:`${pct}%`,borderRadius:4,background:'linear-gradient(90deg,#8B6914,#F0C040,#FFF3C4)',boxShadow:'0 0 10px rgba(240,192,64,.6)',transition:'width .6s ease'}}/>
         </div>
       </div>
 
-      <div style={{fontSize:12,fontWeight:800,color:'rgba(240,237,229,.5)',padding:'0 16px 8px'}}>{t('playModes')}</div>
-      <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(150px,1fr))',gap:10,padding:'0 12px',marginBottom:14}}>
-        {modes.map(m=>(
-          <div key={m.id} onClick={()=>{haptics.play();(m.id==='bot'?onGame():onMultiplayer(m.id));}}
-            style={{background:m.bg,border:`1px solid ${m.color}33`,borderRadius:16,padding:'18px 12px',display:'flex',flexDirection:'column',alignItems:'center',gap:7,cursor:'pointer',touchAction:'manipulation',position:'relative',overflow:'hidden'}}>
-            <span style={{fontSize:30,filter:`drop-shadow(0 4px 10px ${m.color}66)`}}>{m.icon}</span>
+      {/* HERO primary CTA */}
+      <div onClick={()=>{haptics.slam();onGame();}} style={{margin:'0 12px 16px',borderRadius:22,padding:'20px 20px',cursor:'pointer',touchAction:'manipulation',position:'relative',overflow:'hidden',background:'linear-gradient(120deg,#0d5c2a,#1a8a4a 45%,#0d5c2a)',backgroundSize:'200% 100%',animation:'shimmer 6s linear infinite',border:'1.5px solid rgba(255,255,255,.15)',boxShadow:'0 16px 40px rgba(26,138,74,.4),inset 0 2px 0 rgba(255,255,255,.15)',display:'flex',alignItems:'center',gap:16}}>
+        <div style={{position:'absolute',top:0,insetInlineStart:0,width:'35%',height:'100%',background:'linear-gradient(90deg,rgba(255,255,255,.25),transparent)',transform:'skewX(-20deg)',animation:'sheen 3.5s ease-in-out infinite'}}/>
+        <div style={{fontSize:44,filter:'drop-shadow(0 6px 12px rgba(0,0,0,.5))',animation:'bob 3s ease-in-out infinite',position:'relative'}}>🃏</div>
+        <div style={{flex:1,position:'relative'}}>
+          <div style={{fontSize:20,fontWeight:900,color:'#fff',textShadow:'0 2px 8px rgba(0,0,0,.4)'}}>{t('mode_bot')}</div>
+          <div style={{color:'rgba(255,255,255,.85)',fontSize:12,marginTop:2}}>{t('mode_bot_sub')}</div>
+        </div>
+        <div style={{position:'relative',width:44,height:44,borderRadius:'50%',background:'rgba(255,255,255,.2)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:20,color:'#fff'}}>{lang==='ar'?'▶':'▶'}</div>
+      </div>
+
+      <div style={{fontSize:12,fontWeight:800,color:'rgba(240,220,150,.6)',padding:'0 16px 10px',letterSpacing:1}}>{t('playModes')}</div>
+      <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(150px,1fr))',gap:11,padding:'0 12px',marginBottom:16}}>
+        {modes.filter(m=>m.id!=='bot').map(m=>(
+          <div key={m.id} onClick={e=>{haptics.play();e.currentTarget.style.animation='pressPop .3s';onMultiplayer(m.id);}}
+            style={{background:m.bg,border:`1px solid ${m.color}44`,borderRadius:18,padding:'18px 12px 16px',display:'flex',flexDirection:'column',alignItems:'center',gap:9,cursor:'pointer',touchAction:'manipulation',position:'relative',overflow:'hidden',boxShadow:`0 8px 22px rgba(0,0,0,.35),inset 0 1px 0 ${m.color}22`}}>
+            <div style={{position:'absolute',top:0,insetInlineStart:0,width:'45%',height:'100%',background:'linear-gradient(90deg,rgba(255,255,255,.06),transparent)',transform:'skewX(-20deg)',animation:`sheen ${5+Math.random()*3}s ease-in-out infinite`}}/>
+            <Medallion emoji={m.icon} color={m.color} size={52}/>
             <span style={{fontSize:14,fontWeight:800,color:m.color}}>{m.title}</span>
             <span style={{color:'rgba(240,237,229,.6)',fontSize:10.5,textAlign:'center',lineHeight:1.35}}>{m.sub}</span>
           </div>
         ))}
       </div>
-      <div onClick={onTournament} style={{margin:'0 12px 14px',borderRadius:16,padding:'16px 18px',cursor:'pointer',touchAction:'manipulation',position:'relative',overflow:'hidden',border:'1px solid rgba(240,192,64,.32)',background:'linear-gradient(120deg,#1a0f00 0%,#2a1a00 25%,#3a2400 50%,#2a1a00 75%,#1a0f00 100%)',backgroundSize:'200% 100%',animation:'shimmer 5s linear infinite',display:'flex',alignItems:'center',gap:12}}>
-        <span style={{fontSize:32}}>🏆</span>
+      <div onClick={onTournament} style={{margin:'0 12px 16px',borderRadius:18,padding:'16px 18px',cursor:'pointer',touchAction:'manipulation',position:'relative',overflow:'hidden',border:'1px solid rgba(240,192,64,.35)',background:'linear-gradient(120deg,#1a0f00 0%,#2a1a00 25%,#3a2400 50%,#2a1a00 75%,#1a0f00 100%)',backgroundSize:'200% 100%',animation:'shimmer 5s linear infinite',display:'flex',alignItems:'center',gap:14,boxShadow:'0 10px 28px rgba(0,0,0,.4)'}}>
+        <Medallion emoji="🏆" color="#F0C040" size={48} spin/>
         <div style={{flex:1}}>
-          <div style={{fontSize:15,fontWeight:900,color:'#F0C040'}}>{t('tournaments')}</div>
+          <div style={{fontSize:16,fontWeight:900,color:'#F0C040'}}>{t('tournaments')}</div>
           <div style={{color:'rgba(240,237,229,.65)',fontSize:11,marginTop:2}}>{t('tournaments_sub')}</div>
         </div>
-        <span style={{color:'#F0C040',fontSize:20}}>{lang==='ar'?'‹':'›'}</span>
+        <span style={{color:'#F0C040',fontSize:22}}>{lang==='ar'?'‹':'›'}</span>
       </div>
-      <div style={{display:'flex',background:'rgba(13,20,16,.75)',border:'1px solid rgba(240,192,64,.1)',borderRadius:14,margin:'0 12px',overflow:'hidden'}}>
-        {[[lang==='ar'?'٦.٢م':'6.2M',t('stat_players')],[lang==='ar'?'٩٨٤':'984',t('stat_live')],[lang==='ar'?'٤.٨':'4.8',t('stat_rating')]].map(([n,l],i)=>(
+      <div style={{display:'flex',background:'rgba(13,20,16,.7)',border:'1px solid rgba(240,192,64,.12)',borderRadius:16,margin:'0 12px',overflow:'hidden',backdropFilter:'blur(6px)'}}>
+        {[['👥',lang==='ar'?'٦.٢م':'6.2M',t('stat_players')],['🎮',lang==='ar'?'٩٨٤':'984',t('stat_live')],['⭐',lang==='ar'?'٤.٨':'4.8',t('stat_rating')]].map(([ic,n,l],i)=>(
           <div key={i} style={{flex:1,textAlign:'center',padding:'12px 4px',borderInlineEnd:i<2?'1px solid rgba(255,255,255,.06)':'none'}}>
-            <div style={{fontSize:16,fontWeight:900,color:'#F0C040'}}>{n}</div>
+            <div style={{fontSize:15}}>{ic}</div>
+            <div style={{fontSize:16,fontWeight:900,color:'#F0C040',marginTop:2}}>{n}</div>
             <div style={{color:'rgba(240,237,229,.6)',fontSize:9,marginTop:1}}>{l}</div>
           </div>
         ))}
+      </div>
       </div>
     </div>
   );
