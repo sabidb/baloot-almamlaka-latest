@@ -83,7 +83,12 @@ exports.advanceTournaments = onSchedule('every 5 minutes', async () => {
 
 // Bridges finished tournament rooms into the bracket: when a room tied to
 // a tournament match reaches gameOver, record the match winner.
-exports.onRoomFinished = onDocumentUpdated('rooms/{code}', async (event) => {
+// Firestore-triggered functions MUST run in the database's region
+// (me-central2 / Dammam) — unlike the callables, they can't sit in a
+// different region from the data.
+exports.onRoomFinished = onDocumentUpdated(
+  { document: 'rooms/{code}', region: 'me-central2' },
+  async (event) => {
   const after = event.data.after.data();
   const before = event.data.before.data();
   if (!after?.tournamentId || after.gd?.phase !== 'gameOver' || before.gd?.phase === 'gameOver') return;
