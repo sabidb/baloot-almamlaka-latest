@@ -76,8 +76,8 @@ export default function App(){
   },[]);
 
   useEffect(()=>{
-    // Surface any error from a mobile redirect sign-in.
-    getRedirect().catch(e=>{if(e?.code!=='auth/no-auth-event')setAuthErr('تعذر تسجيل الدخول');});
+    // Surface any error from a mobile redirect sign-in (show the real code).
+    getRedirect().catch(e=>{if(e?.code!=='auth/no-auth-event')setAuthErr('redirect: '+(e?.code||e?.message||'error'));});
     const unsub=listenAuth((user)=>{
       (async()=>{
         setAuthUser(user||null);
@@ -184,7 +184,7 @@ function AuthScreen({authUser,authErr,onDone}){
       // On success the app-level auth listener takes over (loads profile or
       // shows this setup step). On mobile this navigates away entirely.
       await signInGoogle();
-    }catch{setErr('تعذر تسجيل الدخول');setBusy(false);}
+    }catch(e){setErr('login: '+(e?.code||e?.message||'error'));setBusy(false);}
   };
 
   const finish=async()=>{
