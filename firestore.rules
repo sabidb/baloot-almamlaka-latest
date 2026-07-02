@@ -1,0 +1,72 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() { return request.auth != null; }
+    function isSelf(uid) { return signedIn() && request.auth.uid == uid; }
+    // Admin access requires a custom claim set server-side (Admin SDK /
+    // Cloud Function). The client-side PIN in AdminPanel.jsx is NOT
+    // security — without this claim, admin writes are denied.
+    function isAdmin() { return signedIn() && request.auth.token.admin == true; }
+    function notBanned() { return !('banned' in resource.data) || resource.data.banned != true; }
+
+    match /users/{uid} {
+      // Any signed-in player can read profiles (leaderboard, friend search)
+      allow read: if signedIn();
+      allow create: if isSelf(uid);
+      // Players update their own doc (profile edits, game results, daily
+      // rewards). Banned users cannot write. Admins can update anyone.
+      allow update: if (isSelf(uid) && notBanned()) || isAdmin();
+      allow delete: if isAdmin();
+
+      match /friends/{friendId} {
+        allow read: if isSelf(uid);
+        // The accepting user writes into BOTH friends subcollections
+        // (their own and the requester's), so the counterparty must also
+        // be allowed to write a doc keyed by their own uid.
+        allow write: if isSelf(uid) || (signedIn() && request.auth.uid == friendId);
+      }
+    }
+
+    match /friendRequests/{id} {
+      allow read: if signedIn() &&
+        (resource.data.to == request.auth.uid || resource.data.from == request.auth.uid);
+      allow create: if signedIn() &&
+        request.resource.data.from == request.auth.uid &&
+        request.resource.data.status == 'pending';
+      // Only the recipient can accept/reject, and may only change status.
+      allow update: if signedIn() &&
+        resource.data.to == request.auth.uid &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']);
+    }
+
+    match /notifications/{id} {
+      allow read: if signedIn() && resource.data.to == request.auth.uid;
+      // Game invites are created by the sender addressed to someone else.
+      allow create: if signedIn() && request.resource.data.to is string;
+      // Recipient can mark as read.
+      allow update: if signedIn() &&
+        resource.data.to == request.auth.uid &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read']);
+    }
+
+    match /tournaments/{id} {
+      allow read: if signedIn();
+      allow create: if signedIn();
+      // MVP: any signed-in player can update (join flow rewrites the
+      // players array from the client). This is NOT tamper-proof — move
+      // joins/settlement to a Cloud Function before real prizes exist.
+      allow update: if signedIn();
+      allow delete: if isAdmin();
+    }
+
+    match /rooms/{code} {
+      allow read, write: if signedIn();
+    }
+
+    // Deny everything not matched above.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
