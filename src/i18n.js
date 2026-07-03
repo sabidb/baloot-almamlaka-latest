@@ -61,6 +61,11 @@ const STRINGS = {
     allPassed: 'الكل مرّر — توزيع جديد', newDeal: 'توزيع جديد',
     thinking: 'يفكر…', bidding_ing: 'يزايد…',
     back: 'رجوع', comingSoon: 'قريباً',
+    // dashboard (colorful lobby)
+    learn: 'تعلّم أصول البلوت', learnSub: 'احترفها الآن ✦', playNow: 'العب الآن',
+    online: 'متصل', vsComputer: 'ضد الكمبيوتر', dailyReward: 'مكافأة يومية',
+    freeBonus: 'هدية مجانية', featured: 'المميّز', quickPlay: 'لعبة سريعة',
+    locked: 'مقفل', unlockAt: 'يفتح عند المستوى',
   },
   en: {
     dir: 'ltr',
@@ -111,6 +116,10 @@ const STRINGS = {
     allPassed: 'All passed — new deal', newDeal: 'New deal',
     thinking: 'thinking…', bidding_ing: 'bidding…',
     back: 'Back', comingSoon: 'Soon',
+    learn: 'Learn Baloot basics', learnSub: 'Master it now ✦', playNow: 'Play now',
+    online: 'online', vsComputer: 'Vs. Computer', dailyReward: 'Daily reward',
+    freeBonus: 'Free bonus', featured: 'Featured', quickPlay: 'Quick Match',
+    locked: 'Locked', unlockAt: 'Unlocks at level',
   },
 };
 
