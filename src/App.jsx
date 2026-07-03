@@ -63,33 +63,66 @@ const G={
 
 function Spin(){return <div style={{width:30,height:30,border:'3px solid rgba(240,192,64,.2)',borderTopColor:'#F0C040',borderRadius:'50%',animation:'spin .8s linear infinite'}}/>;}
 
-// Cinematic ambient backdrop: drifting suit glyphs + slow aurora glows.
+// Cinematic ambient backdrop: rotating light rays, twinkling stars,
+// rising gold sparks, drifting suit glyphs and slow aurora glows.
 const SUIT_GLYPHS=['♠','♥','♦','♣'];
 const SUIT_COL={'♠':'#F0C040','♥':'#E0506A','♦':'#E0A060','♣':'#5FBF7A'};
 function CinematicBG(){
-  const suits=useRef(Array.from({length:9},(_,i)=>({
-    g:SUIT_GLYPHS[i%4], left:(i*11+7)%96, size:22+((i*13)%26), dur:9+((i*7)%10), delay:-(i*2.3),
-    rot:((i*37)%40)-20,
-  })));
+  const suits=useRef(Array.from({length:10},(_,i)=>({g:SUIT_GLYPHS[i%4],left:(i*11+7)%96,size:22+((i*13)%26),dur:9+((i*7)%10),delay:-(i*2.1),rot:((i*37)%40)-20})));
+  const stars=useRef(Array.from({length:26},(_,i)=>({top:(i*53+11)%100,left:(i*37+5)%100,size:1.5+((i*7)%3),dur:2+((i*5)%4),delay:-(i*0.7)})));
+  const sparks=useRef(Array.from({length:12},(_,i)=>({left:(i*29+9)%96,size:4+((i*5)%6),dur:7+((i*6)%8),delay:-(i*1.6)})));
   return(
     <div style={{position:'absolute',inset:0,overflow:'hidden',pointerEvents:'none',zIndex:0}}>
-      <div style={{position:'absolute',top:'-14%',insetInlineStart:'-12%',width:'70%',height:'50%',borderRadius:'50%',background:'radial-gradient(circle,rgba(30,110,60,.45),transparent 65%)',filter:'blur(28px)',animation:'aurora 16s ease-in-out infinite'}}/>
-      <div style={{position:'absolute',bottom:'-16%',insetInlineEnd:'-14%',width:'75%',height:'55%',borderRadius:'50%',background:'radial-gradient(circle,rgba(240,192,64,.18),transparent 65%)',filter:'blur(32px)',animation:'aurora 22s ease-in-out infinite reverse'}}/>
+      {/* rotating god-rays behind the title */}
+      <div style={{position:'absolute',top:'-40%',left:'50%',width:'160%',height:'120%',transform:'translateX(-50%)',background:'repeating-conic-gradient(from 0deg at 50% 50%,rgba(240,192,64,.06) 0deg,transparent 7deg 18deg)',animation:'rays 60s linear infinite',opacity:.7}}/>
+      {/* aurora glows */}
+      <div style={{position:'absolute',top:'-14%',insetInlineStart:'-12%',width:'70%',height:'50%',borderRadius:'50%',background:'radial-gradient(circle,rgba(30,120,66,.5),transparent 65%)',filter:'blur(30px)',animation:'aurora 16s ease-in-out infinite'}}/>
+      <div style={{position:'absolute',bottom:'-16%',insetInlineEnd:'-14%',width:'75%',height:'55%',borderRadius:'50%',background:'radial-gradient(circle,rgba(240,192,64,.2),transparent 65%)',filter:'blur(34px)',animation:'aurora 22s ease-in-out infinite reverse'}}/>
+      {/* twinkling stars */}
+      {stars.current.map((s,i)=>(
+        <span key={'st'+i} style={{position:'absolute',top:s.top+'%',left:s.left+'%',width:s.size,height:s.size,borderRadius:'50%',background:'#FFF3C4',boxShadow:'0 0 6px #FFE08A',animation:`twinkle ${s.dur}s ease-in-out ${s.delay}s infinite`}}/>
+      ))}
+      {/* rising gold sparks */}
+      {sparks.current.map((s,i)=>(
+        <span key={'sp'+i} style={{position:'absolute',bottom:'-20px',left:s.left+'%',width:s.size,height:s.size,borderRadius:'50%',background:'radial-gradient(circle,#FFF3C4,#F0C040)',boxShadow:'0 0 10px #F0C040',animation:`rise ${s.dur}s linear ${s.delay}s infinite`}}/>
+      ))}
+      {/* drifting suit glyphs */}
       {suits.current.map((s,i)=>(
-        <span key={i} style={{position:'absolute',bottom:'-40px',left:s.left+'%',fontSize:s.size,color:SUIT_COL[s.g],opacity:0,'--r':s.rot+'deg',animation:`drift ${s.dur}s linear ${s.delay}s infinite`,textShadow:`0 0 12px ${SUIT_COL[s.g]}66`}}>{s.g}</span>
+        <span key={'su'+i} style={{position:'absolute',bottom:'-40px',left:s.left+'%',fontSize:s.size,color:SUIT_COL[s.g],opacity:0,'--r':s.rot+'deg',animation:`drift ${s.dur}s linear ${s.delay}s infinite`,textShadow:`0 0 12px ${SUIT_COL[s.g]}66`}}>{s.g}</span>
       ))}
     </div>
   );
+}
+
+// Count-up animated number (for coins etc.).
+function AnimatedNumber({value=0,dur=900}){
+  const [n,setN]=useState(0);
+  useEffect(()=>{
+    let raf,start;const from=0,to=Number(value)||0;
+    const step=(ts)=>{if(!start)start=ts;const p=Math.min(1,(ts-start)/dur);setN(Math.round(from+(to-from)*(1-Math.pow(1-p,3))));if(p<1)raf=requestAnimationFrame(step);};
+    raf=requestAnimationFrame(step);return()=>cancelAnimationFrame(raf);
+  },[value,dur]);
+  return <>{n}</>;
 }
 
 // Glowing circular icon medallion used across the dashboard.
 function Medallion({emoji,color,size=54,spin=false}){
   return(
     <div style={{position:'relative',width:size,height:size,flexShrink:0,animation:'bob 4s ease-in-out infinite'}}>
-      <div style={{position:'absolute',inset:-4,borderRadius:'50%',border:`1.5px dashed ${color}55`,animation:spin?'ringspin 12s linear infinite':'none'}}/>
-      <div style={{width:size,height:size,borderRadius:'50%',background:`radial-gradient(circle at 35% 30%,${color}44,rgba(8,12,10,.9))`,border:`2px solid ${color}`,display:'flex',alignItems:'center',justifyContent:'center',fontSize:size*0.5,boxShadow:`0 6px 18px ${color}55,inset 0 2px 8px rgba(255,255,255,.12)`}}>{emoji}</div>
+      <div style={{position:'absolute',inset:-6,borderRadius:'50%',border:`1.5px dashed ${color}66`,animation:`ringspin ${spin?10:16}s linear infinite`}}/>
+      <div style={{position:'absolute',inset:-2,borderRadius:'50%',boxShadow:`0 0 18px ${color}88`,animation:'glowPulse 2.4s ease-in-out infinite'}}/>
+      <div style={{width:size,height:size,borderRadius:'50%',background:`radial-gradient(circle at 35% 30%,${color}55,rgba(8,12,10,.92))`,border:`2px solid ${color}`,display:'flex',alignItems:'center',justifyContent:'center',fontSize:size*0.5,boxShadow:`0 6px 18px ${color}66,inset 0 2px 8px rgba(255,255,255,.14)`,position:'relative'}}>{emoji}</div>
     </div>
   );
+}
+
+// Ripple-on-press wrapper for tappable cards.
+function rippleAt(e){
+  const el=e.currentTarget, r=el.getBoundingClientRect();
+  const d=document.createElement('span');
+  const size=Math.max(r.width,r.height);
+  Object.assign(d.style,{position:'absolute',left:(e.clientX-r.left-size/2)+'px',top:(e.clientY-r.top-size/2)+'px',width:size+'px',height:size+'px',borderRadius:'50%',background:'rgba(255,255,255,.25)',pointerEvents:'none',animation:'ripple .6s ease-out forwards',zIndex:5});
+  el.appendChild(d);setTimeout(()=>d.remove(),650);
 }
 
 export default function App(){
@@ -134,6 +167,17 @@ export default function App(){
       @keyframes ringspin{to{transform:rotate(360deg)}}
       @keyframes pressPop{0%{transform:scale(.94)}60%{transform:scale(1.03)}100%{transform:scale(1)}}
       @keyframes titleGlow{0%,100%{filter:drop-shadow(0 0 12px rgba(240,192,64,.35))}50%{filter:drop-shadow(0 0 26px rgba(240,192,64,.7))}}
+      @keyframes twinkle{0%,100%{opacity:.12;transform:scale(.7)}50%{opacity:.95;transform:scale(1.25)}}
+      @keyframes rise{0%{transform:translateY(0) rotate(0);opacity:0}12%{opacity:.85}88%{opacity:.85}100%{transform:translateY(-150px) rotate(160deg);opacity:0}}
+      @keyframes rays{to{transform:translateX(-50%) rotate(360deg)}}
+      @keyframes breathe{0%,100%{transform:scale(1);box-shadow:0 16px 40px rgba(26,138,74,.45),0 0 0 0 rgba(46,204,113,.5)}50%{transform:scale(1.025);box-shadow:0 22px 54px rgba(26,138,74,.6),0 0 0 14px rgba(46,204,113,0)}}
+      @keyframes cascadeIn{0%{opacity:0;transform:translateY(26px) scale(.96)}100%{opacity:1;transform:translateY(0) scale(1)}}
+      @keyframes sparkle{0%,100%{opacity:0;transform:scale(0) rotate(0)}50%{opacity:1;transform:scale(1) rotate(90deg)}}
+      @keyframes fanRock{0%,100%{transform:rotate(-2.5deg)}50%{transform:rotate(2.5deg)}}
+      @keyframes ripple{to{transform:scale(4.5);opacity:0}}
+      @keyframes glowSweep{0%{background-position:0% 50%}100%{background-position:200% 50%}}
+      @keyframes iconPulse{0%,100%{filter:drop-shadow(0 0 6px currentColor)}50%{filter:drop-shadow(0 0 16px currentColor)}}
+      .cascade{animation:cascadeIn .5s cubic-bezier(.2,.9,.3,1.2) both}
       *::-webkit-scrollbar{width:0;height:0}
       select option{background:#0C1410}
     `;
@@ -355,15 +399,20 @@ function HomeScreen({profile,onGame,onMultiplayer,onTournament,onAdmin,onSetting
         <NotificationCenter userId={profile.uid}/>
       </div>
 
-      {/* hero title with crown */}
-      <div style={{textAlign:'center',padding:'8px 14px 0',position:'relative'}}>
-        <div style={{fontSize:26,marginBottom:-6,animation:'bob 4s ease-in-out infinite'}}>👑</div>
-        <div onClick={onLogoTap} style={{fontFamily:"'Scheherazade New',serif",fontSize:'clamp(34px,11vw,54px)',background:'linear-gradient(135deg,#7A5B1A,#F0C040,#FFF3C4,#F0C040,#7A5B1A)',backgroundSize:'200% auto',WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent',backgroundClip:'text',lineHeight:1.1,marginBottom:4,userSelect:'none',animation:'shimmer 6s linear infinite,titleGlow 4s ease-in-out infinite'}}>{t('appName')}</div>
+      {/* hero title with crown + sparkles */}
+      <div className="cascade" style={{textAlign:'center',padding:'8px 14px 0',position:'relative',animationDelay:'.02s'}}>
+        <div style={{fontSize:28,marginBottom:-6,animation:'bob 4s ease-in-out infinite',filter:'drop-shadow(0 4px 10px rgba(240,192,64,.5))'}}>👑</div>
+        <div style={{position:'relative',display:'inline-block'}}>
+          {[{t:6,l:'8%',d:'0s'},{t:2,l:'92%',d:'.6s'},{t:'70%',l:'2%',d:'1.1s'},{t:'75%',l:'96%',d:'1.6s'}].map((s,i)=>(
+            <span key={i} style={{position:'absolute',top:s.t,left:s.l,fontSize:13,color:'#FFF3C4',animation:`sparkle 2.4s ease-in-out ${s.d} infinite`}}>✦</span>
+          ))}
+          <div onClick={onLogoTap} style={{fontFamily:"'Scheherazade New',serif",fontSize:'clamp(34px,11vw,54px)',background:'linear-gradient(135deg,#7A5B1A,#F0C040,#FFF3C4,#F0C040,#7A5B1A)',backgroundSize:'200% auto',WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent',backgroundClip:'text',lineHeight:1.1,marginBottom:4,userSelect:'none',animation:'shimmer 6s linear infinite,titleGlow 4s ease-in-out infinite'}}>{t('appName')}</div>
+        </div>
         <div style={{color:'rgba(240,220,150,.7)',fontSize:11,letterSpacing:3,marginBottom:14,fontWeight:700}}>{t('tagline')}</div>
       </div>
 
       {/* player card with level + rank */}
-      <div style={{margin:'0 12px 16px',borderRadius:20,padding:'14px',background:'linear-gradient(135deg,rgba(26,61,32,.7),rgba(13,20,16,.9))',border:'1px solid rgba(240,192,64,.22)',boxShadow:'0 14px 34px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.05)',position:'relative',overflow:'hidden'}}>
+      <div className="cascade" style={{margin:'0 12px 16px',borderRadius:20,padding:'14px',background:'linear-gradient(135deg,rgba(26,61,32,.7),rgba(13,20,16,.9))',border:'1px solid rgba(240,192,64,.22)',boxShadow:'0 14px 34px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.05)',position:'relative',overflow:'hidden',animationDelay:'.1s'}}>
         <div style={{position:'absolute',top:0,insetInlineStart:0,width:'40%',height:'100%',background:'linear-gradient(90deg,rgba(255,255,255,.08),transparent)',transform:'skewX(-20deg)',animation:'sheen 6s ease-in-out infinite'}}/>
         <div style={{display:'flex',alignItems:'center',gap:12,position:'relative'}}>
           <div style={{position:'relative',flexShrink:0}}>
@@ -380,7 +429,7 @@ function HomeScreen({profile,onGame,onMultiplayer,onTournament,onAdmin,onSetting
             </div>
           </div>
           <div style={{display:'flex',flexDirection:'column',alignItems:'center',gap:2,background:'rgba(240,192,64,.12)',border:'1px solid rgba(240,192,64,.3)',borderRadius:12,padding:'7px 13px',flexShrink:0,boxShadow:'0 0 14px rgba(240,192,64,.15)'}}>
-            <span style={{fontSize:15,fontWeight:900,color:'#F0C040'}}>🪙 {profile.coins||0}</span>
+            <span style={{fontSize:15,fontWeight:900,color:'#F0C040'}}>🪙 <AnimatedNumber value={profile.coins||0}/></span>
           </div>
         </div>
         <div style={{height:6,background:'rgba(0,0,0,.4)',borderRadius:4,marginTop:12,overflow:'hidden',position:'relative'}}>
@@ -388,30 +437,35 @@ function HomeScreen({profile,onGame,onMultiplayer,onTournament,onAdmin,onSetting
         </div>
       </div>
 
-      {/* HERO primary CTA */}
-      <div onClick={()=>{haptics.slam();onGame();}} style={{margin:'0 12px 16px',borderRadius:22,padding:'20px 20px',cursor:'pointer',touchAction:'manipulation',position:'relative',overflow:'hidden',background:'linear-gradient(120deg,#0d5c2a,#1a8a4a 45%,#0d5c2a)',backgroundSize:'200% 100%',animation:'shimmer 6s linear infinite',border:'1.5px solid rgba(255,255,255,.15)',boxShadow:'0 16px 40px rgba(26,138,74,.4),inset 0 2px 0 rgba(255,255,255,.15)',display:'flex',alignItems:'center',gap:16}}>
-        <div style={{position:'absolute',top:0,insetInlineStart:0,width:'35%',height:'100%',background:'linear-gradient(90deg,rgba(255,255,255,.25),transparent)',transform:'skewX(-20deg)',animation:'sheen 3.5s ease-in-out infinite'}}/>
-        <div style={{fontSize:44,filter:'drop-shadow(0 6px 12px rgba(0,0,0,.5))',animation:'bob 3s ease-in-out infinite',position:'relative'}}>🃏</div>
-        <div style={{flex:1,position:'relative'}}>
-          <div style={{fontSize:20,fontWeight:900,color:'#fff',textShadow:'0 2px 8px rgba(0,0,0,.4)'}}>{t('mode_bot')}</div>
-          <div style={{color:'rgba(255,255,255,.85)',fontSize:12,marginTop:2}}>{t('mode_bot_sub')}</div>
+      {/* HERO primary CTA — breathing glow + fanned cards */}
+      <div className="cascade" onClick={e=>{rippleAt(e);haptics.slam();setTimeout(onGame,120);}} style={{margin:'0 12px 18px',borderRadius:24,padding:'22px 20px',cursor:'pointer',touchAction:'manipulation',position:'relative',overflow:'hidden',background:'linear-gradient(120deg,#0d5c2a,#1fa557 45%,#0d5c2a)',backgroundSize:'200% 100%',animation:'shimmer 6s linear infinite,breathe 3.4s ease-in-out infinite',border:'1.5px solid rgba(255,255,255,.18)',display:'flex',alignItems:'center',gap:16,animationDelay:'.18s'}}>
+        <div style={{position:'absolute',top:0,insetInlineStart:0,width:'35%',height:'100%',background:'linear-gradient(90deg,rgba(255,255,255,.3),transparent)',transform:'skewX(-20deg)',animation:'sheen 3s ease-in-out infinite'}}/>
+        {/* fanned mini cards */}
+        <div style={{position:'relative',width:58,height:52,flexShrink:0,animation:'fanRock 3.5s ease-in-out infinite'}}>
+          {[{r:-22,x:-14,c:'#E0506A',s:'♥'},{r:0,x:0,c:'#111',s:'♠'},{r:22,x:14,c:'#E0A060',s:'♦'}].map((c,i)=>(
+            <div key={i} style={{position:'absolute',left:'50%',top:6,width:30,height:42,marginLeft:-15,borderRadius:5,background:'linear-gradient(145deg,#FEFDF8,#EDE6D6)',border:'1px solid rgba(0,0,0,.15)',boxShadow:'0 4px 10px rgba(0,0,0,.4)',transform:`rotate(${c.r}deg) translateX(${c.x}px)`,transformOrigin:'bottom center',display:'flex',alignItems:'center',justifyContent:'center',fontSize:18,color:c.c,zIndex:i===1?3:1}}>{c.s}</div>
+          ))}
         </div>
-        <div style={{position:'relative',width:44,height:44,borderRadius:'50%',background:'rgba(255,255,255,.2)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:20,color:'#fff'}}>{lang==='ar'?'▶':'▶'}</div>
+        <div style={{flex:1,position:'relative'}}>
+          <div style={{fontSize:21,fontWeight:900,color:'#fff',textShadow:'0 2px 8px rgba(0,0,0,.4)'}}>{t('mode_bot')}</div>
+          <div style={{color:'rgba(255,255,255,.9)',fontSize:12,marginTop:2}}>{t('mode_bot_sub')}</div>
+        </div>
+        <div style={{position:'relative',width:46,height:46,borderRadius:'50%',background:'rgba(255,255,255,.22)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:20,color:'#fff',boxShadow:'0 0 16px rgba(255,255,255,.3)',animation:'glowPulse 2s ease-in-out infinite'}}>▶</div>
       </div>
 
       <div style={{fontSize:12,fontWeight:800,color:'rgba(240,220,150,.6)',padding:'0 16px 10px',letterSpacing:1}}>{t('playModes')}</div>
       <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(150px,1fr))',gap:11,padding:'0 12px',marginBottom:16}}>
-        {modes.filter(m=>m.id!=='bot').map(m=>(
-          <div key={m.id} onClick={e=>{haptics.play();e.currentTarget.style.animation='pressPop .3s';onMultiplayer(m.id);}}
-            style={{background:m.bg,border:`1px solid ${m.color}44`,borderRadius:18,padding:'18px 12px 16px',display:'flex',flexDirection:'column',alignItems:'center',gap:9,cursor:'pointer',touchAction:'manipulation',position:'relative',overflow:'hidden',boxShadow:`0 8px 22px rgba(0,0,0,.35),inset 0 1px 0 ${m.color}22`}}>
-            <div style={{position:'absolute',top:0,insetInlineStart:0,width:'45%',height:'100%',background:'linear-gradient(90deg,rgba(255,255,255,.06),transparent)',transform:'skewX(-20deg)',animation:`sheen ${5+Math.random()*3}s ease-in-out infinite`}}/>
+        {modes.filter(m=>m.id!=='bot').map((m,i)=>(
+          <div key={m.id} className="cascade" onClick={e=>{rippleAt(e);haptics.play();setTimeout(()=>onMultiplayer(m.id),120);}}
+            style={{background:m.bg,border:`1px solid ${m.color}44`,borderRadius:18,padding:'18px 12px 16px',display:'flex',flexDirection:'column',alignItems:'center',gap:9,cursor:'pointer',touchAction:'manipulation',position:'relative',overflow:'hidden',boxShadow:`0 8px 22px rgba(0,0,0,.35),inset 0 1px 0 ${m.color}22`,animationDelay:(.24+i*0.07)+'s'}}>
+            <div style={{position:'absolute',top:0,insetInlineStart:0,width:'45%',height:'100%',background:'linear-gradient(90deg,rgba(255,255,255,.07),transparent)',transform:'skewX(-20deg)',animation:`sheen ${5+i}s ease-in-out infinite`}}/>
             <Medallion emoji={m.icon} color={m.color} size={52}/>
             <span style={{fontSize:14,fontWeight:800,color:m.color}}>{m.title}</span>
             <span style={{color:'rgba(240,237,229,.6)',fontSize:10.5,textAlign:'center',lineHeight:1.35}}>{m.sub}</span>
           </div>
         ))}
       </div>
-      <div onClick={onTournament} style={{margin:'0 12px 16px',borderRadius:18,padding:'16px 18px',cursor:'pointer',touchAction:'manipulation',position:'relative',overflow:'hidden',border:'1px solid rgba(240,192,64,.35)',background:'linear-gradient(120deg,#1a0f00 0%,#2a1a00 25%,#3a2400 50%,#2a1a00 75%,#1a0f00 100%)',backgroundSize:'200% 100%',animation:'shimmer 5s linear infinite',display:'flex',alignItems:'center',gap:14,boxShadow:'0 10px 28px rgba(0,0,0,.4)'}}>
+      <div className="cascade" onClick={e=>{rippleAt(e);setTimeout(onTournament,120);}} style={{margin:'0 12px 16px',borderRadius:18,padding:'16px 18px',cursor:'pointer',touchAction:'manipulation',position:'relative',overflow:'hidden',border:'1px solid rgba(240,192,64,.35)',background:'linear-gradient(120deg,#1a0f00 0%,#2a1a00 25%,#3a2400 50%,#2a1a00 75%,#1a0f00 100%)',backgroundSize:'200% 100%',animation:'shimmer 5s linear infinite',display:'flex',alignItems:'center',gap:14,boxShadow:'0 10px 28px rgba(0,0,0,.4)',animationDelay:'.5s'}}>
         <Medallion emoji="🏆" color="#F0C040" size={48} spin/>
         <div style={{flex:1}}>
           <div style={{fontSize:16,fontWeight:900,color:'#F0C040'}}>{t('tournaments')}</div>
