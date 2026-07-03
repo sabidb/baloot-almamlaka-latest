@@ -12,6 +12,7 @@ import AdminPanel from './AdminPanel';
 import MultiplayerScreen from './MultiplayerGame';
 import { useLang, applyDir } from './i18n';
 import SettingsScreen from './Settings';
+import { Icon } from './Icons';
 
 const AVATARS = ['🧔','👲','🧕','👨‍💼','👩‍💼','🤴','👸','🧙','🦸','🎩'];
 // Cities carry an English label so the picker/leaderboard work in both langs
@@ -252,7 +253,7 @@ export default function App(){
     </div>
   );
 
-  const NAV=[{id:'home',i:'🏠',l:t('nav_home')},{id:'board',i:'🏆',l:t('nav_board')},{id:'store',i:'🛍️',l:t('nav_store')},{id:'friends',i:'👥',l:t('nav_friends')},{id:'profile',i:'👤',l:t('nav_profile')}];
+  const NAV=[{id:'home',i:'home',l:t('nav_home')},{id:'board',i:'medal',l:t('nav_board')},{id:'store',i:'bag',l:t('nav_store')},{id:'friends',i:'friends',l:t('nav_friends')},{id:'profile',i:'user',l:t('nav_profile')}];
 
   return(
     <div style={{height:'100dvh',display:'flex',flexDirection:'column',background:'#07090A',fontFamily:'Tajawal,sans-serif',color:'#F0EDE5',direction:dir,overflow:'hidden'}}>
@@ -270,8 +271,8 @@ export default function App(){
       <nav style={{flexShrink:0,height:'calc(62px + env(safe-area-inset-bottom,0px))',paddingBottom:'env(safe-area-inset-bottom,0px)',background:'linear-gradient(180deg,rgba(10,15,12,.98),rgba(6,9,8,.99))',borderTop:'1px solid rgba(240,192,64,.14)',display:'flex',boxShadow:'0 -8px 24px rgba(0,0,0,.5)'}}>
         {NAV.map(n=>{const a=tab===n.id;return(
           <div key={n.id} onClick={()=>{setTab(n.id);haptics.play();}} style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:3,cursor:'pointer',padding:'6px 0',position:'relative'}}>
-            {a&&<div style={{position:'absolute',top:6,width:42,height:42,borderRadius:'50%',background:'radial-gradient(circle,rgba(240,192,64,.22),transparent 70%)'}}/>}
-            <span style={{fontSize:20,transform:a?'translateY(-3px) scale(1.18)':'none',transition:'transform .25s cubic-bezier(.34,1.56,.64,1)',filter:a?'drop-shadow(0 4px 8px rgba(240,192,64,.4))':'none'}}>{n.i}</span>
+            {a&&<div style={{position:'absolute',top:4,width:44,height:44,borderRadius:'50%',background:'radial-gradient(circle,rgba(240,192,64,.28),transparent 70%)'}}/>}
+            <div style={{transform:a?'translateY(-3px) scale(1.14)':'scale(.96)',opacity:a?1:.65,transition:'all .25s cubic-bezier(.34,1.56,.64,1)'}}><Icon name={n.i} size={26}/></div>
             <span style={{fontSize:9.5,fontWeight:800,color:a?'#F0C040':'rgba(240,237,229,.5)'}}>{n.l}</span>
             {a&&<div style={{position:'absolute',bottom:2,width:22,height:3,borderRadius:3,background:'#F0C040',boxShadow:'0 0 8px #F0C040'}}/>}
           </div>
@@ -374,12 +375,12 @@ function HomeScreen({profile,onGame,onMultiplayer,onTournament,onAdmin,onSetting
   const arNum=(n)=>lang==='ar'?n.toLocaleString('ar-EG'):n.toLocaleString('en-US');
 
   const feats=[
-    {id:'create', icon:'👥', label:t('mode_create'), online:1666, c1:'#F0C040',c2:'#7A5B1A', onClick:()=>onMultiplayer('create')},
-    {id:'bot',    icon:'🤖', label:t('vsComputer'),  online:50,   c1:'#3B82F6',c2:'#0B2A6B', onClick:onGame},
-    {id:'tourn',  icon:'🏆', label:t('tournaments'), online:196,  c1:'#E11D5C',c2:'#7A0B32', onClick:onTournament},
-    {id:'join',   icon:'🔑', label:t('mode_join'),   online:820,  c1:'#14B8A6',c2:'#0B4A44', onClick:()=>onMultiplayer('join')},
-    {id:'daily',  icon:'🎁', label:t('dailyReward'), online:null, c1:'#DB2777',c2:'#6B0B3A', onClick:onDaily},
-    {id:'board',  icon:'👑', label:t('leaderboard'), online:null, c1:'#10B981',c2:'#064E3B', onClick:onBoard},
+    {id:'create', icon:'friends', label:t('mode_create'), online:1666, c1:'#F0C040',c2:'#7A5B1A', onClick:()=>onMultiplayer('create')},
+    {id:'bot',    icon:'robot',   label:t('vsComputer'),  online:50,   c1:'#3B82F6',c2:'#0B2A6B', onClick:onGame},
+    {id:'tourn',  icon:'trophy',  label:t('tournaments'), online:196,  c1:'#E11D5C',c2:'#7A0B32', onClick:onTournament},
+    {id:'join',   icon:'key',     label:t('mode_join'),   online:820,  c1:'#14B8A6',c2:'#0B4A44', onClick:()=>onMultiplayer('join')},
+    {id:'daily',  icon:'gift',    label:t('dailyReward'), online:null, c1:'#DB2777',c2:'#6B0B3A', onClick:onDaily},
+    {id:'board',  icon:'crown',   label:t('leaderboard'), online:null, c1:'#10B981',c2:'#064E3B', onClick:onBoard},
   ];
 
   const chip=(icon,val,color)=>(
@@ -396,7 +397,7 @@ function HomeScreen({profile,onGame,onMultiplayer,onTournament,onAdmin,onSetting
 
       {/* TOP BAR */}
       <div style={{display:'flex',alignItems:'center',gap:7,rowGap:7,flexWrap:'wrap',padding:'12px 12px 0'}}>
-        <div onClick={onSettings} style={pill}>⚙️</div>
+        <div onClick={onSettings} style={pill}><Icon name="gear" size={22}/></div>
         <div onClick={onLogoTap} style={{display:'flex',alignItems:'center',gap:6,background:'rgba(0,0,0,.4)',border:`1px solid ${rank.color}66`,borderRadius:22,padding:'3px 10px 3px 3px',cursor:'pointer'}}>
           <div style={{width:28,height:28,borderRadius:'50%',border:`2px solid ${rank.color}`,display:'flex',alignItems:'center',justifyContent:'center',fontSize:15,background:'rgba(16,26,18,.9)'}}>{profile.avatar}</div>
           <span style={{fontSize:11,fontWeight:900,color:rank.color}}>⭐{level}</span>
@@ -426,7 +427,7 @@ function HomeScreen({profile,onGame,onMultiplayer,onTournament,onAdmin,onSetting
       <div className="cascade" style={{margin:'0 12px 14px',borderRadius:20,padding:'16px',position:'relative',overflow:'hidden',background:'linear-gradient(135deg,#E11D5C,#7A0B32)',border:'1px solid rgba(255,255,255,.16)',boxShadow:'0 16px 40px rgba(225,29,92,.38)',animationDelay:'.1s'}}>
         <div style={{position:'absolute',top:0,insetInlineStart:0,width:'35%',height:'100%',background:'linear-gradient(90deg,rgba(255,255,255,.18),transparent)',transform:'skewX(-20deg)',animation:'sheen 5s ease-in-out infinite'}}/>
         <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',position:'relative',marginBottom:12}}>
-          <div style={{fontSize:20,fontWeight:900,color:'#fff',textShadow:'0 2px 8px rgba(0,0,0,.35)'}}>⚡ {t('quickPlay')}</div>
+          <div style={{display:'flex',alignItems:'center',gap:7,fontSize:20,fontWeight:900,color:'#fff',textShadow:'0 2px 8px rgba(0,0,0,.35)'}}><Icon name="bolt" size={24}/> {t('quickPlay')}</div>
           <div style={{display:'flex',alignItems:'center',gap:5,background:'rgba(0,0,0,.28)',borderRadius:16,padding:'4px 10px'}}>
             <span style={{width:7,height:7,borderRadius:'50%',background:'#2ECC71',boxShadow:'0 0 6px #2ECC71'}}/>
             <span style={{fontSize:12,fontWeight:900,color:'#fff'}}>{arNum(1666)}</span>
@@ -447,7 +448,7 @@ function HomeScreen({profile,onGame,onMultiplayer,onTournament,onAdmin,onSetting
               <span style={{width:6,height:6,borderRadius:'50%',background:'#2ECC71',boxShadow:'0 0 6px #2ECC71'}}/>
               <span style={{fontSize:10,fontWeight:800,color:'#fff'}}>{arNum(f.online)}</span>
             </div>}
-            <div style={{fontSize:42,filter:'drop-shadow(0 5px 12px rgba(0,0,0,.45))',animation:'bob 4s ease-in-out infinite'}}>{f.icon}</div>
+            <div style={{animation:'bob 4s ease-in-out infinite'}}><Icon name={f.icon} size={46}/></div>
             <span style={{fontSize:14,fontWeight:900,color:'#fff',textShadow:'0 2px 6px rgba(0,0,0,.4)',textAlign:'center'}}>{f.label}</span>
           </div>
         ))}
