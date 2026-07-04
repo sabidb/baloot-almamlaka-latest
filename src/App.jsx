@@ -218,6 +218,7 @@ export default function App(){
       @keyframes suitIn{0%{opacity:0;transform:translateY(18px) scale(.4)}60%{opacity:1;transform:translateY(0) scale(1.15)}100%{transform:scale(1)}}
       @keyframes barFill{from{width:0%}to{width:100%}}
       @keyframes crownIn{0%{opacity:0;transform:translateY(-20px) scale(.4) rotate(-12deg)}70%{opacity:1;transform:translateY(0) scale(1.15) rotate(4deg)}100%{transform:scale(1) rotate(0)}}
+      @keyframes throwIn{0%{opacity:0;transform:translateY(-34px) rotateX(75deg) scale(.82)}60%{opacity:1}100%{opacity:1;transform:rotateX(0) scale(1)}}
       .cascade{animation:cascadeIn .5s cubic-bezier(.2,.9,.3,1.2) both}
       *::-webkit-scrollbar{width:0;height:0}
       select option{background:#0C1410}
@@ -527,6 +528,7 @@ function GameScreen({profile,onExit,onProfileUpdate}){
   const [phase,setPhase]=useState('bidding');
   const [hands,setHands]=useState(()=>{const{h0,h1,h2,h3}=dealHands(shuffle(buildDeck()));return[h0,h1,h2,h3];});
   const [trickPlays,setTrickPlays]=useState([]);
+  const [sweep,setSweep]=useState(null); // {seat} — winner the trick sweeps toward
   const [tricksWon,setTricksWon]=useState(0);
   const [roundScores,setRoundScores]=useState([0,0]);
   const [contract,setContract]=useState(null);
@@ -608,8 +610,10 @@ function GameScreen({profile,onExit,onProfileUpdate}){
 
   useEffect(()=>{
     if(phase!=='playing'||trickPlays.length<4)return;
+    // Sweep the four cards toward the winner's seat partway through the pause.
+    const winnerPlay=trickWinner(trickPlays,contract.type,contract.trump);
+    const sweepTimer=setTimeout(()=>setSweep({seat:winnerPlay.seat}),520);
     const t=setTimeout(()=>{
-      const winnerPlay=trickWinner(trickPlays,contract.type,contract.trump);
       const trickValue=trickPlays.reduce((s,p)=>s+cardValue(p.card,contract.type,contract.trump),0);
       const wTeam=seatTeam(winnerPlay.seat);
       const newRoundScores=[...roundScores];newRoundScores[wTeam]+=trickValue;
@@ -618,7 +622,7 @@ function GameScreen({profile,onExit,onProfileUpdate}){
       sounds.win();if(wTeam===0)haptics.win();
       const nt=tricksWon+1;
       setTricksWon(nt);
-      setTrickPlays([]);
+      setTrickPlays([]);setSweep(null);
       if(nt>=8){
         const result=calcResult(newRoundScores,contract);
         roundsHistoryRef.current.push({contract,roundScores:newRoundScores,result:{made:result.made,isGahwa:result.isGahwa}});
@@ -633,7 +637,7 @@ function GameScreen({profile,onExit,onProfileUpdate}){
         setCurrentPlayer(winnerPlay.seat);
       }
     },1100);
-    return()=>clearTimeout(t);
+    return()=>{clearTimeout(t);clearTimeout(sweepTimer);};
     // eslint-disable-next-line react-hooks/exhaustive-deps
   },[trickPlays,phase]);
 
@@ -735,8 +739,11 @@ function GameScreen({profile,onExit,onProfileUpdate}){
           {trickPlays.map((p,i)=>{
             const pos=SEAT_POS[p.seat];
             const sc=theme.suitColor(p.card.suit);
+            // When the trick is won, all four cards fly toward the winner's seat.
+            const sw=sweep?({0:'translate(0,240px)',1:'translate(-300px,0)',2:'translate(0,-240px)',3:'translate(300px,0)'}[sweep.seat]):'';
+            const baseTf=`rotate(${pos.rot}deg)`;
             return(
-              <div key={p.card.id} style={{...G.card,background:theme.cardBg,top:pos.top,left:pos.left+'%',transform:`rotate(${pos.rot}deg)`,zIndex:i+1,animation:'popIn .3s ease both'}}>
+              <div key={p.card.id} style={{...G.card,background:theme.cardBg,top:pos.top,left:pos.left+'%',transform:sweep?`${sw} ${baseTf} scale(.7)`:baseTf,opacity:sweep?0:1,transition:sweep?'transform .5s cubic-bezier(.5,0,.75,0),opacity .5s ease .1s':'none',zIndex:i+1,animation:sweep?'none':'throwIn .32s cubic-bezier(.2,.8,.3,1.1) both'}}>
                 <span style={{fontFamily:"Changa,sans-serif",fontSize:15,fontWeight:700,color:sc,alignSelf:'flex-start',lineHeight:1}}>{RANKAR[p.card.rank.symbol]}</span>
                 <span style={{fontSize:20,color:sc,lineHeight:1}}>{p.card.suit.symbol}</span>
                 <span style={{fontFamily:"Changa,sans-serif",fontSize:15,fontWeight:700,color:sc,alignSelf:'flex-end',transform:'rotate(180deg)',lineHeight:1}}>{RANKAR[p.card.rank.symbol]}</span>
