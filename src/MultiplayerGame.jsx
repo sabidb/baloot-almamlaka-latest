@@ -452,7 +452,8 @@ function MPGame({profile,code,onExit,onProfileUpdate}){
   const active=seat=>(gd.phase==='bidding'&&gd.currentBidder===seat)||(gd.phase==='playing'&&gd.currentPlayer===seat&&gd.trickPlays.length<4);
 
   return(
-    <div style={{...S.page,background:`radial-gradient(ellipse 90% 70% at 50% 50%,${theme.felt},#07090A)`,display:'flex',alignItems:'center',justifyContent:'center'}}>
+    <div style={{...S.page,background:theme.feltGrad,display:'flex',alignItems:'center',justifyContent:'center'}}>
+      <div style={{position:'absolute',top:'50%',left:'50%',transform:'translate(-50%,-50%)',width:'min(94vw,380px)',height:'min(94vw,380px)',borderRadius:'50%',border:`2px solid ${theme.rail}55`,boxShadow:`inset 0 0 60px ${theme.rail}22,0 0 40px ${theme.rail}18`,pointerEvents:'none',zIndex:0}}/>
       {toast&&<div key={toast.k} style={{position:'fixed',top:'calc(env(safe-area-inset-top,0px) + 12px)',left:'50%',transform:'translateX(-50%)',background:'rgba(8,12,10,.95)',border:'1px solid #7A5B1A',borderRadius:10,padding:'9px 18px',fontSize:13,fontWeight:700,color:'#F0C040',whiteSpace:'nowrap',zIndex:9000,pointerEvents:'none',animation:'fadeUp .35s ease both'}}>{toast.msg}</div>}
 
       <div style={{position:'absolute',top:'50%',left:'50%',transform:'translate(-50%,-50%)',width:'min(82vw,320px)',height:'min(82vw,320px)',borderRadius:'50%',border:'1px solid rgba(240,192,64,.15)',pointerEvents:'none',zIndex:1,animation:'spin 60s linear infinite'}}/>

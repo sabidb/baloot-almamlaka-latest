@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { doc, getDoc, setDoc, updateDoc, increment, collection, addDoc, orderBy, where, limit, getDocs, query, serverTimestamp } from 'firebase/firestore';
 import { db } from './firebase';
 import { listenAuth, signInGoogle, signOutUser, getRedirect } from './auth';
-import { SUITS as CARD_SUITS, STORE_ITEMS, buildDeck, shuffle, dealHands, cardValue, trickWinner, calcResult, botPickCard, botBid, sounds, haptics, getThemeStyles } from './GameLogic';
+import { SUITS as CARD_SUITS, STORE_ITEMS, BOARDS, FRAMES, buildDeck, shuffle, dealHands, cardValue, trickWinner, calcResult, botPickCard, botBid, sounds, haptics, getThemeStyles, getFrame } from './GameLogic';
 import { ReactionBar } from './Reactions';
 import { settleBotGame } from './functions';
 import OnboardingTutorial, { ShareScoreCard } from './Onboarding';
@@ -113,6 +113,20 @@ function Medallion({emoji,color,size=54,spin=false}){
       <div style={{position:'absolute',inset:-6,borderRadius:'50%',border:`1.5px dashed ${color}66`,animation:`ringspin ${spin?10:16}s linear infinite`}}/>
       <div style={{position:'absolute',inset:-2,borderRadius:'50%',boxShadow:`0 0 18px ${color}88`,animation:'glowPulse 2.4s ease-in-out infinite'}}/>
       <div style={{width:size,height:size,borderRadius:'50%',background:`radial-gradient(circle at 35% 30%,${color}55,rgba(8,12,10,.92))`,border:`2px solid ${color}`,display:'flex',alignItems:'center',justifyContent:'center',fontSize:size*0.5,boxShadow:`0 6px 18px ${color}66,inset 0 2px 8px rgba(255,255,255,.14)`,position:'relative'}}>{emoji}</div>
+    </div>
+  );
+}
+
+// Avatar wrapped in the player's purchased frame (ring + glow, animated).
+function AvatarFrame({avatar,size=56,frame,fontSize}){
+  const f=frame||{ring:'rgba(240,192,64,.5)',glow:'transparent',anim:false};
+  const conic=f.ring==='conic';
+  const ringColor=conic?'#F0C040':f.ring;
+  return(
+    <div style={{position:'relative',width:size,height:size,flexShrink:0}}>
+      {conic&&<div style={{position:'absolute',inset:-3,borderRadius:'50%',background:'conic-gradient(#F0C040,#e11d5c,#3b82f6,#22c55e,#a855f7,#F0C040)',animation:'ringspin 4s linear infinite'}}/>}
+      {!conic&&f.anim&&<div style={{position:'absolute',inset:-4,borderRadius:'50%',boxShadow:`0 0 18px ${f.glow}`,animation:'glowPulse 1.8s ease-in-out infinite'}}/>}
+      <div style={{position:'relative',width:size,height:size,borderRadius:'50%',background:'rgba(16,26,18,.92)',border:`3px solid ${ringColor}`,boxShadow:f.glow!=='transparent'?`0 0 16px ${f.glow}77`:'none',display:'flex',alignItems:'center',justifyContent:'center',fontSize:fontSize||size*0.5}}>{avatar}</div>
     </div>
   );
 }
@@ -398,8 +412,8 @@ function HomeScreen({profile,onGame,onMultiplayer,onTournament,onAdmin,onSetting
       {/* TOP BAR */}
       <div style={{display:'flex',alignItems:'center',gap:7,rowGap:7,flexWrap:'wrap',padding:'12px 12px 0'}}>
         <div onClick={onSettings} style={pill}><Icon name="gear" size={22}/></div>
-        <div onClick={onLogoTap} style={{display:'flex',alignItems:'center',gap:6,background:'rgba(0,0,0,.4)',border:`1px solid ${rank.color}66`,borderRadius:22,padding:'3px 10px 3px 3px',cursor:'pointer'}}>
-          <div style={{width:28,height:28,borderRadius:'50%',border:`2px solid ${rank.color}`,display:'flex',alignItems:'center',justifyContent:'center',fontSize:15,background:'rgba(16,26,18,.9)'}}>{profile.avatar}</div>
+        <div onClick={onLogoTap} style={{display:'flex',alignItems:'center',gap:7,background:'rgba(0,0,0,.4)',border:`1px solid ${rank.color}66`,borderRadius:22,padding:'3px 10px 3px 3px',cursor:'pointer'}}>
+          <AvatarFrame avatar={profile.avatar} size={30} fontSize={16} frame={getFrame(profile)}/>
           <span style={{fontSize:11,fontWeight:900,color:rank.color}}>⭐{level}</span>
         </div>
         <div style={{flex:1,minWidth:8}}/>
@@ -634,7 +648,9 @@ function GameScreen({profile,onExit,onProfileUpdate}){
   const theme=getThemeStyles(profile);
 
   return(
-    <div style={{width:'100%',height:'100%',background:`radial-gradient(ellipse 90% 70% at 50% 50%,${theme.felt},#07090A)`,position:'relative',overflow:'hidden',display:'flex',alignItems:'center',justifyContent:'center',fontFamily:'Tajawal,sans-serif',direction:dir}}>
+    <div style={{width:'100%',height:'100%',background:theme.feltGrad,position:'relative',overflow:'hidden',display:'flex',alignItems:'center',justifyContent:'center',fontFamily:'Tajawal,sans-serif',direction:dir}}>
+      {/* board rail glow for the active custom board */}
+      <div style={{position:'absolute',top:'50%',left:'50%',transform:'translate(-50%,-50%)',width:'min(94vw,380px)',height:'min(94vw,380px)',borderRadius:'50%',border:`2px solid ${theme.rail}55`,boxShadow:`inset 0 0 60px ${theme.rail}22,0 0 40px ${theme.rail}18`,pointerEvents:'none',zIndex:0}}/>
       {toast&&<div key={toast.k} style={{position:'fixed',top:'calc(env(safe-area-inset-top,0px) + 12px)',left:'50%',transform:'translateX(-50%)',background:'rgba(8,12,10,.95)',border:'1px solid #7A5B1A',borderRadius:10,padding:'9px 18px',fontSize:13,fontWeight:700,color:'#F0C040',whiteSpace:'nowrap',zIndex:9000,pointerEvents:'none',animation:'fadeUp .35s ease both'}}>{toast.msg}</div>}
 
       <div style={{position:'absolute',top:'50%',left:'50%',transform:'translate(-50%,-50%)',width:'min(82vw,320px)',height:'min(82vw,320px)',borderRadius:'50%',border:'1px solid rgba(240,192,64,.15)',pointerEvents:'none',zIndex:1,animation:'spin 60s linear infinite'}}/>
@@ -824,9 +840,18 @@ function StoreScreen({profile,onUpdate}){
   const [toast,setToast]=useState(null);
   const [busy,setBusy]=useState(null);
   const showT=msg=>{setToast(msg);setTimeout(()=>setToast(null),2200);};
-  const owned=profile.owned||{decks:['classic'],tables:['classic'],reactions:[]};
+  const owned=profile.owned||{decks:['classic'],tables:['classic'],frames:[],reactions:[]};
   const coins=profile.coins||0;
   const BADGE={hot:{l:lang==='ar'?'الأكثر طلباً':'Hot',c:'#E74C3C'},new:{l:lang==='ar'?'جديد':'New',c:'#2ECC71'},seasonal:{l:lang==='ar'?'موسمي':'Seasonal',c:'#9B59B6'},vip:{l:'VIP',c:'#F0C040'}};
+  const ACTIVE_FIELD={decks:'activeDeck',tables:'activeTable',frames:'activeFrame'};
+  const nm=(item)=>lang==='en'?(item.name_en||item.name):item.name;
+  const ds=(item)=>lang==='en'?(item.desc_en||item.desc):item.desc;
+  // small live preview for a store item
+  const preview=(kind,id)=>{
+    if(kind==='tables'){const b=BOARDS[id]||BOARDS.classic;return <div style={{width:46,height:46,borderRadius:10,background:`radial-gradient(ellipse at 50% 40%,${b.a},${b.b})`,border:`2px solid ${b.rail}`,boxShadow:`0 0 10px ${b.rail}66`}}/>;}
+    if(kind==='frames'){const f=FRAMES[id]||FRAMES.none;const conic=f.ring==='conic';return <div style={{width:46,height:46,borderRadius:'50%',background:'rgba(16,26,18,.9)',border:conic?'3px solid transparent':`3px solid ${f.ring}`,backgroundImage:conic?'conic-gradient(#F0C040,#e11d5c,#3b82f6,#22c55e,#a855f7,#F0C040)':'none',backgroundOrigin:'border-box',boxShadow:f.glow!=='transparent'?`0 0 12px ${f.glow}`:'none',display:'flex',alignItems:'center',justifyContent:'center',fontSize:20}}>{profile.avatar}</div>;}
+    return null;
+  };
 
   const buy=async(kind,item)=>{
     if(busy)return;
@@ -845,31 +870,36 @@ function StoreScreen({profile,onUpdate}){
   };
 
   const activate=async(kind,id)=>{
-    const field=kind==='decks'?'activeDeck':'activeTable';
+    const field=ACTIVE_FIELD[kind];
     try{
       await updateDoc(doc(db,'users',profile.uid),{[field]:id});
       onUpdate({...profile,[field]:id});
-      showT(t('activated')+' ✨');
+      showT(t('activated')+' ✨');haptics.play();
     }catch{showT('!');}
   };
 
   const renderItems=(kind,items)=>{
-    const activeField=kind==='decks'?'activeDeck':'activeTable';
-    const activeId=profile[activeField]||'classic';
-    const all=kind==='reactions'?items:[{id:'classic',name:lang==='ar'?'كلاسيك':'Classic',desc:lang==='ar'?'التصميم الأساسي':'The default design',cost:0,emoji:kind==='decks'?'🃏':'🟩'},...items];
+    const defaultId=kind==='frames'?'none':'classic';
+    const activeId=profile[ACTIVE_FIELD[kind]]||defaultId;
+    const base=kind==='decks'?{id:'classic',emoji:'🃏',name:'كلاسيك',name_en:'Classic',desc:'التصميم الأساسي',desc_en:'The default design',cost:0}
+      :kind==='tables'?{id:'classic',emoji:'🟩',name:'الكلاسيك',name_en:'Classic',desc:'الطاولة الأساسية',desc_en:'The default felt',cost:0}
+      :kind==='frames'?{id:'none',emoji:'⭕',name:'بدون إطار',name_en:'No frame',desc:'الحلقة الافتراضية',desc_en:'Default ring',cost:0}
+      :null;
+    const all=kind==='reactions'?items:[base,...items];
     return(
       <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(150px,1fr))',gap:10,padding:'0 12px 16px'}}>
         {all.map(item=>{
           const isOwned=item.cost===0||(owned[kind]||[]).includes(item.id);
           const isActive=kind!=='reactions'&&activeId===item.id;
+          const pv=preview(kind,item.id);
           return(
             <div key={item.id} onClick={()=>isOwned?(kind!=='reactions'&&!isActive&&activate(kind,item.id)):buy(kind,item)}
               style={{background:'linear-gradient(160deg,rgba(16,26,18,.9),rgba(10,15,12,.85))',border:`1px solid ${isActive?'#F0C040':'rgba(255,255,255,.07)'}`,borderRadius:16,padding:'16px 12px',display:'flex',flexDirection:'column',alignItems:'center',gap:7,cursor:'pointer',position:'relative',touchAction:'manipulation',opacity:busy===item.id?.6:1,boxShadow:isActive?'0 0 16px rgba(240,192,64,.2)':'none'}}>
               {item.badge&&BADGE[item.badge]&&<span style={{position:'absolute',top:8,insetInlineEnd:8,background:BADGE[item.badge].c,color:BADGE[item.badge].c==='#F0C040'?'#000':'#fff',fontSize:8,fontWeight:700,padding:'2px 5px',borderRadius:5}}>{BADGE[item.badge].l}</span>}
               {isActive&&<span style={{position:'absolute',top:8,insetInlineStart:8,fontSize:12}}>✅</span>}
-              <span style={{fontSize:32}}>{item.emoji}</span>
-              <span style={{fontSize:12,fontWeight:800,textAlign:'center'}}>{item.name}</span>
-              <span style={{color:'rgba(240,237,229,.5)',fontSize:9,textAlign:'center',lineHeight:1.4,minHeight:24}}>{item.desc}</span>
+              <div style={{height:48,display:'flex',alignItems:'center',justifyContent:'center'}}>{pv||<span style={{fontSize:32}}>{item.emoji}</span>}</div>
+              <span style={{fontSize:12,fontWeight:800,textAlign:'center'}}>{nm(item)}</span>
+              <span style={{color:'rgba(240,237,229,.5)',fontSize:9,textAlign:'center',lineHeight:1.4,minHeight:24}}>{ds(item)}</span>
               <span style={{fontSize:12,fontWeight:900,color:isOwned?'#2ECC71':'#F0C040',background:isOwned?'rgba(46,204,113,.1)':'rgba(240,192,64,.1)',padding:'3px 12px',borderRadius:20,border:`1px solid ${isOwned?'rgba(46,204,113,.25)':'rgba(240,192,64,.2)'}`}}>
                 {isActive?t('active'):isOwned?(kind==='reactions'?t('owned'):t('activate')):`🪙 ${item.cost}`}
               </span>
@@ -887,13 +917,14 @@ function StoreScreen({profile,onUpdate}){
         <span style={{color:'rgba(240,237,229,.6)',fontSize:12}}>{t('yourBalance')}</span>
         <span style={{fontSize:17,fontWeight:900,color:'#F0C040'}}>🪙 {coins}</span>
       </div>
-      <div style={{display:'flex',gap:6,padding:'0 12px 12px'}}>
-        {[{id:'decks',l:'🎴 '+t('tab_decks')},{id:'tables',l:'🟩 '+t('tab_tables')},{id:'coins',l:'🪙 '+t('tab_coins')}].map(tb=>(
-          <div key={tb.id} onClick={()=>setTab(tb.id)} style={{flex:1,textAlign:'center',padding:'9px 4px',borderRadius:12,fontSize:12,fontWeight:800,cursor:'pointer',border:`1px solid ${tab===tb.id?'#F0C040':'rgba(255,255,255,.1)'}`,background:tab===tb.id?'rgba(240,192,64,.12)':'transparent',color:tab===tb.id?'#F0C040':'rgba(240,237,229,.55)',touchAction:'manipulation'}}>{tb.l}</div>
+      <div style={{display:'flex',gap:6,padding:'0 12px 12px',overflowX:'auto'}}>
+        {[{id:'tables',l:'🟩 '+t('tab_tables')},{id:'frames',l:'🖼️ '+(lang==='ar'?'إطارات':'Frames')},{id:'decks',l:'🎴 '+t('tab_decks')},{id:'coins',l:'🪙 '+t('tab_coins')}].map(tb=>(
+          <div key={tb.id} onClick={()=>setTab(tb.id)} style={{flex:'1 0 auto',textAlign:'center',padding:'9px 12px',borderRadius:12,fontSize:12,fontWeight:800,cursor:'pointer',border:`1px solid ${tab===tb.id?'#F0C040':'rgba(255,255,255,.1)'}`,background:tab===tb.id?'rgba(240,192,64,.12)':'transparent',color:tab===tb.id?'#F0C040':'rgba(240,237,229,.55)',touchAction:'manipulation',whiteSpace:'nowrap'}}>{tb.l}</div>
         ))}
       </div>
       {tab==='decks'&&renderItems('decks',STORE_ITEMS.decks)}
       {tab==='tables'&&renderItems('tables',STORE_ITEMS.tables)}
+      {tab==='frames'&&renderItems('frames',STORE_ITEMS.frames)}
       {tab==='coins'&&(
         <div style={{display:'flex',flexDirection:'column',gap:10,padding:'0 12px 16px'}}>
           {STORE_ITEMS.coins.map(pack=>(
@@ -942,7 +973,7 @@ function ProfileScreen({profile,onUpdate,onSettings,onLogout}){
       {/* hero */}
       <div style={{textAlign:'center',padding:'22px 14px 18px',position:'relative',background:'radial-gradient(ellipse 70% 100% at 50% 0%,rgba(26,61,32,.6),transparent)'}}>
         <div style={{position:'relative',display:'inline-block',marginBottom:8}}>
-          <div style={{width:96,height:96,borderRadius:'50%',background:'rgba(16,26,18,.9)',border:`3px solid ${rank.color}`,display:'flex',alignItems:'center',justifyContent:'center',fontSize:52,boxShadow:`0 0 26px ${rank.color}55`,margin:'0 auto'}}>{profile.avatar}</div>
+          <AvatarFrame avatar={profile.avatar} size={100} fontSize={52} frame={getFrame(profile)}/>
           <div style={{position:'absolute',bottom:0,insetInlineEnd:'50%',transform:'translateX(50%) translateY(30%)',background:'#0C1410',border:`2px solid ${rank.color}`,borderRadius:12,fontSize:11,fontWeight:900,color:rank.color,padding:'2px 10px',whiteSpace:'nowrap'}}>{rank.icon} {t('level')} {level}</div>
         </div>
         <div style={{fontSize:22,fontWeight:900,marginTop:8}}>{profile.name}</div>

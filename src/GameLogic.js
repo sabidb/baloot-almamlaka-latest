@@ -36,6 +36,33 @@ export const TABLE_THEMES = {
   desert:   { name:'الصحراء',      felt:'#2a1a00', cost:600 },
   royal:    { name:'الملكي',       felt:'#1a0020', cost:800 },
 };
+
+// Custom boards (game tables): a felt gradient (a→b) + a colored rail.
+// Rendered live on the game table via getThemeStyles().board.
+export const BOARDS = {
+  classic:  { a:'#14522f', b:'#06170e', rail:'#7A5B1A' },
+  emerald:  { a:'#0b7a4a', b:'#03150c', rail:'#22c55e' },
+  midnight: { a:'#16296b', b:'#05081a', rail:'#3b82f6' },
+  ruby:     { a:'#7a0b32', b:'#1a0208', rail:'#e11d5c' },
+  royal:    { a:'#3b1a6b', b:'#0d0620', rail:'#a855f7' },
+  desert:   { a:'#7a4a10', b:'#1a0f02', rail:'#e0a020' },
+  sunset:   { a:'#8a2a2a', b:'#1a0808', rail:'#ff7a45' },
+  ocean:    { a:'#0b5a6b', b:'#02141a', rail:'#22b8cf' },
+};
+
+// Avatar frames: a ring color + glow; 'conic' = animated rainbow.
+export const FRAMES = {
+  none:     { ring:'rgba(240,192,64,.5)', glow:'transparent',        anim:false },
+  gold:     { ring:'#F0C040',             glow:'#F0C040',            anim:false },
+  emerald:  { ring:'#22c55e',             glow:'#22c55e',            anim:false },
+  ruby:     { ring:'#e11d5c',             glow:'#e11d5c',            anim:false },
+  sapphire: { ring:'#3b82f6',             glow:'#3b82f6',            anim:false },
+  diamond:  { ring:'#5DE0E6',             glow:'#5DE0E6',            anim:true  },
+  royal:    { ring:'#a855f7',             glow:'#a855f7',            anim:false },
+  fire:     { ring:'#ff7a45',             glow:'#ff5a2a',            anim:true  },
+  rainbow:  { ring:'conic',               glow:'#F0C040',            anim:true  },
+};
+export function getFrame(profile){ return FRAMES[profile?.activeFrame||'none']||FRAMES.none; }
 export const STORE_ITEMS = {
   decks: [
     { id:'heritage', name:'التراث السعودي', desc:'نقوش هندسية مستوحاة من التراث السعودي', cost:500, badge:'hot',      emoji:'🕌' },
@@ -44,10 +71,23 @@ export const STORE_ITEMS = {
     { id:'royal',    name:'الملكي الداكن',  desc:'تصميم ملكي فاخر بألوان الليل',           cost:1000,badge:'vip',      emoji:'👑' },
   ],
   tables: [
-    { id:'midnight', name:'منتصف الليل',    desc:'طاولة داكنة فاخرة',                      cost:400, badge:'hot',      emoji:'🌃' },
-    { id:'ramadan',  name:'رمضان 🌙',       desc:'طاولة رمضانية بنجوم وهلال',              cost:300, badge:'seasonal', emoji:'🌙' },
-    { id:'desert',   name:'الصحراء',        desc:'طاولة بألوان الرمال الدافئة',             cost:600, badge:'new',      emoji:'🏜️' },
-    { id:'royal',    name:'الملكي الأرجواني',desc:'أفخم طاولة في اللعبة',                  cost:800, badge:'vip',      emoji:'💜' },
+    { id:'emerald',  name:'الزمرد',          name_en:'Emerald',   desc:'طاولة خضراء زمردية لامعة',   desc_en:'Glowing emerald green felt',   cost:300, badge:'new',      emoji:'🟢' },
+    { id:'midnight', name:'منتصف الليل',     name_en:'Midnight',  desc:'أزرق ليلي فاخر',              desc_en:'Deep luxury night blue',       cost:400, badge:'hot',      emoji:'🌃' },
+    { id:'ruby',     name:'الياقوت',         name_en:'Ruby',      desc:'أحمر ياقوتي جريء',            desc_en:'Bold ruby-red felt',           cost:500, badge:'hot',      emoji:'🔴' },
+    { id:'ocean',    name:'المحيط',          name_en:'Ocean',     desc:'أزرق مائي منعش',              desc_en:'Fresh aqua ocean felt',        cost:500, badge:'new',      emoji:'🌊' },
+    { id:'desert',   name:'الصحراء',         name_en:'Desert',    desc:'ذهبي رملي دافئ',              desc_en:'Warm golden sand',             cost:600, badge:null,      emoji:'🏜️' },
+    { id:'sunset',   name:'الغروب',          name_en:'Sunset',    desc:'برتقالي غروب متوهّج',          desc_en:'Glowing sunset orange',        cost:700, badge:'new',      emoji:'🌅' },
+    { id:'royal',    name:'الملكي',          name_en:'Royal',     desc:'بنفسجي ملكي فاخر',            desc_en:'Regal royal purple',           cost:800, badge:'vip',      emoji:'💜' },
+  ],
+  frames: [
+    { id:'gold',     name:'إطار ذهبي',       name_en:'Gold frame',      desc:'حلقة ذهبية متوهّجة',       desc_en:'Glowing gold ring',        cost:200, badge:'hot',  emoji:'🟡' },
+    { id:'emerald',  name:'إطار زمردي',      name_en:'Emerald frame',   desc:'حلقة خضراء',               desc_en:'Emerald ring',             cost:250, badge:null,  emoji:'🟢' },
+    { id:'sapphire', name:'إطار ياقوتي أزرق',name_en:'Sapphire frame',  desc:'حلقة زرقاء',               desc_en:'Sapphire ring',            cost:250, badge:null,  emoji:'🔵' },
+    { id:'ruby',     name:'إطار ياقوتي',     name_en:'Ruby frame',      desc:'حلقة حمراء',               desc_en:'Ruby ring',                cost:300, badge:null,  emoji:'🔴' },
+    { id:'royal',    name:'إطار ملكي',       name_en:'Royal frame',     desc:'حلقة بنفسجية',             desc_en:'Royal purple ring',        cost:400, badge:'vip', emoji:'🟣' },
+    { id:'diamond',  name:'إطار ماسي',       name_en:'Diamond frame',   desc:'حلقة ماسية متلألئة',       desc_en:'Shimmering diamond ring',  cost:600, badge:'vip', emoji:'💎' },
+    { id:'fire',     name:'إطار ناري',       name_en:'Fire frame',      desc:'حلقة نارية متحركة',        desc_en:'Animated fire ring',       cost:700, badge:'hot', emoji:'🔥' },
+    { id:'rainbow',  name:'إطار قوس قزح',    name_en:'Rainbow frame',   desc:'حلقة ملوّنة دوّارة',        desc_en:'Rotating rainbow ring',    cost:1000,badge:'vip', emoji:'🌈' },
   ],
   reactions: [
     { id:'fire_pack',   name:'حزمة النار 🔥',  desc:'٥ ردود فعل نارية متحركة', cost:200, badge:'hot',      emoji:'🔥' },
@@ -69,8 +109,12 @@ export function getThemeStyles(profile){
   const tableId=profile?.activeTable||'classic';
   const deck=DECK_THEMES[deckId]||DECK_THEMES.classic;
   const darkDeck=['ramadan','royal'].includes(deckId);
+  const board=BOARDS[tableId]||BOARDS.classic;
   return{
-    felt:tableId==='classic'?'#0F2A14':(TABLE_THEMES[tableId]||TABLE_THEMES.classic).felt,
+    felt:board.a,
+    feltGrad:`radial-gradient(ellipse 92% 78% at 50% 46%,${board.a},${board.b} 82%)`,
+    rail:board.rail,
+    board,
     cardBg:deckId==='classic'?'linear-gradient(145deg,#FEFDF8,#F0EBE0)':`linear-gradient(145deg,${deck.bg},${deck.bg})`,
     cardBorder:deck.border,
     darkDeck,
