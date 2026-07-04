@@ -341,7 +341,7 @@ export default function TournamentScreen({userId,userProfile,onUpdateProfile}){
   const viewingConfig=viewing?TOURNAMENTS_CONFIG.find(c=>c.id===viewing.configId):null;
 
   return(
-    <div style={{minHeight:'100vh',background:T.night,fontFamily:'Segoe UI,Tahoma,Arial,sans-serif',color:T.cream,paddingBottom:80}}>
+    <div style={{minHeight:'100vh',background:T.night,fontFamily:'Changa,sans-serif',color:T.cream,paddingBottom:80}}>
       {/* Header */}
       <div style={{background:`linear-gradient(135deg,${T.bg2},${T.bg3})`,borderBottom:`1px solid ${T.border}`,padding:'20px 20px 0',position:'sticky',top:0,zIndex:100,backdropFilter:'blur(12px)'}}>
         <div style={{fontSize:22,color:T.gold,fontWeight:900,marginBottom:4}}>🏆 البطولات</div>

@@ -14,10 +14,10 @@ const S={
   gold:{color:'#F0C040'},
   dim:{color:'rgba(240,237,229,.6)'},
   card:{width:54,height:78,borderRadius:10,background:'linear-gradient(145deg,#FEFDF8,#F0EBE0)',border:'1px solid rgba(0,0,0,.1)',boxShadow:'0 6px 20px rgba(0,0,0,.65)',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'space-between',padding:'3px',position:'absolute',cursor:'pointer',touchAction:'manipulation'},
-  btn:{padding:'11px 20px',borderRadius:11,border:'none',cursor:'pointer',fontFamily:'Tajawal,sans-serif',fontWeight:700,touchAction:'manipulation'},
-  input:{background:'rgba(255,255,255,.06)',border:'1px solid rgba(255,255,255,.12)',borderRadius:10,padding:'11px 13px',fontFamily:'Tajawal,sans-serif',fontSize:14,color:'#F0EDE5',width:'100%',outline:'none'},
+  btn:{padding:'11px 20px',borderRadius:11,border:'none',cursor:'pointer',fontFamily:'Changa,sans-serif',fontWeight:700,touchAction:'manipulation'},
+  input:{background:'rgba(255,255,255,.06)',border:'1px solid rgba(255,255,255,.12)',borderRadius:10,padding:'11px 13px',fontFamily:'Changa,sans-serif',fontSize:14,color:'#F0EDE5',width:'100%',outline:'none'},
   panel:{background:'linear-gradient(180deg,rgba(16,26,18,.97),rgba(8,12,10,.97))',border:'1px solid rgba(240,192,64,.25)',borderRadius:20,padding:'20px 18px',boxShadow:'0 20px 60px rgba(0,0,0,.6)'},
-  page:{width:'100%',height:'100%',background:'radial-gradient(ellipse 90% 70% at 50% 50%,#0F2A14,#07090A)',position:'relative',overflow:'hidden',fontFamily:'Tajawal,sans-serif',direction:'rtl',color:'#F0EDE5'},
+  page:{width:'100%',height:'100%',background:'radial-gradient(ellipse 90% 70% at 50% 50%,#0F2A14,#07090A)',position:'relative',overflow:'hidden',fontFamily:'Changa,sans-serif',direction:'rtl',color:'#F0EDE5'},
 };
 
 function CardFace({card,style,onClick,theme}){
@@ -25,9 +25,9 @@ function CardFace({card,style,onClick,theme}){
   const bg=theme?{background:theme.cardBg}:null;
   return(
     <div onClick={onClick} style={{...S.card,...bg,...style}}>
-      <span style={{fontFamily:"'Scheherazade New',serif",fontSize:15,fontWeight:700,color:sc,alignSelf:'flex-start',lineHeight:1}}>{RANKAR[card.rank.symbol]}</span>
+      <span style={{fontFamily:"Changa,sans-serif",fontSize:15,fontWeight:700,color:sc,alignSelf:'flex-start',lineHeight:1}}>{RANKAR[card.rank.symbol]}</span>
       <span style={{fontSize:20,color:sc,lineHeight:1}}>{card.suit.symbol}</span>
-      <span style={{fontFamily:"'Scheherazade New',serif",fontSize:15,fontWeight:700,color:sc,alignSelf:'flex-end',transform:'rotate(180deg)',lineHeight:1}}>{RANKAR[card.rank.symbol]}</span>
+      <span style={{fontFamily:"Changa,sans-serif",fontSize:15,fontWeight:700,color:sc,alignSelf:'flex-end',transform:'rotate(180deg)',lineHeight:1}}>{RANKAR[card.rank.symbol]}</span>
     </div>
   );
 }
@@ -216,7 +216,7 @@ function Lobby({profile,code,onExit,onStart}){
   const players=room?.players||[];
   return(
     <div style={{...S.page,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:20,gap:16}}>
-      <div style={{fontFamily:"'Scheherazade New',serif",fontSize:30,color:'#F0C040'}}>غرفة الأصدقاء</div>
+      <div style={{fontFamily:"Changa,sans-serif",fontSize:30,color:'#F0C040'}}>غرفة الأصدقاء</div>
       <div onClick={share} style={{display:'flex',alignItems:'center',gap:10,background:'rgba(240,192,64,.1)',border:'1px dashed rgba(240,192,64,.4)',borderRadius:14,padding:'10px 22px',cursor:'pointer'}}>
         <span style={{fontSize:26,fontWeight:900,letterSpacing:8,color:'#F0C040',direction:'ltr'}}>{code}</span>
         <span style={{fontSize:18}}>📋</span>
@@ -546,7 +546,7 @@ function MPGame({profile,code,onExit,onProfileUpdate}){
         <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,.85)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:500,padding:20}}>
           <div style={{...S.panel,textAlign:'center',width:'100%',maxWidth:320,animation:'popIn .4s cubic-bezier(.34,1.56,.64,1)'}}>
             <div style={{fontSize:48,marginBottom:6}}>{gd.roundResult.isGahwa?'☕':gd.roundResult.made?'✅':'❌'}</div>
-            <div style={{fontFamily:"'Scheherazade New',serif",fontSize:22,color:'#F0C040',marginBottom:10}}>{gd.roundResult.reason}</div>
+            <div style={{fontFamily:"Changa,sans-serif",fontSize:22,color:'#F0C040',marginBottom:10}}>{gd.roundResult.reason}</div>
             <div style={{display:'flex',justifyContent:'center',gap:28,margin:'12px 0 18px'}}>
               {[['أ',gd.scores.a],['ب',gd.scores.b]].map(([t,v])=>(
                 <div key={t} style={{display:'flex',flexDirection:'column',alignItems:'center',gap:2}}>
@@ -569,7 +569,7 @@ function MPGame({profile,code,onExit,onProfileUpdate}){
         <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,.88)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:500,padding:20}}>
           <div style={{background:'radial-gradient(ellipse at top,#1A3D20,#0C1410)',border:'1px solid #F0C040',borderRadius:22,padding:'34px 26px',textAlign:'center',boxShadow:'0 0 40px rgba(240,192,64,.25)',width:'100%',maxWidth:320,animation:'popIn .5s cubic-bezier(.34,1.56,.64,1)'}}>
             <div style={{fontSize:58}}>{winnerTeam===seatTeam(mySeat)?'🏆':'💔'}</div>
-            <div style={{fontFamily:"'Scheherazade New',serif",fontSize:28,color:'#F0C040',margin:'10px 0 5px'}}>{winnerTeam===seatTeam(mySeat)?'فريقك يفوز!':'فريقك خسر'}</div>
+            <div style={{fontFamily:"Changa,sans-serif",fontSize:28,color:'#F0C040',margin:'10px 0 5px'}}>{winnerTeam===seatTeam(mySeat)?'فريقك يفوز!':'فريقك خسر'}</div>
             <div style={{display:'flex',justifyContent:'center',gap:28,margin:'18px 0'}}>
               {[['أ',gd.scores.a,winnerTeam===0],['ب',gd.scores.b,winnerTeam===1]].map(([t,v,w])=>(
                 <div key={t} style={{display:'flex',flexDirection:'column',alignItems:'center',gap:2}}>

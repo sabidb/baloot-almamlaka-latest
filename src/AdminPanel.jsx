@@ -119,7 +119,7 @@ export default function AdminPanel(){
   );
 
   if(!auth)return(
-    <div style={{minHeight:'100vh',background:T.night,display:'flex',alignItems:'center',justifyContent:'center',fontFamily:'Segoe UI,Tahoma,Arial,sans-serif',padding:16}}>
+    <div style={{minHeight:'100vh',background:T.night,display:'flex',alignItems:'center',justifyContent:'center',fontFamily:'Changa,sans-serif',padding:16}}>
       <div style={{background:T.bg2,border:`2px solid ${T.gold}`,borderRadius:20,padding:40,maxWidth:360,width:'100%',textAlign:'center',boxShadow:`0 0 60px ${T.gold}22`}}>
         <div style={{fontSize:48,marginBottom:12}}>🔐</div>
         <div style={{color:T.gold,fontSize:22,fontWeight:900,marginBottom:4}}>لوحة التحكم</div>
@@ -161,7 +161,7 @@ export default function AdminPanel(){
   );
 
   return(
-    <div style={{minHeight:'100vh',background:T.night,fontFamily:'Segoe UI,Tahoma,Arial,sans-serif',color:T.cream}}>
+    <div style={{minHeight:'100vh',background:T.night,fontFamily:'Changa,sans-serif',color:T.cream}}>
       {/* Header */}
       <div style={{background:T.bg2,borderBottom:`1px solid ${T.border}`,padding:'16px 24px',display:'flex',justifyContent:'space-between',alignItems:'center',position:'sticky',top:0,zIndex:100}}>
         <div style={{color:T.gold,fontSize:20,fontWeight:900}}>🃏 لوحة تحكم بلوت المملكة</div>

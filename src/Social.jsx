@@ -252,7 +252,7 @@ export function FriendSystem({userId,userProfile,onInvite,currentRoomCode}){
   };
 
   return(
-    <div style={{minHeight:'100vh',background:T.night,fontFamily:'Segoe UI,Tahoma,Arial,sans-serif',color:T.cream,paddingBottom:80}}>
+    <div style={{minHeight:'100vh',background:T.night,fontFamily:'Changa,sans-serif',color:T.cream,paddingBottom:80}}>
       {/* Header */}
       <div style={{background:T.bg2,borderBottom:`1px solid ${T.border}`,padding:'20px 20px 0',position:'sticky',top:0,zIndex:100}}>
         <div style={{color:T.gold,fontSize:20,fontWeight:900,marginBottom:4}}>👥 الأصدقاء</div>

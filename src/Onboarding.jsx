@@ -74,7 +74,7 @@ export default function OnboardingTutorial({onComplete}){
   const skip=()=>{onComplete&&onComplete();};
 
   return(
-    <div style={{position:'fixed',inset:0,zIndex:1000,fontFamily:'Segoe UI,Tahoma,Arial,sans-serif',overflow:'hidden'}}>
+    <div style={{position:'fixed',inset:0,zIndex:1000,fontFamily:'Changa,sans-serif',overflow:'hidden'}}>
       <div style={{minHeight:'100vh',background:current.bg,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:24,transition:'background 0.5s ease',position:'relative'}}>
 
         {/* Skip button */}

@@ -52,13 +52,13 @@ function spawnParticles(x,y){
 }
 
 const G={
-  page:{fontFamily:'Tajawal,sans-serif',minHeight:'100dvh',background:'#07090A',color:'#F0EDE5',direction:'rtl'},
+  page:{fontFamily:'Changa,sans-serif',minHeight:'100dvh',background:'#07090A',color:'#F0EDE5',direction:'rtl'},
   center:{display:'flex',alignItems:'center',justifyContent:'center'},
   gold:{color:'#F0C040'},
   dim:{color:'rgba(240,237,229,.6)'},
   card:{width:54,height:78,borderRadius:10,background:'linear-gradient(145deg,#FEFDF8,#F0EBE0)',border:'1px solid rgba(0,0,0,.1)',boxShadow:'0 6px 20px rgba(0,0,0,.65)',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'space-between',padding:'3px',position:'absolute',cursor:'pointer',touchAction:'manipulation'},
-  btn:{padding:'11px 20px',borderRadius:11,border:'none',cursor:'pointer',fontFamily:'Tajawal,sans-serif',fontWeight:700,touchAction:'manipulation'},
-  input:{background:'rgba(255,255,255,.06)',border:'1px solid rgba(255,255,255,.12)',borderRadius:10,padding:'11px 13px',fontFamily:'Tajawal,sans-serif',fontSize:14,color:'#F0EDE5',width:'100%',outline:'none'},
+  btn:{padding:'11px 20px',borderRadius:11,border:'none',cursor:'pointer',fontFamily:'Changa,sans-serif',fontWeight:700,touchAction:'manipulation'},
+  input:{background:'rgba(255,255,255,.06)',border:'1px solid rgba(255,255,255,.12)',borderRadius:10,padding:'11px 13px',fontFamily:'Changa,sans-serif',fontSize:14,color:'#F0EDE5',width:'100%',outline:'none'},
   panel:{background:'linear-gradient(180deg,rgba(16,26,18,.97),rgba(8,12,10,.97))',border:'1px solid rgba(240,192,64,.25)',borderRadius:20,padding:'20px 18px',boxShadow:'0 20px 60px rgba(0,0,0,.6)'},
 };
 
@@ -173,8 +173,8 @@ export default function App(){
   useEffect(()=>{
     const style=document.createElement('style');
     style.textContent=`
-      @import url('https://fonts.googleapis.com/css2?family=Scheherazade+New:wght@400;700&family=Tajawal:wght@400;700;900&family=Inter:wght@400;600;800;900&display=swap');
-      *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+      @import url('https://fonts.googleapis.com/css2?family=Changa:wght@300;400;500;600;700;800&display=swap');
+      *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;font-family:'Changa',sans-serif}
       html,body,#root{height:100%;background:#07090A;overflow:hidden}
       @keyframes spin{to{transform:rotate(360deg)}}
       @keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
@@ -242,8 +242,8 @@ export default function App(){
   },[profile,showOnboarding]);
 
   if(loading)return(
-    <div style={{height:'100dvh',background:'radial-gradient(ellipse 90% 60% at 50% 35%,#0F2A14,#07090A)',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:22,fontFamily:'Tajawal,sans-serif',direction:dir}}>
-      <div style={{fontFamily:"'Scheherazade New',serif",fontSize:'clamp(44px,12vw,64px)',color:'#F0C040',textShadow:'0 0 34px rgba(240,192,64,.5)',animation:'floaty 3s ease-in-out infinite'}}>{t('appShort')}</div>
+    <div style={{height:'100dvh',background:'radial-gradient(ellipse 90% 60% at 50% 35%,#0F2A14,#07090A)',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:22,fontFamily:'Changa,sans-serif',direction:dir}}>
+      <div style={{fontFamily:"Changa,sans-serif",fontSize:'clamp(44px,12vw,64px)',color:'#F0C040',textShadow:'0 0 34px rgba(240,192,64,.5)',animation:'floaty 3s ease-in-out infinite'}}>{t('appShort')}</div>
       <Spin/>
     </div>
   );
@@ -283,7 +283,7 @@ export default function App(){
   const NAV=[{id:'home',i:'home',l:t('nav_home')},{id:'board',i:'medal',l:t('nav_board')},{id:'store',i:'bag',l:t('nav_store')},{id:'friends',i:'friends',l:t('nav_friends')},{id:'profile',i:'user',l:t('nav_profile')}];
 
   return(
-    <div style={{height:'100dvh',display:'flex',flexDirection:'column',background:'#07090A',fontFamily:'Tajawal,sans-serif',color:'#F0EDE5',direction:dir,overflow:'hidden'}}>
+    <div style={{height:'100dvh',display:'flex',flexDirection:'column',background:'#07090A',fontFamily:'Changa,sans-serif',color:'#F0EDE5',direction:dir,overflow:'hidden'}}>
       <div style={{flex:1,overflow:'hidden',position:'relative'}}>
         {tab==='home'    &&<HomeScreen    profile={profile} onGame={()=>setInGame(true)} onMultiplayer={setMpMode} onTournament={()=>setInTournament(true)} onAdmin={()=>setShowAdmin(true)} onSettings={()=>setShowSettings(true)} onTutorial={()=>setShowOnboarding(true)} onDaily={()=>setShowDaily(true)} onBoard={()=>setTab('board')}/>}
         {tab==='board'   &&<LeaderScreen/>}
@@ -339,12 +339,12 @@ function AuthScreen({authUser,authErr,onDone}){
     }catch(e){setErr(e.message);setBusy(false);}
   };
 
-  const bg={minHeight:'100dvh',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:'28px 20px',background:'radial-gradient(ellipse 80% 60% at 50% 40%,#0F2A14,#07090A)',fontFamily:'Tajawal,sans-serif',direction:dir};
+  const bg={minHeight:'100dvh',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:'28px 20px',background:'radial-gradient(ellipse 80% 60% at 50% 40%,#0F2A14,#07090A)',fontFamily:'Changa,sans-serif',direction:dir};
   const box={width:'100%',maxWidth:380,background:'linear-gradient(180deg,rgba(16,26,18,.95),rgba(10,15,12,.96))',border:'1px solid rgba(240,192,64,.18)',borderRadius:22,padding:'24px 20px',boxShadow:'0 24px 70px rgba(0,0,0,.6)'};
 
   if(step==='setup')return(
     <div style={bg}>
-      <div style={{fontFamily:"'Scheherazade New',serif",fontSize:'clamp(40px,11vw,56px)',color:'#F0C040',textShadow:'0 0 26px rgba(240,192,64,.45)',marginBottom:6,animation:'floaty 3s ease-in-out infinite'}}>{t('appShort')}</div>
+      <div style={{fontFamily:"Changa,sans-serif",fontSize:'clamp(40px,11vw,56px)',color:'#F0C040',textShadow:'0 0 26px rgba(240,192,64,.45)',marginBottom:6,animation:'floaty 3s ease-in-out infinite'}}>{t('appShort')}</div>
       <div style={{color:'rgba(240,237,229,.6)',fontSize:12,letterSpacing:2,marginBottom:24}}>{t('completeProfile')}</div>
       <div style={box}>
         <div style={{fontSize:17,fontWeight:900,textAlign:'center',marginBottom:18}}>{t('welcome')} {authUser?.displayName?.split(' ')[0]||''} 👋</div>
@@ -368,7 +368,7 @@ function AuthScreen({authUser,authErr,onDone}){
 
   return(
     <div style={bg}>
-      <div style={{fontFamily:"'Scheherazade New',serif",fontSize:'clamp(46px,13vw,64px)',color:'#F0C040',textShadow:'0 0 30px rgba(240,192,64,.5)',marginBottom:6,animation:'floaty 3s ease-in-out infinite'}}>{t('appShort')}</div>
+      <div style={{fontFamily:"Changa,sans-serif",fontSize:'clamp(46px,13vw,64px)',color:'#F0C040',textShadow:'0 0 30px rgba(240,192,64,.5)',marginBottom:6,animation:'floaty 3s ease-in-out infinite'}}>{t('appShort')}</div>
       <div style={{color:'rgba(240,237,229,.6)',fontSize:12,letterSpacing:2,marginBottom:28}}>{t('kingdom')}</div>
       <div style={box}>
         <div style={{fontSize:18,fontWeight:900,textAlign:'center',marginBottom:8}}>{t('signInTitle')}</div>
@@ -445,7 +445,7 @@ function HomeScreen({profile,onGame,onMultiplayer,onTournament,onAdmin,onSetting
           <div style={{position:'absolute',top:-6,insetInlineEnd:-4,fontSize:15,color:'#FFF3C4',animation:'sparkle 2.4s ease-in-out infinite'}}>✦</div>
         </div>
         <div style={{flex:1,position:'relative',textAlign:'center'}}>
-          <div style={{fontFamily:"'Scheherazade New',serif",fontSize:'clamp(22px,7vw,32px)',fontWeight:900,color:'#FFE08A',textShadow:'0 2px 14px rgba(0,0,0,.45)',lineHeight:1.15}}>{t('learn')}</div>
+          <div style={{fontFamily:"Changa,sans-serif",fontSize:'clamp(22px,7vw,32px)',fontWeight:900,color:'#FFE08A',textShadow:'0 2px 14px rgba(0,0,0,.45)',lineHeight:1.15}}>{t('learn')}</div>
           <div style={{display:'inline-block',marginTop:8,background:'linear-gradient(135deg,#16a34a,#22c55e)',color:'#fff',fontSize:12,fontWeight:900,padding:'5px 16px',borderRadius:20,boxShadow:'0 4px 14px rgba(34,197,94,.5)'}}>{t('learnSub')}</div>
         </div>
       </div>
@@ -664,7 +664,7 @@ function GameScreen({profile,onExit,onProfileUpdate}){
   const back=getCardBack(profile);
 
   return(
-    <div style={{width:'100%',height:'100%',background:theme.feltGrad,position:'relative',overflow:'hidden',display:'flex',alignItems:'center',justifyContent:'center',fontFamily:'Tajawal,sans-serif',direction:dir}}>
+    <div style={{width:'100%',height:'100%',background:theme.feltGrad,position:'relative',overflow:'hidden',display:'flex',alignItems:'center',justifyContent:'center',fontFamily:'Changa,sans-serif',direction:dir}}>
       {/* board rail glow for the active custom board */}
       <div style={{position:'absolute',top:'50%',left:'50%',transform:'translate(-50%,-50%)',width:'min(94vw,380px)',height:'min(94vw,380px)',borderRadius:'50%',border:`2px solid ${theme.rail}55`,boxShadow:`inset 0 0 60px ${theme.rail}22,0 0 40px ${theme.rail}18`,pointerEvents:'none',zIndex:0}}/>
       {toast&&<div key={toast.k} style={{position:'fixed',top:'calc(env(safe-area-inset-top,0px) + 12px)',left:'50%',transform:'translateX(-50%)',background:'rgba(8,12,10,.95)',border:'1px solid #7A5B1A',borderRadius:10,padding:'9px 18px',fontSize:13,fontWeight:700,color:'#F0C040',whiteSpace:'nowrap',zIndex:9000,pointerEvents:'none',animation:'fadeUp .35s ease both'}}>{toast.msg}</div>}
@@ -710,9 +710,9 @@ function GameScreen({profile,onExit,onProfileUpdate}){
             const sc=theme.suitColor(p.card.suit);
             return(
               <div key={p.card.id} style={{...G.card,background:theme.cardBg,top:pos.top,left:pos.left+'%',transform:`rotate(${pos.rot}deg)`,zIndex:i+1,animation:'popIn .3s ease both'}}>
-                <span style={{fontFamily:"'Scheherazade New',serif",fontSize:15,fontWeight:700,color:sc,alignSelf:'flex-start',lineHeight:1}}>{RANKAR[p.card.rank.symbol]}</span>
+                <span style={{fontFamily:"Changa,sans-serif",fontSize:15,fontWeight:700,color:sc,alignSelf:'flex-start',lineHeight:1}}>{RANKAR[p.card.rank.symbol]}</span>
                 <span style={{fontSize:20,color:sc,lineHeight:1}}>{p.card.suit.symbol}</span>
-                <span style={{fontFamily:"'Scheherazade New',serif",fontSize:15,fontWeight:700,color:sc,alignSelf:'flex-end',transform:'rotate(180deg)',lineHeight:1}}>{RANKAR[p.card.rank.symbol]}</span>
+                <span style={{fontFamily:"Changa,sans-serif",fontSize:15,fontWeight:700,color:sc,alignSelf:'flex-end',transform:'rotate(180deg)',lineHeight:1}}>{RANKAR[p.card.rank.symbol]}</span>
               </div>
             );
           })}
@@ -752,9 +752,9 @@ function GameScreen({profile,onExit,onProfileUpdate}){
           const sc=theme.suitColor(card.suit);
           return(
             <div key={card.id} onClick={e=>onCardClick(e,card,i)} style={{...G.card,background:theme.cardBg,left:`calc(50% + ${off}px - 27px)`,transform:`rotate(${rot}deg) translateY(${iS?-26:lft}px) scale(${iS?1.07:1})`,zIndex:iS?90:i+1,border:`1px solid ${iS?'#2ECC71':theme.cardBorder}`,boxShadow:iS?'0 0 0 2px rgba(46,204,113,.35),0 8px 22px rgba(0,0,0,.7)':'0 8px 22px rgba(0,0,0,.65)',opacity:phase==='playing'&&!playable?.4:1,filter:phase==='playing'&&!playable?'grayscale(.5)':'none',cursor:phase==='playing'&&!playable?'default':'pointer',transition:'transform .25s cubic-bezier(.34,1.56,.64,1),box-shadow .2s,border-color .2s,opacity .2s',animation:`dealIn .4s ${i*0.05}s ease both`}}>
-              <span style={{fontFamily:"'Scheherazade New',serif",fontSize:15,fontWeight:700,color:sc,alignSelf:'flex-start',lineHeight:1}}>{RANKAR[card.rank.symbol]}</span>
+              <span style={{fontFamily:"Changa,sans-serif",fontSize:15,fontWeight:700,color:sc,alignSelf:'flex-start',lineHeight:1}}>{RANKAR[card.rank.symbol]}</span>
               <span style={{fontSize:20,color:sc,lineHeight:1}}>{card.suit.symbol}</span>
-              <span style={{fontFamily:"'Scheherazade New',serif",fontSize:15,fontWeight:700,color:sc,alignSelf:'flex-end',transform:'rotate(180deg)',lineHeight:1}}>{RANKAR[card.rank.symbol]}</span>
+              <span style={{fontFamily:"Changa,sans-serif",fontSize:15,fontWeight:700,color:sc,alignSelf:'flex-end',transform:'rotate(180deg)',lineHeight:1}}>{RANKAR[card.rank.symbol]}</span>
             </div>
           );
         })}
@@ -764,7 +764,7 @@ function GameScreen({profile,onExit,onProfileUpdate}){
         <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,.85)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:500,padding:20}}>
           <div style={{...G.panel,textAlign:'center',width:'100%',maxWidth:320,animation:'popIn .4s cubic-bezier(.34,1.56,.64,1)'}}>
             <div style={{fontSize:48,marginBottom:6}}>{roundResult.isGahwa?'☕':roundResult.made?'✅':'❌'}</div>
-            <div style={{fontFamily:"'Scheherazade New',serif",fontSize:22,color:'#F0C040',marginBottom:10}}>{roundResult.reason}</div>
+            <div style={{fontFamily:"Changa,sans-serif",fontSize:22,color:'#F0C040',marginBottom:10}}>{roundResult.reason}</div>
             <div style={{display:'flex',justifyContent:'center',gap:28,margin:'12px 0 18px'}}>
               {[[t('teamA'),scores.a],[t('teamB'),scores.b]].map(([tl,v])=>(
                 <div key={tl} style={{display:'flex',flexDirection:'column',alignItems:'center',gap:2}}>
@@ -782,7 +782,7 @@ function GameScreen({profile,onExit,onProfileUpdate}){
         <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,.88)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:500,padding:20}}>
           <div style={{background:'radial-gradient(ellipse at top,#1A3D20,#0C1410)',border:'1px solid #F0C040',borderRadius:22,padding:'34px 26px',textAlign:'center',boxShadow:'0 0 40px rgba(240,192,64,.25),0 50px 100px rgba(0,0,0,.9)',width:'100%',maxWidth:320,animation:'popIn .5s cubic-bezier(.34,1.56,.64,1)'}}>
             <div style={{fontSize:58}}>🏆</div>
-            <div style={{fontFamily:"'Scheherazade New',serif",fontSize:28,color:'#F0C040',margin:'10px 0 5px'}}>{t('team')} {winnerLabel===' أ'||winnerLabel==='أ'?t('teamA'):t('teamB')} {t('wonGame')}</div>
+            <div style={{fontFamily:"Changa,sans-serif",fontSize:28,color:'#F0C040',margin:'10px 0 5px'}}>{t('team')} {winnerLabel===' أ'||winnerLabel==='أ'?t('teamA'):t('teamB')} {t('wonGame')}</div>
             <div style={{color:'rgba(240,237,229,.6)',fontSize:13}}>{t('reached152')}</div>
             <div style={{display:'flex',justifyContent:'center',gap:28,margin:'18px 0'}}>
               {[[t('teamA'),scores.a,'#F0C040'],[t('teamB'),scores.b,'rgba(240,237,229,.4)']].map(([tl,v,c])=>(
@@ -828,7 +828,7 @@ function LeaderScreen(){
   return(
     <div style={{position:'absolute',inset:0,overflowY:'auto',WebkitOverflowScrolling:'touch',paddingBottom:'calc(66px + env(safe-area-inset-bottom,0px) + 12px)',paddingTop:'env(safe-area-inset-top,0px)'}}>
       <div style={{padding:'18px 14px 8px',textAlign:'center'}}>
-        <div style={{fontFamily:"'Scheherazade New',serif",fontSize:24,color:'#F0C040'}}>🏆 {t('leaderboard')}</div>
+        <div style={{fontFamily:"Changa,sans-serif",fontSize:24,color:'#F0C040'}}>🏆 {t('leaderboard')}</div>
         <div style={{color:'rgba(240,237,229,.6)',fontSize:11,marginTop:4}}>{t('leaderboard_sub')}</div>
       </div>
       <div style={{display:'flex',gap:6,overflowX:'auto',WebkitOverflowScrolling:'touch',padding:'6px 14px 10px'}}>
@@ -934,7 +934,7 @@ function StoreScreen({profile,onUpdate}){
 
   return(
     <div style={{position:'absolute',inset:0,overflowY:'auto',WebkitOverflowScrolling:'touch',paddingBottom:'calc(66px + env(safe-area-inset-bottom,0px) + 12px)',paddingTop:'env(safe-area-inset-top,0px)'}}>
-      <div style={{padding:'18px 14px 8px',textAlign:'center'}}><div style={{fontFamily:"'Scheherazade New',serif",fontSize:24,color:'#F0C040'}}>🛍️ {t('store')}</div></div>
+      <div style={{padding:'18px 14px 8px',textAlign:'center'}}><div style={{fontFamily:"Changa,sans-serif",fontSize:24,color:'#F0C040'}}>🛍️ {t('store')}</div></div>
       <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',background:'linear-gradient(135deg,rgba(26,20,4,.9),rgba(13,20,16,.85))',border:'1px solid #7A5B1A',borderRadius:14,margin:'0 12px 12px',padding:'12px 16px'}}>
         <span style={{color:'rgba(240,237,229,.6)',fontSize:12}}>{t('yourBalance')}</span>
         <span style={{fontSize:17,fontWeight:900,color:'#F0C040'}}>🪙 {coins}</span>
