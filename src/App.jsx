@@ -159,6 +159,8 @@ export default function App(){
   const [authUser,setAuthUser]=useState(null);
   const [authErr,setAuthErr]=useState('');
   const [loading,setLoading]=useState(true);
+  const [splashDone,setSplashDone]=useState(false);
+  const [splashExit,setSplashExit]=useState(false);
   const [tab,setTab]=useState('home');
   const [inGame,setInGame]=useState(false);
   const [mpMode,setMpMode]=useState(null); // 'create'|'join'|'quick'
@@ -169,6 +171,13 @@ export default function App(){
   const [showDaily,setShowDaily]=useState(false);
 
   useEffect(()=>{applyDir();},[]);
+
+  // Animated splash: always plays for 4s on launch, then hands off to the app.
+  useEffect(()=>{
+    const t1=setTimeout(()=>setSplashExit(true),3500); // start fade-out
+    const t2=setTimeout(()=>setSplashDone(true),4000);  // reveal app
+    return()=>{clearTimeout(t1);clearTimeout(t2);};
+  },[]);
 
   useEffect(()=>{
     const style=document.createElement('style');
@@ -205,6 +214,10 @@ export default function App(){
       @keyframes ripple{to{transform:scale(4.5);opacity:0}}
       @keyframes glowSweep{0%{background-position:0% 50%}100%{background-position:200% 50%}}
       @keyframes iconPulse{0%,100%{filter:drop-shadow(0 0 6px currentColor)}50%{filter:drop-shadow(0 0 16px currentColor)}}
+      @keyframes splashIn{0%{opacity:0;transform:scale(.55) translateY(24px);filter:blur(6px)}55%{opacity:1;transform:scale(1.05) translateY(0);filter:blur(0)}100%{transform:scale(1)}}
+      @keyframes suitIn{0%{opacity:0;transform:translateY(18px) scale(.4)}60%{opacity:1;transform:translateY(0) scale(1.15)}100%{transform:scale(1)}}
+      @keyframes barFill{from{width:0%}to{width:100%}}
+      @keyframes crownIn{0%{opacity:0;transform:translateY(-20px) scale(.4) rotate(-12deg)}70%{opacity:1;transform:translateY(0) scale(1.15) rotate(4deg)}100%{transform:scale(1) rotate(0)}}
       .cascade{animation:cascadeIn .5s cubic-bezier(.2,.9,.3,1.2) both}
       *::-webkit-scrollbar{width:0;height:0}
       select option{background:#0C1410}
@@ -241,10 +254,24 @@ export default function App(){
     return()=>clearTimeout(t);
   },[profile,showOnboarding]);
 
-  if(loading)return(
-    <div style={{height:'100dvh',background:'radial-gradient(ellipse 90% 60% at 50% 35%,#0F2A14,#07090A)',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:22,fontFamily:'Changa,sans-serif',direction:dir}}>
-      <div style={{fontFamily:"Changa,sans-serif",fontWeight:800,letterSpacing:'.5px',fontSize:'clamp(44px,12vw,64px)',color:'#F0C040',WebkitTextStroke:'1px rgba(80,52,8,.55)',textShadow:'0 2px 0 rgba(60,40,6,.5),0 0 18px rgba(240,192,64,.45),0 0 40px rgba(240,192,64,.35)',animation:'floaty 3s ease-in-out infinite'}}>{t('appShort')}</div>
-      <Spin/>
+  if(!splashDone||loading)return(
+    <div style={{height:'100dvh',position:'relative',overflow:'hidden',background:'radial-gradient(ellipse 90% 60% at 50% 35%,#0F2A14,#07090A)',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:20,fontFamily:'Changa,sans-serif',direction:dir,opacity:splashExit?0:1,transform:splashExit?'scale(1.05)':'scale(1)',transition:'opacity .5s ease,transform .5s ease'}}>
+      {/* slow rotating golden rays */}
+      <div style={{position:'absolute',top:'34%',left:'50%',width:'170vmax',height:'170vmax',transform:'translateX(-50%)',background:'conic-gradient(from 0deg,rgba(240,192,64,.09),transparent 22%,rgba(240,192,64,.09) 50%,transparent 72%,rgba(240,192,64,.09))',animation:'rays 20s linear infinite',pointerEvents:'none'}}/>
+      {/* crown */}
+      <div style={{fontSize:'clamp(40px,12vw,60px)',animation:'crownIn .9s cubic-bezier(.2,.8,.3,1.4) both,floaty 3s ease-in-out 1s infinite',filter:'drop-shadow(0 6px 18px rgba(240,192,64,.5))'}}>👑</div>
+      {/* brand title */}
+      <div style={{fontFamily:"Changa,sans-serif",fontWeight:800,letterSpacing:'.5px',fontSize:'clamp(44px,12vw,64px)',color:'#F0C040',WebkitTextStroke:'1px rgba(80,52,8,.55)',textShadow:'0 2px 0 rgba(60,40,6,.5),0 0 18px rgba(240,192,64,.45),0 0 40px rgba(240,192,64,.35)',animation:'splashIn 1s cubic-bezier(.2,.8,.3,1.2) both'}}>{t('appShort')}</div>
+      {/* suit row */}
+      <div style={{display:'flex',gap:16,fontSize:26}}>
+        {['♠','♥','♦','♣'].map((s,i)=>(
+          <span key={s} style={{color:s==='♥'||s==='♦'?'#E0524A':'#F0EDE5',textShadow:'0 2px 8px rgba(0,0,0,.45)',animation:'suitIn .5s cubic-bezier(.2,.9,.3,1.4) both',animationDelay:`${.6+i*.13}s`}}>{s}</span>
+        ))}
+      </div>
+      {/* loading bar filling over the splash */}
+      <div style={{width:180,height:5,borderRadius:5,background:'rgba(255,255,255,.1)',overflow:'hidden',marginTop:6}}>
+        <div style={{height:'100%',borderRadius:5,background:'linear-gradient(90deg,#8B6914,#F0C040)',boxShadow:'0 0 12px rgba(240,192,64,.6)',animation:'barFill 3.4s ease-out both'}}/>
+      </div>
     </div>
   );
 
