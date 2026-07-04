@@ -243,7 +243,7 @@ export default function App(){
 
   if(loading)return(
     <div style={{height:'100dvh',background:'radial-gradient(ellipse 90% 60% at 50% 35%,#0F2A14,#07090A)',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:22,fontFamily:'Changa,sans-serif',direction:dir}}>
-      <div style={{fontFamily:"Changa,sans-serif",fontWeight:800,letterSpacing:'.5px',fontSize:'clamp(44px,12vw,64px)',color:'#F0C040',textShadow:'0 0 34px rgba(240,192,64,.5)',animation:'floaty 3s ease-in-out infinite'}}>{t('appShort')}</div>
+      <div style={{fontFamily:"Changa,sans-serif",fontWeight:800,letterSpacing:'.5px',fontSize:'clamp(44px,12vw,64px)',color:'#F0C040',WebkitTextStroke:'1px rgba(80,52,8,.55)',textShadow:'0 2px 0 rgba(60,40,6,.5),0 0 18px rgba(240,192,64,.45),0 0 40px rgba(240,192,64,.35)',animation:'floaty 3s ease-in-out infinite'}}>{t('appShort')}</div>
       <Spin/>
     </div>
   );
@@ -344,7 +344,7 @@ function AuthScreen({authUser,authErr,onDone}){
 
   if(step==='setup')return(
     <div style={bg}>
-      <div style={{fontFamily:"Changa,sans-serif",fontWeight:800,letterSpacing:'.5px',fontSize:'clamp(40px,11vw,56px)',color:'#F0C040',textShadow:'0 0 26px rgba(240,192,64,.45)',marginBottom:6,animation:'floaty 3s ease-in-out infinite'}}>{t('appShort')}</div>
+      <div style={{fontFamily:"Changa,sans-serif",fontWeight:800,letterSpacing:'.5px',fontSize:'clamp(40px,11vw,56px)',color:'#F0C040',WebkitTextStroke:'1px rgba(80,52,8,.55)',textShadow:'0 2px 0 rgba(60,40,6,.5),0 0 16px rgba(240,192,64,.4),0 0 36px rgba(240,192,64,.32)',marginBottom:6,animation:'floaty 3s ease-in-out infinite'}}>{t('appShort')}</div>
       <div style={{color:'rgba(240,237,229,.6)',fontSize:12,letterSpacing:2,marginBottom:24}}>{t('completeProfile')}</div>
       <div style={box}>
         <div style={{fontSize:17,fontWeight:800,textAlign:'center',marginBottom:18}}>{t('welcome')} {authUser?.displayName?.split(' ')[0]||''} 👋</div>
@@ -368,7 +368,7 @@ function AuthScreen({authUser,authErr,onDone}){
 
   return(
     <div style={bg}>
-      <div style={{fontFamily:"Changa,sans-serif",fontWeight:800,letterSpacing:'.5px',fontSize:'clamp(46px,13vw,64px)',color:'#F0C040',textShadow:'0 0 30px rgba(240,192,64,.5)',marginBottom:6,animation:'floaty 3s ease-in-out infinite'}}>{t('appShort')}</div>
+      <div style={{fontFamily:"Changa,sans-serif",fontWeight:800,letterSpacing:'.5px',fontSize:'clamp(46px,13vw,64px)',color:'#F0C040',WebkitTextStroke:'1px rgba(80,52,8,.55)',textShadow:'0 2px 0 rgba(60,40,6,.5),0 0 18px rgba(240,192,64,.45),0 0 40px rgba(240,192,64,.35)',marginBottom:6,animation:'floaty 3s ease-in-out infinite'}}>{t('appShort')}</div>
       <div style={{color:'rgba(240,237,229,.6)',fontSize:12,letterSpacing:2,marginBottom:28}}>{t('kingdom')}</div>
       <div style={box}>
         <div style={{fontSize:18,fontWeight:800,textAlign:'center',marginBottom:8}}>{t('signInTitle')}</div>
