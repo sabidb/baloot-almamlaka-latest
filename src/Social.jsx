@@ -67,7 +67,7 @@ export function DailyRewardPopup({userId,profile,onClaim,onClose}){
         <div style={{fontSize:48,marginBottom:8,animation:'bounce 0.6s ease'}}>
           {claimed?'🎉':reward.icon}
         </div>
-        <div style={{color:T.gold,fontSize:20,fontWeight:900,marginBottom:4}}>
+        <div style={{color:T.gold,fontSize:20,fontWeight:800,marginBottom:4}}>
           {claimed?'تم الاستلام!':'مكافأة يومية 🎁'}
         </div>
         <div style={{color:T.smoke,fontSize:13,marginBottom:20}}>
@@ -101,12 +101,12 @@ export function DailyRewardPopup({userId,profile,onClaim,onClose}){
         {/* Today's reward highlight */}
         <div style={{background:`${T.gold}22`,border:`1px solid ${T.gold}44`,borderRadius:16,padding:'14px',marginBottom:16}}>
           <div style={{color:T.smoke,fontSize:11,marginBottom:4}}>مكافأة اليوم — يوم {streak}</div>
-          <div style={{color:T.goldL,fontSize:32,fontWeight:900}}>{reward.coins} 🪙</div>
+          <div style={{color:T.goldL,fontSize:32,fontWeight:800}}>{reward.coins} 🪙</div>
           {reward.bonus&&<div style={{color:T.greenL,fontSize:12,marginTop:4,fontWeight:700}}>{reward.bonus}</div>}
         </div>
 
         {!claimed?(
-          <button onClick={claim} style={{background:`linear-gradient(135deg,${T.gold},${T.goldL})`,color:T.night,border:'none',borderRadius:14,padding:'14px',fontWeight:900,cursor:'pointer',fontSize:17,width:'100%',fontFamily:'inherit',boxShadow:`0 4px 20px ${T.gold}66`}}>
+          <button onClick={claim} style={{background:`linear-gradient(135deg,${T.gold},${T.goldL})`,color:T.night,border:'none',borderRadius:14,padding:'14px',fontWeight:800,cursor:'pointer',fontSize:17,width:'100%',fontFamily:'inherit',boxShadow:`0 4px 20px ${T.gold}66`}}>
             🎁 استلم المكافأة
           </button>
         ):(
@@ -255,7 +255,7 @@ export function FriendSystem({userId,userProfile,onInvite,currentRoomCode}){
     <div style={{minHeight:'100vh',background:T.night,fontFamily:'Changa,sans-serif',color:T.cream,paddingBottom:80}}>
       {/* Header */}
       <div style={{background:T.bg2,borderBottom:`1px solid ${T.border}`,padding:'20px 20px 0',position:'sticky',top:0,zIndex:100}}>
-        <div style={{color:T.gold,fontSize:20,fontWeight:900,marginBottom:4}}>👥 الأصدقاء</div>
+        <div style={{color:T.gold,fontSize:20,fontWeight:800,marginBottom:4}}>👥 الأصدقاء</div>
         <div style={{color:T.smoke,fontSize:12,marginBottom:14}}>العب مع أصدقائك</div>
         <div style={{display:'flex',gap:8}}>
           {[{id:'friends',l:`أصدقائي (${friends.length})`},{id:'requests',l:`الطلبات ${requests.length>0?`(${requests.length})`:''}`},{id:'search',l:'بحث'}].map(t=>(
@@ -356,7 +356,7 @@ export function FriendSystem({userId,userProfile,onInvite,currentRoomCode}){
         )}
       </div>
 
-      {toast&&<div style={{position:'fixed',bottom:90,left:'50%',transform:'translateX(-50%)',background:`linear-gradient(135deg,${T.gold},${T.goldL})`,color:T.night,fontWeight:900,fontSize:14,padding:'12px 24px',borderRadius:24,zIndex:9999,whiteSpace:'nowrap'}}>{toast}</div>}
+      {toast&&<div style={{position:'fixed',bottom:90,left:'50%',transform:'translateX(-50%)',background:`linear-gradient(135deg,${T.gold},${T.goldL})`,color:T.night,fontWeight:800,fontSize:14,padding:'12px 24px',borderRadius:24,zIndex:9999,whiteSpace:'nowrap'}}>{toast}</div>}
     </div>
   );
 }
@@ -389,7 +389,7 @@ export function NotificationCenter({userId,onGameInvite}){
     <div style={{position:'relative'}}>
       <button onClick={()=>setOpen(o=>!o)} style={{background:'#00000033',border:`1px solid ${T.border}`,borderRadius:10,padding:'6px 10px',cursor:'pointer',fontSize:16,position:'relative',backdropFilter:'blur(4px)'}}>
         🔔
-        {notifs.length>0&&<div style={{position:'absolute',top:-4,right:-4,width:16,height:16,borderRadius:'50%',background:T.redL,color:'#fff',fontSize:9,fontWeight:900,display:'flex',alignItems:'center',justifyContent:'center',border:`2px solid ${T.night}`}}>{notifs.length>9?'9+':notifs.length}</div>}
+        {notifs.length>0&&<div style={{position:'absolute',top:-4,right:-4,width:16,height:16,borderRadius:'50%',background:T.redL,color:'#fff',fontSize:9,fontWeight:800,display:'flex',alignItems:'center',justifyContent:'center',border:`2px solid ${T.night}`}}>{notifs.length>9?'9+':notifs.length}</div>}
       </button>
       {open&&(
         <div style={{position:'absolute',top:44,right:0,width:300,background:T.bg2,border:`1px solid ${T.border}`,borderRadius:16,overflow:'hidden',boxShadow:'0 8px 32px #00000088',zIndex:500}}>

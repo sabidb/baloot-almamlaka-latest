@@ -121,7 +121,7 @@ export default function MultiplayerScreen({profile,mode,onExit,onProfileUpdate})
         {mode==='join'?(
           <>
             <div style={{fontSize:34,marginBottom:6}}>🔑</div>
-            <div style={{fontSize:16,fontWeight:900,color:'#F0C040',marginBottom:14}}>انضم لغرفة</div>
+            <div style={{fontSize:16,fontWeight:800,color:'#F0C040',marginBottom:14}}>انضم لغرفة</div>
             <input style={{...S.input,textAlign:'center',fontSize:22,letterSpacing:6,direction:'ltr'}} maxLength={6} inputMode="numeric" placeholder="000000" value={joinInput} onChange={e=>setJoinInput(e.target.value.replace(/\D/g,''))}/>
             {err&&<div style={{color:'#E74C3C',fontSize:12,marginTop:10}}>{err}</div>}
             <div style={{display:'flex',gap:8,marginTop:16}}>
@@ -218,7 +218,7 @@ function Lobby({profile,code,onExit,onStart}){
     <div style={{...S.page,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:20,gap:16}}>
       <div style={{fontFamily:"Changa,sans-serif",fontSize:30,color:'#F0C040'}}>غرفة الأصدقاء</div>
       <div onClick={share} style={{display:'flex',alignItems:'center',gap:10,background:'rgba(240,192,64,.1)',border:'1px dashed rgba(240,192,64,.4)',borderRadius:14,padding:'10px 22px',cursor:'pointer'}}>
-        <span style={{fontSize:26,fontWeight:900,letterSpacing:8,color:'#F0C040',direction:'ltr'}}>{code}</span>
+        <span style={{fontSize:26,fontWeight:800,letterSpacing:8,color:'#F0C040',direction:'ltr'}}>{code}</span>
         <span style={{fontSize:18}}>📋</span>
       </div>
       <div style={{...S.dim,fontSize:11}}>شارك الكود مع أصدقائك — {room?.public?'غرفة عامة':'غرفة خاصة'}</div>
@@ -466,7 +466,7 @@ function MPGame({profile,code,onExit,onProfileUpdate}){
           {gd.phase==='bidding'?'🗣️ مزايدة':gd.contract?.type==='sun'?'☀️ صن':trumpInfo?`حكم ${trumpInfo.symbol}`:'—'}
           <span style={{marginRight:8,opacity:.6,fontSize:10}}>غرفة {code}</span>
         </div>
-        <div style={{background:'rgba(10,14,12,.8)',border:'1px solid rgba(240,192,64,.18)',borderRadius:10,padding:'4px 10px',fontSize:13,fontWeight:900}}>
+        <div style={{background:'rgba(10,14,12,.8)',border:'1px solid rgba(240,192,64,.18)',borderRadius:10,padding:'4px 10px',fontSize:13,fontWeight:800}}>
           <span style={S.gold}>{gd.scores[myTeamKey]}</span><span style={S.dim}> — </span><span style={S.gold}>{gd.scores[myTeamKey==='a'?'b':'a']}</span>
         </div>
       </div>
@@ -509,7 +509,7 @@ function MPGame({profile,code,onExit,onProfileUpdate}){
         <div style={{...S.panel,position:'absolute',bottom:'calc(env(safe-area-inset-bottom,0px) + 124px)',width:'min(88vw,320px)',zIndex:40,animation:'popIn .3s ease both'}}>
           {!pendingTrumpPick?(
             <>
-              <div style={{textAlign:'center',fontSize:13,fontWeight:900,color:'#F0C040',marginBottom:12}}>دورك للمزايدة 🗣️</div>
+              <div style={{textAlign:'center',fontSize:13,fontWeight:800,color:'#F0C040',marginBottom:12}}>دورك للمزايدة 🗣️</div>
               <div style={{display:'flex',gap:8}}>
                 <button onClick={()=>humanBid('hokum')} style={{...S.btn,flex:1,background:'linear-gradient(135deg,#8B6914,#F0C040)',color:'#07090A',fontSize:13,padding:'11px 6px'}}>حكم</button>
                 <button onClick={()=>humanBid('sun')} style={{...S.btn,flex:1,background:'linear-gradient(135deg,#B8860B,#FFD166)',color:'#07090A',fontSize:13,padding:'11px 6px'}}>☀️ صن</button>
@@ -518,7 +518,7 @@ function MPGame({profile,code,onExit,onProfileUpdate}){
             </>
           ):(
             <>
-              <div style={{textAlign:'center',fontSize:13,fontWeight:900,color:'#F0C040',marginBottom:12}}>اختر لون الحكم</div>
+              <div style={{textAlign:'center',fontSize:13,fontWeight:800,color:'#F0C040',marginBottom:12}}>اختر لون الحكم</div>
               <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}}>
                 {CARD_SUITS.map(s=>(
                   <button key={s.symbol} onClick={()=>pickTrump(s)} style={{...S.btn,display:'flex',alignItems:'center',justifyContent:'center',gap:8,background:'rgba(255,255,255,.06)',border:`1.5px solid ${s.isRed?'#c0392b':'#666'}`,color:s.isRed?'#E74C3C':'#F0EDE5',fontSize:13,padding:'11px 6px'}}>
@@ -550,7 +550,7 @@ function MPGame({profile,code,onExit,onProfileUpdate}){
             <div style={{display:'flex',justifyContent:'center',gap:28,margin:'12px 0 18px'}}>
               {[['أ',gd.scores.a],['ب',gd.scores.b]].map(([t,v])=>(
                 <div key={t} style={{display:'flex',flexDirection:'column',alignItems:'center',gap:2}}>
-                  <span style={{fontSize:30,fontWeight:900,color:'#F0C040',lineHeight:1}}>{v}</span>
+                  <span style={{fontSize:30,fontWeight:800,color:'#F0C040',lineHeight:1}}>{v}</span>
                   <span style={{color:'rgba(240,237,229,.6)',fontSize:11}}>الفريق {t}</span>
                 </div>
               ))}
@@ -573,7 +573,7 @@ function MPGame({profile,code,onExit,onProfileUpdate}){
             <div style={{display:'flex',justifyContent:'center',gap:28,margin:'18px 0'}}>
               {[['أ',gd.scores.a,winnerTeam===0],['ب',gd.scores.b,winnerTeam===1]].map(([t,v,w])=>(
                 <div key={t} style={{display:'flex',flexDirection:'column',alignItems:'center',gap:2}}>
-                  <span style={{fontSize:34,fontWeight:900,color:w?'#F0C040':'rgba(240,237,229,.4)',lineHeight:1}}>{v}</span>
+                  <span style={{fontSize:34,fontWeight:800,color:w?'#F0C040':'rgba(240,237,229,.4)',lineHeight:1}}>{v}</span>
                   <span style={{color:'rgba(240,237,229,.6)',fontSize:11}}>الفريق {t}</span>
                 </div>
               ))}

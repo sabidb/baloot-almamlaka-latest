@@ -243,7 +243,7 @@ export default function App(){
 
   if(loading)return(
     <div style={{height:'100dvh',background:'radial-gradient(ellipse 90% 60% at 50% 35%,#0F2A14,#07090A)',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:22,fontFamily:'Changa,sans-serif',direction:dir}}>
-      <div style={{fontFamily:"Changa,sans-serif",fontSize:'clamp(44px,12vw,64px)',color:'#F0C040',textShadow:'0 0 34px rgba(240,192,64,.5)',animation:'floaty 3s ease-in-out infinite'}}>{t('appShort')}</div>
+      <div style={{fontFamily:"Changa,sans-serif",fontWeight:800,letterSpacing:'.5px',fontSize:'clamp(44px,12vw,64px)',color:'#F0C040',textShadow:'0 0 34px rgba(240,192,64,.5)',animation:'floaty 3s ease-in-out infinite'}}>{t('appShort')}</div>
       <Spin/>
     </div>
   );
@@ -344,10 +344,10 @@ function AuthScreen({authUser,authErr,onDone}){
 
   if(step==='setup')return(
     <div style={bg}>
-      <div style={{fontFamily:"Changa,sans-serif",fontSize:'clamp(40px,11vw,56px)',color:'#F0C040',textShadow:'0 0 26px rgba(240,192,64,.45)',marginBottom:6,animation:'floaty 3s ease-in-out infinite'}}>{t('appShort')}</div>
+      <div style={{fontFamily:"Changa,sans-serif",fontWeight:800,letterSpacing:'.5px',fontSize:'clamp(40px,11vw,56px)',color:'#F0C040',textShadow:'0 0 26px rgba(240,192,64,.45)',marginBottom:6,animation:'floaty 3s ease-in-out infinite'}}>{t('appShort')}</div>
       <div style={{color:'rgba(240,237,229,.6)',fontSize:12,letterSpacing:2,marginBottom:24}}>{t('completeProfile')}</div>
       <div style={box}>
-        <div style={{fontSize:17,fontWeight:900,textAlign:'center',marginBottom:18}}>{t('welcome')} {authUser?.displayName?.split(' ')[0]||''} 👋</div>
+        <div style={{fontSize:17,fontWeight:800,textAlign:'center',marginBottom:18}}>{t('welcome')} {authUser?.displayName?.split(' ')[0]||''} 👋</div>
         <div style={{marginBottom:12}}>
           <div style={{color:'rgba(240,237,229,.6)',fontSize:11,fontWeight:700,marginBottom:4}}>{t('yourCity')}</div>
           <select style={G.input} value={city} onChange={e=>setCity(e.target.value)}>{CITIES.map(c=><option key={c} value={c}>{cityLabel(c,lang)}</option>)}</select>
@@ -368,10 +368,10 @@ function AuthScreen({authUser,authErr,onDone}){
 
   return(
     <div style={bg}>
-      <div style={{fontFamily:"Changa,sans-serif",fontSize:'clamp(46px,13vw,64px)',color:'#F0C040',textShadow:'0 0 30px rgba(240,192,64,.5)',marginBottom:6,animation:'floaty 3s ease-in-out infinite'}}>{t('appShort')}</div>
+      <div style={{fontFamily:"Changa,sans-serif",fontWeight:800,letterSpacing:'.5px',fontSize:'clamp(46px,13vw,64px)',color:'#F0C040',textShadow:'0 0 30px rgba(240,192,64,.5)',marginBottom:6,animation:'floaty 3s ease-in-out infinite'}}>{t('appShort')}</div>
       <div style={{color:'rgba(240,237,229,.6)',fontSize:12,letterSpacing:2,marginBottom:28}}>{t('kingdom')}</div>
       <div style={box}>
-        <div style={{fontSize:18,fontWeight:900,textAlign:'center',marginBottom:8}}>{t('signInTitle')}</div>
+        <div style={{fontSize:18,fontWeight:800,textAlign:'center',marginBottom:8}}>{t('signInTitle')}</div>
         <div style={{color:'rgba(240,237,229,.6)',fontSize:12,textAlign:'center',lineHeight:1.6,marginBottom:20}}>{t('signInSub')}</div>
         {err&&<div style={{color:'#E74C3C',fontSize:12,textAlign:'center',background:'rgba(231,76,60,.1)',borderRadius:8,padding:8,marginBottom:12}}>{err}</div>}
         <button onClick={doGoogle} disabled={busy} style={{display:'flex',alignItems:'center',justifyContent:'center',gap:10,width:'100%',padding:15,borderRadius:12,background:'#fff',color:'#1a1a1a',border:'none',cursor:'pointer',fontFamily:'inherit',fontSize:15,fontWeight:800,boxShadow:'0 4px 18px rgba(0,0,0,.4)',opacity:busy?.7:1,touchAction:'manipulation'}}>
@@ -412,7 +412,7 @@ function HomeScreen({profile,onGame,onMultiplayer,onTournament,onAdmin,onSetting
 
   const chip=(icon,val,color)=>(
     <div style={{display:'flex',alignItems:'center',gap:4,background:'rgba(0,0,0,.4)',border:`1px solid ${color}66`,borderRadius:20,padding:'3px 10px',backdropFilter:'blur(6px)'}}>
-      <span style={{fontSize:12}}>{icon}</span><span style={{fontSize:12,fontWeight:900,color}}>{val}</span>
+      <span style={{fontSize:12}}>{icon}</span><span style={{fontSize:12,fontWeight:800,color}}>{val}</span>
     </div>
   );
   const pill={display:'flex',alignItems:'center',justifyContent:'center',width:36,height:36,borderRadius:'50%',background:'rgba(255,255,255,.07)',border:'1px solid rgba(255,255,255,.16)',cursor:'pointer',fontSize:15,touchAction:'manipulation',backdropFilter:'blur(6px)',flexShrink:0};
@@ -427,7 +427,7 @@ function HomeScreen({profile,onGame,onMultiplayer,onTournament,onAdmin,onSetting
         <div onClick={onSettings} style={pill}><Icon name="gear" size={22}/></div>
         <div onClick={onLogoTap} style={{display:'flex',alignItems:'center',gap:7,background:'rgba(0,0,0,.4)',border:`1px solid ${rank.color}66`,borderRadius:22,padding:'3px 10px 3px 3px',cursor:'pointer'}}>
           <AvatarFrame avatar={profile.avatar} size={30} fontSize={16} frame={getFrame(profile)}/>
-          <span style={{fontSize:11,fontWeight:900,color:rank.color}}>⭐{level}</span>
+          <span style={{fontSize:11,fontWeight:800,color:rank.color}}>⭐{level}</span>
         </div>
         <div style={{flex:1,minWidth:8}}/>
         <div onClick={toggleLang} style={{...pill,width:'auto',padding:'0 11px',fontSize:11,fontWeight:800,color:'#F0C040'}}>🌐 {lang==='ar'?'EN':'ع'}</div>
@@ -445,8 +445,8 @@ function HomeScreen({profile,onGame,onMultiplayer,onTournament,onAdmin,onSetting
           <div style={{position:'absolute',top:-6,insetInlineEnd:-4,fontSize:15,color:'#FFF3C4',animation:'sparkle 2.4s ease-in-out infinite'}}>✦</div>
         </div>
         <div style={{flex:1,position:'relative',textAlign:'center'}}>
-          <div style={{fontFamily:"Changa,sans-serif",fontSize:'clamp(22px,7vw,32px)',fontWeight:900,color:'#FFE08A',textShadow:'0 2px 14px rgba(0,0,0,.45)',lineHeight:1.15}}>{t('learn')}</div>
-          <div style={{display:'inline-block',marginTop:8,background:'linear-gradient(135deg,#16a34a,#22c55e)',color:'#fff',fontSize:12,fontWeight:900,padding:'5px 16px',borderRadius:20,boxShadow:'0 4px 14px rgba(34,197,94,.5)'}}>{t('learnSub')}</div>
+          <div style={{fontFamily:"Changa,sans-serif",fontSize:'clamp(22px,7vw,32px)',fontWeight:800,color:'#FFE08A',textShadow:'0 2px 14px rgba(0,0,0,.45)',lineHeight:1.15}}>{t('learn')}</div>
+          <div style={{display:'inline-block',marginTop:8,background:'linear-gradient(135deg,#16a34a,#22c55e)',color:'#fff',fontSize:12,fontWeight:800,padding:'5px 16px',borderRadius:20,boxShadow:'0 4px 14px rgba(34,197,94,.5)'}}>{t('learnSub')}</div>
         </div>
       </div>
 
@@ -454,14 +454,14 @@ function HomeScreen({profile,onGame,onMultiplayer,onTournament,onAdmin,onSetting
       <div className="cascade" style={{margin:'0 12px 14px',borderRadius:20,padding:'16px',position:'relative',overflow:'hidden',background:'linear-gradient(135deg,#E11D5C,#7A0B32)',border:'1px solid rgba(255,255,255,.16)',boxShadow:'0 16px 40px rgba(225,29,92,.38)',animationDelay:'.1s'}}>
         <div style={{position:'absolute',top:0,insetInlineStart:0,width:'35%',height:'100%',background:'linear-gradient(90deg,rgba(255,255,255,.18),transparent)',transform:'skewX(-20deg)',animation:'sheen 5s ease-in-out infinite'}}/>
         <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',position:'relative',marginBottom:12}}>
-          <div style={{display:'flex',alignItems:'center',gap:7,fontSize:20,fontWeight:900,color:'#fff',textShadow:'0 2px 8px rgba(0,0,0,.35)'}}><Icon name="bolt" size={24}/> {t('quickPlay')}</div>
+          <div style={{display:'flex',alignItems:'center',gap:7,fontSize:20,fontWeight:800,color:'#fff',textShadow:'0 2px 8px rgba(0,0,0,.35)'}}><Icon name="bolt" size={24}/> {t('quickPlay')}</div>
           <div style={{display:'flex',alignItems:'center',gap:5,background:'rgba(0,0,0,.28)',borderRadius:16,padding:'4px 10px'}}>
             <span style={{width:7,height:7,borderRadius:'50%',background:'#2ECC71',boxShadow:'0 0 6px #2ECC71'}}/>
-            <span style={{fontSize:12,fontWeight:900,color:'#fff'}}>{arNum(1666)}</span>
+            <span style={{fontSize:12,fontWeight:800,color:'#fff'}}>{arNum(1666)}</span>
           </div>
         </div>
         <div onClick={e=>{rippleAt(e);haptics.slam();setTimeout(()=>onMultiplayer('quick'),120);}} style={{position:'relative',borderRadius:16,padding:'15px',textAlign:'center',cursor:'pointer',touchAction:'manipulation',background:'linear-gradient(135deg,#15803d,#22c55e)',boxShadow:'0 8px 22px rgba(34,197,94,.5),inset 0 2px 0 rgba(255,255,255,.28)',animation:'breathe 3.4s ease-in-out infinite'}}>
-          <span style={{fontSize:19,fontWeight:900,color:'#fff',textShadow:'0 2px 6px rgba(0,0,0,.3)'}}>{t('playNow')} ▶</span>
+          <span style={{fontSize:19,fontWeight:800,color:'#fff',textShadow:'0 2px 6px rgba(0,0,0,.3)'}}>{t('playNow')} ▶</span>
         </div>
       </div>
 
@@ -476,7 +476,7 @@ function HomeScreen({profile,onGame,onMultiplayer,onTournament,onAdmin,onSetting
               <span style={{fontSize:10,fontWeight:800,color:'#fff'}}>{arNum(f.online)}</span>
             </div>}
             <div style={{animation:'bob 4s ease-in-out infinite'}}><Icon name={f.icon} size={46}/></div>
-            <span style={{fontSize:14,fontWeight:900,color:'#fff',textShadow:'0 2px 6px rgba(0,0,0,.4)',textAlign:'center'}}>{f.label}</span>
+            <span style={{fontSize:14,fontWeight:800,color:'#fff',textShadow:'0 2px 6px rgba(0,0,0,.4)',textAlign:'center'}}>{f.label}</span>
           </div>
         ))}
       </div>
@@ -680,7 +680,7 @@ function GameScreen({profile,onExit,onProfileUpdate}){
            contract?trumpInfo&&<span style={{color:trumpInfo.color==='#0A0F0A'?'#F0C040':'#e08'}}>{t('hokum')} {trumpInfo.symbol}</span>:
            <span>—</span>}
         </div>
-        <div style={{background:'rgba(10,14,12,.8)',border:'1px solid rgba(240,192,64,.18)',borderRadius:10,padding:'4px 10px',fontSize:13,fontWeight:900}}>
+        <div style={{background:'rgba(10,14,12,.8)',border:'1px solid rgba(240,192,64,.18)',borderRadius:10,padding:'4px 10px',fontSize:13,fontWeight:800}}>
           <span style={G.gold}>{scores.a}</span><span style={G.dim}> — </span><span style={G.gold}>{scores.b}</span>
         </div>
       </div>
@@ -724,7 +724,7 @@ function GameScreen({profile,onExit,onProfileUpdate}){
         <div style={{...G.panel,position:'absolute',bottom:'calc(env(safe-area-inset-bottom,0px) + 124px)',width:'min(88vw,320px)',zIndex:40,animation:'popIn .3s ease both'}}>
           {!pendingTrumpPick?(
             <>
-              <div style={{textAlign:'center',fontSize:13,fontWeight:900,color:'#F0C040',marginBottom:12}}>{t('yourBidTurn')} 🗣️</div>
+              <div style={{textAlign:'center',fontSize:13,fontWeight:800,color:'#F0C040',marginBottom:12}}>{t('yourBidTurn')} 🗣️</div>
               <div style={{display:'flex',gap:8}}>
                 <button onClick={()=>humanBid('hokum')} style={{...G.btn,flex:1,background:'linear-gradient(135deg,#8B6914,#F0C040)',color:'#07090A',fontSize:13,padding:'11px 6px'}}>{t('hokum')}</button>
                 <button onClick={()=>humanBid('sun')} style={{...G.btn,flex:1,background:'linear-gradient(135deg,#B8860B,#FFD166)',color:'#07090A',fontSize:13,padding:'11px 6px'}}>☀️ {t('sun')}</button>
@@ -733,7 +733,7 @@ function GameScreen({profile,onExit,onProfileUpdate}){
             </>
           ):(
             <>
-              <div style={{textAlign:'center',fontSize:13,fontWeight:900,color:'#F0C040',marginBottom:12}}>{t('chooseTrump')}</div>
+              <div style={{textAlign:'center',fontSize:13,fontWeight:800,color:'#F0C040',marginBottom:12}}>{t('chooseTrump')}</div>
               <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}}>
                 {CARD_SUITS.map(s=>(
                   <button key={s.symbol} onClick={()=>pickTrump(s)} style={{...G.btn,display:'flex',alignItems:'center',justifyContent:'center',gap:8,background:'rgba(255,255,255,.06)',border:`1.5px solid ${s.isRed?'#c0392b':'#666'}`,color:s.isRed?'#E74C3C':'#F0EDE5',fontSize:13,padding:'11px 6px'}}>
@@ -768,7 +768,7 @@ function GameScreen({profile,onExit,onProfileUpdate}){
             <div style={{display:'flex',justifyContent:'center',gap:28,margin:'12px 0 18px'}}>
               {[[t('teamA'),scores.a],[t('teamB'),scores.b]].map(([tl,v])=>(
                 <div key={tl} style={{display:'flex',flexDirection:'column',alignItems:'center',gap:2}}>
-                  <span style={{fontSize:30,fontWeight:900,color:'#F0C040',lineHeight:1}}>{v}</span>
+                  <span style={{fontSize:30,fontWeight:800,color:'#F0C040',lineHeight:1}}>{v}</span>
                   <span style={{color:'rgba(240,237,229,.6)',fontSize:11}}>{t('team')} {tl}</span>
                 </div>
               ))}
@@ -787,7 +787,7 @@ function GameScreen({profile,onExit,onProfileUpdate}){
             <div style={{display:'flex',justifyContent:'center',gap:28,margin:'18px 0'}}>
               {[[t('teamA'),scores.a,'#F0C040'],[t('teamB'),scores.b,'rgba(240,237,229,.4)']].map(([tl,v,c])=>(
                 <div key={tl} style={{display:'flex',flexDirection:'column',alignItems:'center',gap:2}}>
-                  <span style={{fontSize:34,fontWeight:900,color:c,lineHeight:1}}>{v}</span>
+                  <span style={{fontSize:34,fontWeight:800,color:c,lineHeight:1}}>{v}</span>
                   <span style={{color:'rgba(240,237,229,.6)',fontSize:11}}>{t('team')} {tl}</span>
                 </div>
               ))}
@@ -840,10 +840,10 @@ function LeaderScreen(){
       {players.length===0&&<div style={{textAlign:'center',color:'rgba(240,237,229,.4)',fontSize:12,padding:30}}>{t('noPlayers')}</div>}
       {players.map((p,i)=>(
         <div key={p.id} style={{display:'flex',alignItems:'center',gap:11,padding:'11px 14px',borderBottom:'1px solid rgba(255,255,255,.06)',background:i<3?`linear-gradient(90deg,${rc(i)}12,transparent)`:'transparent'}}>
-          <span style={{fontSize:i<3?19:13,fontWeight:900,color:rc(i),width:26,textAlign:'center',flexShrink:0}}>{ri(i)}</span>
+          <span style={{fontSize:i<3?19:13,fontWeight:800,color:rc(i),width:26,textAlign:'center',flexShrink:0}}>{ri(i)}</span>
           <span style={{fontSize:28,flexShrink:0}}>{p.avatar||'🧔'}</span>
           <div style={{flex:1,minWidth:0}}><div style={{fontSize:13.5,fontWeight:800,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{p.name}</div><div style={{color:'rgba(240,237,229,.55)',fontSize:10}}>{cityLabel(p.city,lang)}</div></div>
-          <span style={{fontSize:13,fontWeight:900,color:'#F0C040',flexShrink:0}}>{p.wins} 🏆</span>
+          <span style={{fontSize:13,fontWeight:800,color:'#F0C040',flexShrink:0}}>{p.wins} 🏆</span>
         </div>
       ))}
     </div>
@@ -867,7 +867,7 @@ function StoreScreen({profile,onUpdate}){
     if(kind==='tables'){const b=BOARDS[id]||BOARDS.classic;return <div style={{width:46,height:46,borderRadius:10,background:`radial-gradient(ellipse at 50% 40%,${b.a},${b.b})`,border:`2px solid ${b.rail}`,boxShadow:`0 0 10px ${b.rail}66`}}/>;}
     if(kind==='frames'){const f=FRAMES[id]||FRAMES.none;const conic=f.ring==='conic';return <div style={{width:46,height:46,borderRadius:'50%',background:'rgba(16,26,18,.9)',border:conic?'3px solid transparent':`3px solid ${f.ring}`,backgroundImage:conic?'conic-gradient(#F0C040,#e11d5c,#3b82f6,#22c55e,#a855f7,#F0C040)':'none',backgroundOrigin:'border-box',boxShadow:f.glow!=='transparent'?`0 0 12px ${f.glow}`:'none',display:'flex',alignItems:'center',justifyContent:'center',fontSize:20}}>{profile.avatar}</div>;}
     if(kind==='backs'){const bk=CARD_BACKS[id]||CARD_BACKS.classic;return <div style={{width:34,height:46,borderRadius:6,background:bk.bg,border:`1.5px solid ${bk.border}`,boxShadow:'0 3px 8px rgba(0,0,0,.5)'}}/>;}
-    if(kind==='nameColors'){const nc=NAME_COLORS[id]||NAME_COLORS.default;return <NameText name={profile.name?.slice(0,8)||'Baloot'} color={nc} style={{fontSize:17,fontWeight:900}}/>;}
+    if(kind==='nameColors'){const nc=NAME_COLORS[id]||NAME_COLORS.default;return <NameText name={profile.name?.slice(0,8)||'Baloot'} color={nc} style={{fontSize:17,fontWeight:800}}/>;}
     if(kind==='badges'){return <span style={{fontSize:34}}>{BADGES_MAP[id]||'◻'}</span>;}
     return null;
   };
@@ -922,7 +922,7 @@ function StoreScreen({profile,onUpdate}){
               <div style={{height:48,display:'flex',alignItems:'center',justifyContent:'center'}}>{pv||<span style={{fontSize:32}}>{item.emoji}</span>}</div>
               <span style={{fontSize:12,fontWeight:800,textAlign:'center'}}>{nm(item)}</span>
               <span style={{color:'rgba(240,237,229,.5)',fontSize:9,textAlign:'center',lineHeight:1.4,minHeight:24}}>{ds(item)}</span>
-              <span style={{fontSize:12,fontWeight:900,color:isOwned?'#2ECC71':'#F0C040',background:isOwned?'rgba(46,204,113,.1)':'rgba(240,192,64,.1)',padding:'3px 12px',borderRadius:20,border:`1px solid ${isOwned?'rgba(46,204,113,.25)':'rgba(240,192,64,.2)'}`}}>
+              <span style={{fontSize:12,fontWeight:800,color:isOwned?'#2ECC71':'#F0C040',background:isOwned?'rgba(46,204,113,.1)':'rgba(240,192,64,.1)',padding:'3px 12px',borderRadius:20,border:`1px solid ${isOwned?'rgba(46,204,113,.25)':'rgba(240,192,64,.2)'}`}}>
                 {isActive?t('active'):isOwned?(kind==='reactions'?t('owned'):t('activate')):`🪙 ${item.cost}`}
               </span>
             </div>
@@ -937,7 +937,7 @@ function StoreScreen({profile,onUpdate}){
       <div style={{padding:'18px 14px 8px',textAlign:'center'}}><div style={{fontFamily:"Changa,sans-serif",fontSize:24,color:'#F0C040'}}>🛍️ {t('store')}</div></div>
       <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',background:'linear-gradient(135deg,rgba(26,20,4,.9),rgba(13,20,16,.85))',border:'1px solid #7A5B1A',borderRadius:14,margin:'0 12px 12px',padding:'12px 16px'}}>
         <span style={{color:'rgba(240,237,229,.6)',fontSize:12}}>{t('yourBalance')}</span>
-        <span style={{fontSize:17,fontWeight:900,color:'#F0C040'}}>🪙 {coins}</span>
+        <span style={{fontSize:17,fontWeight:800,color:'#F0C040'}}>🪙 {coins}</span>
       </div>
       <div style={{display:'flex',gap:6,padding:'0 12px 12px',overflowX:'auto'}}>
         {[{id:'tables',l:'🟩 '+t('tab_tables')},{id:'frames',l:'🖼️ '+(lang==='ar'?'إطارات':'Frames')},{id:'backs',l:'🂠 '+(lang==='ar'?'ظهر الورق':'Backs')},{id:'nameColors',l:'🎨 '+(lang==='ar'?'ألوان الاسم':'Name')},{id:'badges',l:'🏅 '+(lang==='ar'?'شارات':'Badges')},{id:'decks',l:'🎴 '+t('tab_decks')},{id:'coins',l:'🪙 '+t('tab_coins')}].map(tb=>(
@@ -954,19 +954,19 @@ function StoreScreen({profile,onUpdate}){
         <div style={{display:'flex',flexDirection:'column',gap:10,padding:'0 12px 16px'}}>
           {STORE_ITEMS.coins.map(pack=>(
             <div key={pack.id} onClick={()=>showT(t('paymentSoon')+' 💳')} style={{display:'flex',alignItems:'center',gap:12,background:'linear-gradient(160deg,rgba(16,26,18,.9),rgba(10,15,12,.85))',border:`1px solid ${pack.best?'rgba(240,192,64,.4)':'rgba(255,255,255,.07)'}`,borderRadius:16,padding:'14px 16px',cursor:'pointer',touchAction:'manipulation',position:'relative'}}>
-              {pack.best&&<span style={{position:'absolute',top:-8,insetInlineEnd:14,background:'#F0C040',color:'#000',fontSize:9,fontWeight:900,padding:'2px 8px',borderRadius:8}}>{t('bestValue')}</span>}
+              {pack.best&&<span style={{position:'absolute',top:-8,insetInlineEnd:14,background:'#F0C040',color:'#000',fontSize:9,fontWeight:800,padding:'2px 8px',borderRadius:8}}>{t('bestValue')}</span>}
               <span style={{fontSize:30}}>{pack.emoji}</span>
               <div style={{flex:1}}>
                 <div style={{fontSize:13,fontWeight:800}}>{pack.name}</div>
                 <div style={{color:'rgba(240,237,229,.5)',fontSize:10,marginTop:2}}>{pack.desc}</div>
               </div>
-              <span style={{fontSize:14,fontWeight:900,color:'#2ECC71',whiteSpace:'nowrap'}}>{pack.price} {lang==='ar'?'ر.س':'SAR'}</span>
+              <span style={{fontSize:14,fontWeight:800,color:'#2ECC71',whiteSpace:'nowrap'}}>{pack.price} {lang==='ar'?'ر.س':'SAR'}</span>
             </div>
           ))}
           <div style={{textAlign:'center',color:'rgba(240,237,229,.4)',fontSize:10,marginTop:4}}>💳 {t('paymentComingSoon')}</div>
         </div>
       )}
-      {toast&&<div style={{position:'fixed',bottom:'calc(76px + env(safe-area-inset-bottom,0px))',left:'50%',transform:'translateX(-50%)',background:'linear-gradient(135deg,#8B6914,#F0C040)',color:'#07090A',fontWeight:900,fontSize:13,padding:'10px 22px',borderRadius:24,zIndex:9999,whiteSpace:'nowrap',animation:'fadeUp .3s ease both'}}>{toast}</div>}
+      {toast&&<div style={{position:'fixed',bottom:'calc(76px + env(safe-area-inset-bottom,0px))',left:'50%',transform:'translateX(-50%)',background:'linear-gradient(135deg,#8B6914,#F0C040)',color:'#07090A',fontWeight:800,fontSize:13,padding:'10px 22px',borderRadius:24,zIndex:9999,whiteSpace:'nowrap',animation:'fadeUp .3s ease both'}}>{toast}</div>}
     </div>
   );
 }
@@ -988,7 +988,7 @@ function ProfileScreen({profile,onUpdate,onSettings,onLogout}){
   const statTile=(icon,val,label,color)=>(
     <div style={{flex:1,background:'linear-gradient(160deg,rgba(16,26,18,.9),rgba(10,15,12,.9))',border:`1px solid ${color}33`,borderRadius:14,padding:'12px 6px',textAlign:'center'}}>
       <div style={{fontSize:16,marginBottom:3}}>{icon}</div>
-      <div style={{fontSize:19,fontWeight:900,color}}>{val}</div>
+      <div style={{fontSize:19,fontWeight:800,color}}>{val}</div>
       <div style={{color:'rgba(240,237,229,.55)',fontSize:9.5,marginTop:2}}>{label}</div>
     </div>
   );
@@ -999,9 +999,9 @@ function ProfileScreen({profile,onUpdate,onSettings,onLogout}){
       <div style={{textAlign:'center',padding:'22px 14px 18px',position:'relative',background:'radial-gradient(ellipse 70% 100% at 50% 0%,rgba(26,61,32,.6),transparent)'}}>
         <div style={{position:'relative',display:'inline-block',marginBottom:8}}>
           <AvatarFrame avatar={profile.avatar} size={100} fontSize={52} frame={getFrame(profile)}/>
-          <div style={{position:'absolute',bottom:0,insetInlineEnd:'50%',transform:'translateX(50%) translateY(30%)',background:'#0C1410',border:`2px solid ${rank.color}`,borderRadius:12,fontSize:11,fontWeight:900,color:rank.color,padding:'2px 10px',whiteSpace:'nowrap'}}>{rank.icon} {t('level')} {level}</div>
+          <div style={{position:'absolute',bottom:0,insetInlineEnd:'50%',transform:'translateX(50%) translateY(30%)',background:'#0C1410',border:`2px solid ${rank.color}`,borderRadius:12,fontSize:11,fontWeight:800,color:rank.color,padding:'2px 10px',whiteSpace:'nowrap'}}>{rank.icon} {t('level')} {level}</div>
         </div>
-        <div style={{fontSize:22,fontWeight:900,marginTop:8,display:'flex',alignItems:'center',justifyContent:'center',gap:8}}>
+        <div style={{fontSize:22,fontWeight:800,marginTop:8,display:'flex',alignItems:'center',justifyContent:'center',gap:8}}>
           <NameText name={profile.name} color={getNameColor(profile)}/>
           {getBadge(profile)&&<span style={{fontSize:20,filter:'drop-shadow(0 2px 4px rgba(0,0,0,.4))'}}>{getBadge(profile)}</span>}
         </div>

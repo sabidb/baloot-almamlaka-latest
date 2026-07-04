@@ -12,7 +12,7 @@ function StatCard({label,value,color,icon}){
   return(
     <div style={{background:T.bg2,border:`1px solid ${color}33`,borderRadius:14,padding:'16px 20px',textAlign:'center'}}>
       <div style={{fontSize:28,marginBottom:6}}>{icon}</div>
-      <div style={{color,fontSize:28,fontWeight:900}}>{value}</div>
+      <div style={{color,fontSize:28,fontWeight:800}}>{value}</div>
       <div style={{color:T.smoke,fontSize:12,marginTop:4}}>{label}</div>
     </div>
   );
@@ -122,7 +122,7 @@ export default function AdminPanel(){
     <div style={{minHeight:'100vh',background:T.night,display:'flex',alignItems:'center',justifyContent:'center',fontFamily:'Changa,sans-serif',padding:16}}>
       <div style={{background:T.bg2,border:`2px solid ${T.gold}`,borderRadius:20,padding:40,maxWidth:360,width:'100%',textAlign:'center',boxShadow:`0 0 60px ${T.gold}22`}}>
         <div style={{fontSize:48,marginBottom:12}}>🔐</div>
-        <div style={{color:T.gold,fontSize:22,fontWeight:900,marginBottom:4}}>لوحة التحكم</div>
+        <div style={{color:T.gold,fontSize:22,fontWeight:800,marginBottom:4}}>لوحة التحكم</div>
         <div style={{color:T.smoke,fontSize:13,marginBottom:24}}>بلوت المملكة — Admin</div>
 
         {claim==='checking'&&<div style={{color:T.smoke,fontSize:14,padding:'20px 0'}}>جارٍ التحقق من الصلاحية…</div>}
@@ -150,7 +150,7 @@ export default function AdminPanel(){
             />
             <button
               onClick={()=>pin===ADMIN_PIN?setAuth(true):showToast('❌ رمز خاطئ')}
-              style={{background:`linear-gradient(135deg,${T.gold},${T.goldL})`,color:T.night,border:'none',borderRadius:12,padding:'14px',fontWeight:900,cursor:'pointer',fontSize:16,width:'100%',fontFamily:'inherit'}}>
+              style={{background:`linear-gradient(135deg,${T.gold},${T.goldL})`,color:T.night,border:'none',borderRadius:12,padding:'14px',fontWeight:800,cursor:'pointer',fontSize:16,width:'100%',fontFamily:'inherit'}}>
               دخول
             </button>
           </>
@@ -164,7 +164,7 @@ export default function AdminPanel(){
     <div style={{minHeight:'100vh',background:T.night,fontFamily:'Changa,sans-serif',color:T.cream}}>
       {/* Header */}
       <div style={{background:T.bg2,borderBottom:`1px solid ${T.border}`,padding:'16px 24px',display:'flex',justifyContent:'space-between',alignItems:'center',position:'sticky',top:0,zIndex:100}}>
-        <div style={{color:T.gold,fontSize:20,fontWeight:900}}>🃏 لوحة تحكم بلوت المملكة</div>
+        <div style={{color:T.gold,fontSize:20,fontWeight:800}}>🃏 لوحة تحكم بلوت المملكة</div>
         <div style={{display:'flex',gap:10,alignItems:'center'}}>
           <button onClick={loadPlayers} style={{background:'#0a2a0a',color:T.greenL,border:`1px solid ${T.greenL}44`,borderRadius:10,padding:'7px 14px',cursor:'pointer',fontSize:12,fontWeight:700,fontFamily:'inherit'}}>🔄 تحديث</button>
           <button onClick={()=>setAuth(false)} style={{background:'#3a0a0a',color:T.redL,border:`1px solid ${T.red}44`,borderRadius:10,padding:'7px 14px',cursor:'pointer',fontSize:12,fontWeight:700,fontFamily:'inherit'}}>خروج</button>
@@ -216,7 +216,7 @@ export default function AdminPanel(){
                         <div style={{color:T.smoke,fontSize:11,marginTop:2}}>📍 {p.city||'—'} · {p.wins||0} انتصار · {p.losses||0} هزيمة</div>
                       </div>
                       <div style={{textAlign:'center'}}>
-                        <div style={{color:T.goldL,fontSize:18,fontWeight:900}}>🪙 {p.coins||0}</div>
+                        <div style={{color:T.goldL,fontSize:18,fontWeight:800}}>🪙 {p.coins||0}</div>
                       </div>
                     </div>
                   ))}
@@ -243,7 +243,7 @@ export default function AdminPanel(){
                 <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:8,marginBottom:16}}>
                   {[{l:'انتصار',v:selected.wins||0,c:T.greenL},{l:'هزيمة',v:selected.losses||0,c:T.redL},{l:'رصيد',v:selected.coins||0,c:T.gold}].map(s=>(
                     <div key={s.l} style={{background:'#0a0a14',border:`1px solid ${s.c}33`,borderRadius:10,padding:'8px',textAlign:'center'}}>
-                      <div style={{color:s.c,fontSize:18,fontWeight:900}}>{s.v}</div>
+                      <div style={{color:s.c,fontSize:18,fontWeight:800}}>{s.v}</div>
                       <div style={{color:T.smoke,fontSize:10}}>{s.l}</div>
                     </div>
                   ))}
@@ -337,7 +337,7 @@ export default function AdminPanel(){
         )}
       </div>
 
-      {toast&&<div style={{position:'fixed',bottom:30,left:'50%',transform:'translateX(-50%)',background:`linear-gradient(135deg,${T.gold},${T.goldL})`,color:T.night,fontWeight:900,fontSize:14,padding:'12px 24px',borderRadius:24,zIndex:9999,whiteSpace:'nowrap',boxShadow:`0 8px 30px ${T.gold}44`}}>{toast}</div>}
+      {toast&&<div style={{position:'fixed',bottom:30,left:'50%',transform:'translateX(-50%)',background:`linear-gradient(135deg,${T.gold},${T.goldL})`,color:T.night,fontWeight:800,fontSize:14,padding:'12px 24px',borderRadius:24,zIndex:9999,whiteSpace:'nowrap',boxShadow:`0 8px 30px ${T.gold}44`}}>{toast}</div>}
     </div>
   );
 }

@@ -52,11 +52,11 @@ function TournamentCard({config,onJoin,onView,userCoins,userId}){
         <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start'}}>
           <div>
             <div style={{fontSize:32,marginBottom:4}}>{config.icon}</div>
-            <div style={{color:T.cream,fontSize:17,fontWeight:900}}>{config.name}</div>
+            <div style={{color:T.cream,fontSize:17,fontWeight:800}}>{config.name}</div>
             <div style={{color:config.color,fontSize:11,marginTop:3,fontWeight:700}}>{config.freq} · {config.size} لاعب</div>
           </div>
           <div style={{textAlign:'center'}}>
-            <div style={{color:config.color,fontSize:22,fontWeight:900}}>{config.prizeCoins.toLocaleString()}</div>
+            <div style={{color:config.color,fontSize:22,fontWeight:800}}>{config.prizeCoins.toLocaleString()}</div>
             <div style={{color:T.smoke,fontSize:10}}>🪙 جائزة</div>
             <div style={{color:T.greenL,fontSize:14,fontWeight:700,marginTop:2}}>{config.prizeSAR} ر</div>
           </div>
@@ -67,11 +67,11 @@ function TournamentCard({config,onJoin,onView,userCoins,userId}){
         {/* Entry options */}
         <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8,marginBottom:16}}>
           <div style={{background:`${config.color}11`,border:`1px solid ${config.color}33`,borderRadius:12,padding:'10px',textAlign:'center'}}>
-            <div style={{color:config.color,fontSize:16,fontWeight:900}}>🪙 {config.entryCoins}</div>
+            <div style={{color:config.color,fontSize:16,fontWeight:800}}>🪙 {config.entryCoins}</div>
             <div style={{color:T.smoke,fontSize:10,marginTop:2}}>رصيد</div>
           </div>
           <div style={{background:`${T.greenL}11`,border:`1px solid ${T.greenL}33`,borderRadius:12,padding:'10px',textAlign:'center'}}>
-            <div style={{color:T.greenL,fontSize:16,fontWeight:900}}>{config.entrySAR} ر</div>
+            <div style={{color:T.greenL,fontSize:16,fontWeight:800}}>{config.entrySAR} ر</div>
             <div style={{color:T.smoke,fontSize:10,marginTop:2}}>ريال سعودي</div>
           </div>
         </div>
@@ -107,7 +107,7 @@ function TournamentCard({config,onJoin,onView,userCoins,userId}){
         <div style={{display:'flex',gap:8}}>
           {tournament&&<button onClick={()=>onView(tournament)} style={{flex:1,background:'rgba(255,255,255,0.06)',color:T.smoke,border:'1px solid rgba(255,255,255,0.1)',borderRadius:12,padding:'10px',fontWeight:700,cursor:'pointer',fontSize:13,fontFamily:'inherit'}}>عرض</button>}
           {!isJoined&&!isFull&&(
-            <button onClick={()=>onJoin(config,tournament)} style={{flex:2,background:`linear-gradient(135deg,${config.color},${config.color}cc)`,color:config.color===T.gold?T.night:'#fff',border:'none',borderRadius:12,padding:'10px',fontWeight:900,cursor:'pointer',fontSize:14,fontFamily:'inherit',boxShadow:`0 4px 16px ${config.color}44`}}>
+            <button onClick={()=>onJoin(config,tournament)} style={{flex:2,background:`linear-gradient(135deg,${config.color},${config.color}cc)`,color:config.color===T.gold?T.night:'#fff',border:'none',borderRadius:12,padding:'10px',fontWeight:800,cursor:'pointer',fontSize:14,fontFamily:'inherit',boxShadow:`0 4px 16px ${config.color}44`}}>
               انضم للبطولة
             </button>
           )}
@@ -134,7 +134,7 @@ function BracketView({tournament,config,userId,onClose}){
       {/* Header */}
       <div style={{background:T.bg2,borderBottom:`1px solid ${T.border}`,padding:'16px 20px',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
         <div>
-          <div style={{color:T.gold,fontSize:18,fontWeight:900}}>{config.icon} {config.name}</div>
+          <div style={{color:T.gold,fontSize:18,fontWeight:800}}>{config.icon} {config.name}</div>
           <div style={{display:'flex',gap:8,marginTop:4,alignItems:'center'}}>
             <div style={{background:`${statusColor}22`,color:statusColor,fontSize:10,padding:'2px 8px',borderRadius:8,fontWeight:700,border:`1px solid ${statusColor}44`}}>
               {{open:'🟡 مفتوح',active:'🟢 جارية',completed:'🏁 منتهية'}[t?.status]||t?.status}
@@ -151,7 +151,7 @@ function BracketView({tournament,config,userId,onClose}){
           {[{l:'🥇 المركز الأول',v:`${Math.floor(config.prizeCoins*0.6).toLocaleString()} 🪙`,sub:`${Math.floor(config.prizeSAR*0.6)} ريال`},{l:'🥈 المركز الثاني',v:`${Math.floor(config.prizeCoins*0.25).toLocaleString()} 🪙`,sub:`${Math.floor(config.prizeSAR*0.25)} ريال`},{l:'🥉 المركز الثالث',v:`${Math.floor(config.prizeCoins*0.15).toLocaleString()} 🪙`,sub:`${Math.floor(config.prizeSAR*0.15)} ريال`}].map(p=>(
             <div key={p.l} style={{flex:1,textAlign:'center'}}>
               <div style={{color:T.smoke,fontSize:9,marginBottom:4}}>{p.l}</div>
-              <div style={{color:T.goldL,fontSize:14,fontWeight:900}}>{p.v}</div>
+              <div style={{color:T.goldL,fontSize:14,fontWeight:800}}>{p.v}</div>
               <div style={{color:T.greenL,fontSize:10}}>{p.sub}</div>
             </div>
           ))}
@@ -228,7 +228,7 @@ function BracketView({tournament,config,userId,onClose}){
         {t?.status==='completed'&&t?.winner&&(
           <div style={{background:`linear-gradient(135deg,${T.gold}22,${T.gold}11)`,border:`2px solid ${T.gold}`,borderRadius:20,padding:24,textAlign:'center',marginTop:16}}>
             <div style={{fontSize:48}}>🏆</div>
-            <div style={{color:T.gold,fontSize:20,fontWeight:900,marginTop:8}}>بطل البطولة</div>
+            <div style={{color:T.gold,fontSize:20,fontWeight:800,marginTop:8}}>بطل البطولة</div>
             <div style={{fontSize:36,marginTop:8}}>{t.winner.avatar||'🧔'}</div>
             <div style={{color:T.goldL,fontSize:18,fontWeight:700,marginTop:4}}>{t.winner.name}</div>
             <div style={{color:T.greenL,fontSize:14,marginTop:8}}>🪙 {Math.floor(config.prizeCoins*0.6).toLocaleString()} رصيد</div>
@@ -248,14 +248,14 @@ function JoinModal({config,tournament,userId,userProfile,onConfirm,onClose}){
       <div style={{background:`linear-gradient(135deg,#0D2A1A,#071f10)`,border:`2px solid ${config.color}`,borderRadius:20,padding:28,maxWidth:340,width:'100%',boxShadow:`0 0 60px ${config.color}33`}}>
         <div style={{textAlign:'center',marginBottom:20}}>
           <div style={{fontSize:40}}>{config.icon}</div>
-          <div style={{color:T.gold,fontSize:18,fontWeight:900,marginTop:8}}>{config.name}</div>
+          <div style={{color:T.gold,fontSize:18,fontWeight:800,marginTop:8}}>{config.name}</div>
           <div style={{color:T.smoke,fontSize:12,marginTop:4}}>{config.size} لاعب · {config.rounds} جولات</div>
         </div>
 
         {/* Prize */}
         <div style={{background:`${config.color}11`,border:`1px solid ${config.color}33`,borderRadius:14,padding:'12px',marginBottom:16,textAlign:'center'}}>
           <div style={{color:T.smoke,fontSize:11,marginBottom:4}}>🏆 الجائزة الكبرى</div>
-          <div style={{color:T.goldL,fontSize:22,fontWeight:900}}>🪙 {Math.floor(config.prizeCoins*0.6).toLocaleString()}</div>
+          <div style={{color:T.goldL,fontSize:22,fontWeight:800}}>🪙 {Math.floor(config.prizeCoins*0.6).toLocaleString()}</div>
           <div style={{color:T.greenL,fontSize:13,marginTop:2}}>{Math.floor(config.prizeSAR*0.6)} ريال سعودي</div>
         </div>
 
@@ -280,7 +280,7 @@ function JoinModal({config,tournament,userId,userProfile,onConfirm,onClose}){
           <button
             onClick={()=>onConfirm(payMethod)}
             disabled={payMethod==='coins'&&!hasCoins}
-            style={{flex:2,background:payMethod==='coins'&&!hasCoins?'#1a1a1a':`linear-gradient(135deg,${config.color},${config.color}cc)`,color:config.color===T.gold?T.night:'#fff',border:'none',borderRadius:12,padding:'12px',fontWeight:900,cursor:payMethod==='coins'&&!hasCoins?'not-allowed':'pointer',fontSize:15,fontFamily:'inherit',opacity:payMethod==='coins'&&!hasCoins?0.5:1}}>
+            style={{flex:2,background:payMethod==='coins'&&!hasCoins?'#1a1a1a':`linear-gradient(135deg,${config.color},${config.color}cc)`,color:config.color===T.gold?T.night:'#fff',border:'none',borderRadius:12,padding:'12px',fontWeight:800,cursor:payMethod==='coins'&&!hasCoins?'not-allowed':'pointer',fontSize:15,fontFamily:'inherit',opacity:payMethod==='coins'&&!hasCoins?0.5:1}}>
             {payMethod==='sar'?'💳 ادفع':'🪙 انضم'}
           </button>
         </div>
@@ -344,7 +344,7 @@ export default function TournamentScreen({userId,userProfile,onUpdateProfile}){
     <div style={{minHeight:'100vh',background:T.night,fontFamily:'Changa,sans-serif',color:T.cream,paddingBottom:80}}>
       {/* Header */}
       <div style={{background:`linear-gradient(135deg,${T.bg2},${T.bg3})`,borderBottom:`1px solid ${T.border}`,padding:'20px 20px 0',position:'sticky',top:0,zIndex:100,backdropFilter:'blur(12px)'}}>
-        <div style={{fontSize:22,color:T.gold,fontWeight:900,marginBottom:4}}>🏆 البطولات</div>
+        <div style={{fontSize:22,color:T.gold,fontWeight:800,marginBottom:4}}>🏆 البطولات</div>
         <div style={{color:T.smoke,fontSize:12,marginBottom:16}}>تنافس واربح جوائز ضخمة</div>
         <div style={{display:'flex',gap:8,paddingBottom:0}}>
           {[{id:'all',l:'كل البطولات'},{id:'mine',l:'بطولاتي'}].map(t=>(
@@ -361,7 +361,7 @@ export default function TournamentScreen({userId,userProfile,onUpdateProfile}){
               {[{l:'بطولات نشطة',v:TOURNAMENTS_CONFIG.length,i:'⚔️',c:T.blueL},{l:'أكبر جائزة',v:'٤٠٠٠ 🪙',i:'👑',c:T.gold},{l:'لاعبون اليوم',v:'٢٤+',i:'👥',c:T.greenL}].map(s=>(
                 <div key={s.l} style={{background:T.bg2,border:`1px solid ${s.c}33`,borderRadius:14,padding:'12px',textAlign:'center'}}>
                   <div style={{fontSize:20,marginBottom:4}}>{s.i}</div>
-                  <div style={{color:s.c,fontSize:16,fontWeight:900}}>{s.v}</div>
+                  <div style={{color:s.c,fontSize:16,fontWeight:800}}>{s.v}</div>
                   <div style={{color:T.smoke,fontSize:9,marginTop:2}}>{s.l}</div>
                 </div>
               ))}
@@ -442,7 +442,7 @@ export default function TournamentScreen({userId,userProfile,onUpdateProfile}){
         />
       )}
 
-      {toast&&<div style={{position:'fixed',bottom:90,left:'50%',transform:'translateX(-50%)',background:`linear-gradient(135deg,${T.gold},${T.goldL})`,color:T.night,fontWeight:900,fontSize:14,padding:'12px 24px',borderRadius:24,zIndex:9999,whiteSpace:'nowrap',boxShadow:`0 8px 30px ${T.gold}44`}}>{toast}</div>}
+      {toast&&<div style={{position:'fixed',bottom:90,left:'50%',transform:'translateX(-50%)',background:`linear-gradient(135deg,${T.gold},${T.goldL})`,color:T.night,fontWeight:800,fontSize:14,padding:'12px 24px',borderRadius:24,zIndex:9999,whiteSpace:'nowrap',boxShadow:`0 8px 30px ${T.gold}44`}}>{toast}</div>}
     </div>
   );
 }

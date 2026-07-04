@@ -98,7 +98,7 @@ export default function OnboardingTutorial({onComplete}){
             {current.icon}
           </div>
 
-          <h1 style={{color:current.accent,fontSize:26,fontWeight:900,margin:'0 0 8px',textShadow:`0 0 30px ${current.accent}44`}}>
+          <h1 style={{color:current.accent,fontSize:26,fontWeight:800,margin:'0 0 8px',textShadow:`0 0 30px ${current.accent}44`}}>
             {current.title}
           </h1>
           <p style={{color:'rgba(255,255,255,0.6)',fontSize:14,margin:'0 0 32px'}}>
@@ -116,7 +116,7 @@ export default function OnboardingTutorial({onComplete}){
           </div>
 
           {/* Button */}
-          <button onClick={next} style={{background:`linear-gradient(135deg,${current.accent},${current.accent}cc)`,color:current.accent===T.gold?T.night:'#fff',border:'none',borderRadius:16,padding:'16px 48px',fontWeight:900,cursor:'pointer',fontSize:18,fontFamily:'inherit',boxShadow:`0 6px 24px ${current.accent}44`,width:'100%',maxWidth:300}}>
+          <button onClick={next} style={{background:`linear-gradient(135deg,${current.accent},${current.accent}cc)`,color:current.accent===T.gold?T.night:'#fff',border:'none',borderRadius:16,padding:'16px 48px',fontWeight:800,cursor:'pointer',fontSize:18,fontFamily:'inherit',boxShadow:`0 6px 24px ${current.accent}44`,width:'100%',maxWidth:300}}>
             {isLast?'🚀 ابدأ اللعب!':'التالي ←'}
           </button>
 
@@ -153,23 +153,23 @@ export function ShareScoreCard({winner,loser,winnerScore,loserScore,isGahwa,onCl
         
         {isGahwa&&(
           <div style={{background:`${T.gold}22`,border:`1px solid ${T.gold}44`,borderRadius:12,padding:'8px',marginBottom:12}}>
-            <div style={{color:T.gold,fontWeight:900,fontSize:16}}>☕ قهوة!</div>
+            <div style={{color:T.gold,fontWeight:800,fontSize:16}}>☕ قهوة!</div>
           </div>
         )}
 
         <div style={{fontSize:48,marginBottom:8}}>🏆</div>
-        <div style={{color:T.gold,fontSize:22,fontWeight:900,marginBottom:4}}>
+        <div style={{color:T.gold,fontSize:22,fontWeight:800,marginBottom:4}}>
           Team {winner===0?'A':'B'} فازت!
         </div>
 
         <div style={{display:'flex',gap:12,margin:'20px 0',justifyContent:'center',alignItems:'center'}}>
           <div style={{textAlign:'center'}}>
-            <div style={{color:T.greenL,fontSize:36,fontWeight:900}}>{winnerScore}</div>
+            <div style={{color:T.greenL,fontSize:36,fontWeight:800}}>{winnerScore}</div>
             <div style={{color:T.smoke,fontSize:11}}>الفائز</div>
           </div>
           <div style={{color:T.smoke,fontSize:20,fontWeight:700}}>—</div>
           <div style={{textAlign:'center'}}>
-            <div style={{color:'rgba(255,255,255,0.4)',fontSize:36,fontWeight:900}}>{loserScore}</div>
+            <div style={{color:'rgba(255,255,255,0.4)',fontSize:36,fontWeight:800}}>{loserScore}</div>
             <div style={{color:T.smoke,fontSize:11}}>الخاسر</div>
           </div>
         </div>
@@ -180,7 +180,7 @@ export function ShareScoreCard({winner,loser,winnerScore,loserScore,isGahwa,onCl
 
         <div style={{display:'flex',gap:10}}>
           <button onClick={onClose} style={{flex:1,background:'rgba(255,255,255,0.06)',color:T.smoke,border:'1px solid rgba(255,255,255,0.1)',borderRadius:12,padding:'12px',fontWeight:700,cursor:'pointer',fontSize:14,fontFamily:'inherit'}}>إغلاق</button>
-          <button onClick={share} style={{flex:2,background:'linear-gradient(135deg,#25D366,#128c7e)',color:'#fff',border:'none',borderRadius:12,padding:'12px',fontWeight:900,cursor:'pointer',fontSize:14,fontFamily:'inherit',boxShadow:'0 4px 16px #25D36644'}}>
+          <button onClick={share} style={{flex:2,background:'linear-gradient(135deg,#25D366,#128c7e)',color:'#fff',border:'none',borderRadius:12,padding:'12px',fontWeight:800,cursor:'pointer',fontSize:14,fontFamily:'inherit',boxShadow:'0 4px 16px #25D36644'}}>
             📱 شارك واتساب
           </button>
         </div>

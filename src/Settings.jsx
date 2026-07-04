@@ -34,7 +34,7 @@ export default function SettingsScreen({ profile, onClose, onLogout }) {
       {/* header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 'calc(env(safe-area-inset-top,0px) + 16px) 16px 12px' }}>
         <button onClick={onClose} style={{ background: 'rgba(255,255,255,.08)', border: '1px solid rgba(240,192,64,.3)', color: '#F0EDE5', borderRadius: 10, padding: '7px 14px', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>{arrow} {t('back')}</button>
-        <div style={{ fontSize: 20, fontWeight: 900, color: '#F0C040' }}>⚙️ {t('settings')}</div>
+        <div style={{ fontSize: 20, fontWeight: 800, color: '#F0C040' }}>⚙️ {t('settings')}</div>
       </div>
 
       <div style={{ maxWidth: 520, margin: '0 auto', padding: '8px 14px' }}>
