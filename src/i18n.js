@@ -116,6 +116,13 @@ const STRINGS = {
     mp_roomNotFound: 'الغرفة غير موجودة', mp_gameStarted: 'اللعبة بدأت بالفعل', mp_roomFull: 'الغرفة ممتلئة',
     mp_createFail: 'تعذر إنشاء الغرفة', mp_joinFail: 'تعذر الانضمام', mp_searchFail: 'تعذر البحث',
     mp_yourTeamWins: 'فريقك يفوز!', mp_yourTeamLost: 'فريقك خسر',
+    // achievements
+    achievementsSub: 'إنجازاتك ومكافآتك', unlocked: 'مفتوح', achProgress: '{done} من {total}',
+    ach_firstwin: 'الفوز الأول', ach_wins10: '١٠ انتصارات', ach_wins50: '٥٠ انتصار', ach_wins250: '٢٥٠ انتصار',
+    ach_games100: '١٠٠ مباراة', ach_streak5: 'سلسلة ٥ انتصارات', ach_rich: 'ثري — ٥٠٠٠ رصيد', ach_veteran: 'محترف — ٥٠٠ مباراة',
+    // daily missions
+    missions: 'المهام اليومية', missionsSub: 'أكملها اليوم', missionDone: 'مكتملة', missionsReset: 'تتجدد يومياً',
+    mission_play3: 'العب ٣ مباريات', mission_win2: 'افز بمباراتين', mission_score152: 'سجّل ١٥٢ نقطة',
   },
   en: {
     dir: 'ltr',
@@ -220,6 +227,13 @@ const STRINGS = {
     mp_roomNotFound: 'Room not found', mp_gameStarted: 'The game already started', mp_roomFull: 'Room is full',
     mp_createFail: 'Could not create the room', mp_joinFail: 'Could not join', mp_searchFail: 'Search failed',
     mp_yourTeamWins: 'Your team wins!', mp_yourTeamLost: 'Your team lost',
+    // achievements
+    achievementsSub: 'Your milestones & rewards', unlocked: 'Unlocked', achProgress: '{done} of {total}',
+    ach_firstwin: 'First win', ach_wins10: '10 wins', ach_wins50: '50 wins', ach_wins250: '250 wins',
+    ach_games100: '100 games', ach_streak5: '5-win streak', ach_rich: 'Rich — 5000 coins', ach_veteran: 'Veteran — 500 games',
+    // daily missions
+    missions: 'Daily Missions', missionsSub: 'Complete them today', missionDone: 'Done', missionsReset: 'Resets daily',
+    mission_play3: 'Play 3 games', mission_win2: 'Win 2 games', mission_score152: 'Score 152 points',
   },
 };
 

@@ -93,6 +93,67 @@ export function getNameColor(profile){ return NAME_COLORS[profile?.activeNameCol
 // Profile badges (single active badge shown by the name).
 export const BADGES_MAP = { none:'', star:'⭐', crown:'👑', fire:'🔥', diamond:'💎', shield:'🛡️', trophy:'🏆', rocket:'🚀', lion:'🦁' };
 export function getBadge(profile){ return BADGES_MAP[profile?.activeBadge||'none']||''; }
+
+// ── Achievements ──────────────────────────────────────────
+// Purely derived from server-controlled stats (wins/losses/streak/games),
+// so they can never be forged client-side. `need` is the target; `val`
+// pulls the current value from the profile. i18n key = 'ach_<id>'.
+export const ACHIEVEMENTS = [
+  { id:'firstwin',  icon:'🎉', need:1,   val:p=>p?.wins||0 },
+  { id:'wins10',    icon:'🥉', need:10,  val:p=>p?.wins||0 },
+  { id:'wins50',    icon:'🥇', need:50,  val:p=>p?.wins||0 },
+  { id:'wins250',   icon:'💎', need:250, val:p=>p?.wins||0 },
+  { id:'games100',  icon:'🎮', need:100, val:p=>(p?.wins||0)+(p?.losses||0) },
+  { id:'streak5',   icon:'🔥', need:5,   val:p=>p?.bestStreak||0 },
+  { id:'rich',      icon:'🪙', need:5000,val:p=>p?.coins||0 },
+  { id:'veteran',   icon:'🎖️', need:500, val:p=>(p?.wins||0)+(p?.losses||0) },
+];
+export function getAchievements(profile){
+  return ACHIEVEMENTS.map(a=>{
+    const val=a.val(profile), done=val>=a.need;
+    return { ...a, val, done, pct:Math.min(100,Math.round(val/a.need*100)) };
+  });
+}
+export function achievementsSummary(profile){
+  const all=getAchievements(profile);
+  return { done:all.filter(a=>a.done).length, total:all.length };
+}
+
+// ── Daily missions ────────────────────────────────────────
+// Progress is tracked locally per-day (display only, not economy). Missions
+// reset at local midnight. i18n key = 'mission_<id>'.
+export const DAILY_MISSIONS = [
+  { id:'play3',  icon:'🎯', need:3, field:'games' },
+  { id:'win2',   icon:'🏆', need:2, field:'wins'  },
+  { id:'score152',icon:'💯',need:1, field:'big'   },
+];
+const MKEY='baloot_daily_missions';
+function todayStr(){ return new Date().toISOString().slice(0,10); }
+export function getDailyProgress(){
+  try{
+    const raw=JSON.parse(localStorage.getItem(MKEY)||'{}');
+    if(raw.date!==todayStr()) return { date:todayStr(), games:0, wins:0, big:0 };
+    return { games:0, wins:0, big:0, ...raw };
+  }catch{ return { date:todayStr(), games:0, wins:0, big:0 }; }
+}
+// Call at game end: bumpDailyProgress({won:true, myScore:154}).
+export function bumpDailyProgress({won,myScore}={}){
+  const p=getDailyProgress();
+  p.date=todayStr();
+  p.games=(p.games||0)+1;
+  if(won)p.wins=(p.wins||0)+1;
+  if((myScore||0)>=152)p.big=(p.big||0)+1;
+  try{ localStorage.setItem(MKEY,JSON.stringify(p)); }catch{ /* ignore */ }
+  return p;
+}
+export function getMissions(){
+  const prog=getDailyProgress();
+  return DAILY_MISSIONS.map(m=>{
+    const val=Math.min(prog[m.field]||0,m.need), done=(prog[m.field]||0)>=m.need;
+    return { ...m, val, done, pct:Math.round(val/m.need*100) };
+  });
+}
+
 export const STORE_ITEMS = {
   decks: [
     { id:'heritage', name:'التراث السعودي', desc:'نقوش هندسية مستوحاة من التراث السعودي', cost:500, badge:'hot',      emoji:'🕌' },

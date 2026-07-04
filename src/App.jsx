@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useMemo } from 'react';
 import { doc, getDoc, setDoc, updateDoc, increment, collection, addDoc, orderBy, where, limit, getDocs, query, serverTimestamp } from 'firebase/firestore';
 import { db } from './firebase';
 import { listenAuth, signInGoogle, signOutUser, getRedirect } from './auth';
-import { SUITS as CARD_SUITS, STORE_ITEMS, BOARDS, FRAMES, CARD_BACKS, NAME_COLORS, BADGES_MAP, buildDeck, shuffle, dealHands, cardValue, trickWinner, calcResult, botPickCard, botBid, sounds, haptics, getThemeStyles, getFrame, getCardBack, getNameColor, getBadge } from './GameLogic';
+import { SUITS as CARD_SUITS, STORE_ITEMS, BOARDS, FRAMES, CARD_BACKS, NAME_COLORS, BADGES_MAP, buildDeck, shuffle, dealHands, cardValue, trickWinner, calcResult, botPickCard, botBid, sounds, haptics, getThemeStyles, getFrame, getCardBack, getNameColor, getBadge, getAchievements, achievementsSummary, getMissions, bumpDailyProgress } from './GameLogic';
 import { ReactionBar, spawnCoins } from './Reactions';
 import { settleBotGame } from './functions';
 import OnboardingTutorial, { ShareScoreCard } from './Onboarding';
@@ -493,6 +493,31 @@ function HomeScreen({profile,onGame,onMultiplayer,onTournament,onAdmin,onSetting
         </div>
       </div>
 
+      {/* DAILY MISSIONS */}
+      {(()=>{ const ms=getMissions(); const allDone=ms.every(m=>m.done); return(
+        <div className="cascade" style={{margin:'0 12px 14px',borderRadius:20,padding:'14px 16px',background:'linear-gradient(135deg,#1e293b,#0f172a)',border:'1px solid rgba(240,192,64,.22)',boxShadow:'0 12px 32px rgba(0,0,0,.4)',animationDelay:'.13s'}}>
+          <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:12}}>
+            <div style={{display:'flex',alignItems:'center',gap:8,fontSize:16,fontWeight:800,color:'#FFE08A'}}>🎯 {t('missions')}</div>
+            <span style={{fontSize:10,fontWeight:700,color:allDone?'#2ECC71':'rgba(240,237,229,.5)'}}>{allDone?'✓ '+t('missionDone'):t('missionsReset')}</span>
+          </div>
+          <div style={{display:'flex',flexDirection:'column',gap:10}}>
+            {ms.map(m=>(
+              <div key={m.id} style={{display:'flex',alignItems:'center',gap:10}}>
+                <span style={{fontSize:18,width:24,textAlign:'center',filter:m.done?'none':'grayscale(.4)',opacity:m.done?1:.85}}>{m.done?'✅':m.icon}</span>
+                <div style={{flex:1}}>
+                  <div style={{display:'flex',justifyContent:'space-between',fontSize:11.5,fontWeight:700,color:m.done?'#2ECC71':'#F0EDE5',marginBottom:3}}>
+                    <span>{t('mission_'+m.id)}</span><span>{m.val}/{m.need}</span>
+                  </div>
+                  <div style={{height:6,borderRadius:4,background:'rgba(0,0,0,.4)',overflow:'hidden'}}>
+                    <div style={{height:'100%',width:`${m.pct}%`,borderRadius:4,background:m.done?'linear-gradient(90deg,#16a34a,#22c55e)':'linear-gradient(90deg,#8B6914,#F0C040)',transition:'width .5s ease'}}/>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      );})()}
+
       {/* COLORFUL FEATURE GRID */}
       <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(150px,1fr))',gap:11,padding:'0 12px 6px'}}>
         {feats.map((f,i)=>(
@@ -646,6 +671,8 @@ function GameScreen({profile,onExit,onProfileUpdate}){
     gameOverAppliedRef.current=true;
     const humanWon=scores.a>=scores.b;
     const coinDelta=humanWon?50:10;
+    // Track daily-mission progress (local, display-only).
+    bumpDailyProgress({won:humanWon,myScore:scores.a});
     // Celebration: coin burst from screen centre on a win.
     if(humanWon){haptics.win();setTimeout(()=>spawnCoins(window.innerWidth/2,window.innerHeight*0.4),300);setTimeout(()=>spawnCoins(window.innerWidth/2,window.innerHeight*0.4,12),700);}
     // Route through the server referee (rate-limited) — clients can't mint.
@@ -1063,6 +1090,25 @@ function ProfileScreen({profile,onUpdate,onSettings,onLogout}){
         {statTile('🎮',games,t('gamesPlayed'),'#9B59B6')}
         {statTile('⭐',level,t('level'),'#F0C040')}
       </div>
+
+      {/* Achievements */}
+      {(()=>{ const achs=getAchievements(profile); const sum=achievementsSummary(profile); return(
+        <div style={{padding:'0 12px',marginBottom:14}}>
+          <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:8}}>
+            <div style={{fontSize:14,fontWeight:800,color:'#F0EDE5'}}>🎖️ {t('achievements')}</div>
+            <div style={{fontSize:11,fontWeight:700,color:'#F0C040'}}>{t('achProgress',{done:sum.done,total:sum.total})}</div>
+          </div>
+          <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:8}}>
+            {achs.map(a=>(
+              <div key={a.id} title={t('ach_'+a.id)} style={{position:'relative',aspectRatio:'1',borderRadius:14,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:3,padding:4,background:a.done?'linear-gradient(160deg,rgba(240,192,64,.18),rgba(139,105,20,.12))':'rgba(16,26,18,.7)',border:`1px solid ${a.done?'rgba(240,192,64,.5)':'rgba(255,255,255,.06)'}`,boxShadow:a.done?'0 0 14px rgba(240,192,64,.2)':'none'}}>
+                <span style={{fontSize:22,filter:a.done?'none':'grayscale(1)',opacity:a.done?1:.4}}>{a.done?a.icon:'🔒'}</span>
+                <span style={{fontSize:8,fontWeight:700,textAlign:'center',lineHeight:1.1,color:a.done?'#FFE08A':'rgba(240,237,229,.4)'}}>{t('ach_'+a.id)}</span>
+                {!a.done&&<div style={{position:'absolute',bottom:3,left:6,right:6,height:3,borderRadius:2,background:'rgba(0,0,0,.4)',overflow:'hidden'}}><div style={{height:'100%',width:`${a.pct}%`,background:'#F0C040',borderRadius:2}}/></div>}
+              </div>
+            ))}
+          </div>
+        </div>
+      );})()}
 
       {editing?(
         <div style={{padding:'0 14px'}}>
