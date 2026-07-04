@@ -2,6 +2,7 @@ import React,{useState,useEffect,useRef}from'react';
 import{db}from'./firebase';
 import{doc,getDoc,setDoc,updateDoc,collection,query,where,getDocs,addDoc,onSnapshot,orderBy,limit}from'firebase/firestore';
 import{claimDailyReward}from'./functions';
+import{useLang}from'./i18n';
 
 const T={gold:'#C9A84C',goldL:'#F0C060',green:'#006C35',greenL:'#1a8a4a',night:'#07070F',bg2:'#0D0D1A',cream:'#F0EEE8',red:'#C0392B',redL:'#E74C3C',smoke:'#888',border:'#C9A84C33',blueL:'#2E86C1'};
 
@@ -18,6 +19,7 @@ const DAILY_REWARDS=[
 
 // ── Daily Reward Popup ────────────────────────────────────
 export function DailyRewardPopup({userId,profile,onClaim,onClose}){
+  const{t,dir}=useLang();
   const[claimed,setClaimed]=useState(false);
   const[reward,setReward]=useState(null);
   const[streak,setStreak]=useState(0);
@@ -61,17 +63,17 @@ export function DailyRewardPopup({userId,profile,onClaim,onClose}){
   };
 
   return(
-    <div style={{position:'fixed',inset:0,background:'#000c',display:'flex',alignItems:'center',justifyContent:'center',zIndex:600,padding:16,backdropFilter:'blur(8px)'}}>
+    <div style={{position:'fixed',inset:0,background:'#000c',display:'flex',alignItems:'center',justifyContent:'center',zIndex:600,padding:16,backdropFilter:'blur(8px)',direction:dir}}>
       <div style={{background:`linear-gradient(135deg,#0D2A1A,#071f10)`,border:`2px solid ${T.gold}`,borderRadius:24,padding:28,maxWidth:340,width:'100%',textAlign:'center',boxShadow:`0 0 80px ${T.gold}33`}}>
         {/* Stars */}
         <div style={{fontSize:48,marginBottom:8,animation:'bounce 0.6s ease'}}>
           {claimed?'🎉':reward.icon}
         </div>
         <div style={{color:T.gold,fontSize:20,fontWeight:800,marginBottom:4}}>
-          {claimed?'تم الاستلام!':'مكافأة يومية 🎁'}
+          {claimed?t('daily_claimed'):t('daily_title')+' 🎁'}
         </div>
         <div style={{color:T.smoke,fontSize:13,marginBottom:20}}>
-          {claimed?`أضفنا ${reward.coins} رصيد لحسابك`:'سجّل دخولك يومياً للحصول على مكافآت أكبر'}
+          {claimed?t('daily_added',{n:reward.coins}):t('daily_sub')}
         </div>
 
         {/* Streak days */}
@@ -100,21 +102,21 @@ export function DailyRewardPopup({userId,profile,onClaim,onClose}){
 
         {/* Today's reward highlight */}
         <div style={{background:`${T.gold}22`,border:`1px solid ${T.gold}44`,borderRadius:16,padding:'14px',marginBottom:16}}>
-          <div style={{color:T.smoke,fontSize:11,marginBottom:4}}>مكافأة اليوم — يوم {streak}</div>
+          <div style={{color:T.smoke,fontSize:11,marginBottom:4}}>{t('daily_todayReward',{n:streak})}</div>
           <div style={{color:T.goldL,fontSize:32,fontWeight:800}}>{reward.coins} 🪙</div>
-          {reward.bonus&&<div style={{color:T.greenL,fontSize:12,marginTop:4,fontWeight:700}}>{reward.bonus}</div>}
+          {reward.bonus&&<div style={{color:T.greenL,fontSize:12,marginTop:4,fontWeight:700}}>{t('daily_vipBonus')}</div>}
         </div>
 
         {!claimed?(
           <button onClick={claim} style={{background:`linear-gradient(135deg,${T.gold},${T.goldL})`,color:T.night,border:'none',borderRadius:14,padding:'14px',fontWeight:800,cursor:'pointer',fontSize:17,width:'100%',fontFamily:'inherit',boxShadow:`0 4px 20px ${T.gold}66`}}>
-            🎁 استلم المكافأة
+            🎁 {t('daily_claim')}
           </button>
         ):(
-          <div style={{color:T.greenL,fontSize:16,fontWeight:700}}>✅ تم الاستلام!</div>
+          <div style={{color:T.greenL,fontSize:16,fontWeight:700}}>✅ {t('daily_claimed')}</div>
         )}
 
         <button onClick={onClose} style={{marginTop:10,background:'transparent',color:T.smoke,border:'none',cursor:'pointer',fontSize:12,fontFamily:'inherit'}}>
-          {claimed?'':'تخطي'}
+          {claimed?'':t('ob_skip')}
         </button>
       </div>
       <style>{`@keyframes bounce{0%{transform:scale(0.5)}70%{transform:scale(1.1)}100%{transform:scale(1)}}`}</style>
@@ -173,6 +175,7 @@ export function NotificationBanner({message,onClose}){
 
 // ── Friend System ─────────────────────────────────────────
 export function FriendSystem({userId,userProfile,onInvite,currentRoomCode}){
+  const{t,dir}=useLang();
   const[tab,setTab]=useState('friends');
   const[friends,setFriends]=useState([]);
   const[requests,setRequests]=useState([]);
@@ -211,12 +214,12 @@ export function FriendSystem({userId,userProfile,onInvite,currentRoomCode}){
   const sendRequest=async(toUser)=>{
     try{
       await addDoc(collection(db,'friendRequests'),{
-        from:userId,fromName:userProfile?.name||'لاعب',fromAvatar:userProfile?.avatar||'🧔',
+        from:userId,fromName:userProfile?.name||t('player'),fromAvatar:userProfile?.avatar||'🧔',
         to:toUser.id,toName:toUser.name,
         status:'pending',createdAt:Date.now()
       });
-      showToast('✅ تم إرسال طلب الصداقة');
-    }catch(e){showToast('❌ فشل الإرسال');}
+      showToast(t('fr_reqSent'));
+    }catch(e){showToast(t('fr_sendFail'));}
   };
 
   const acceptRequest=async(request)=>{
@@ -226,11 +229,11 @@ export function FriendSystem({userId,userProfile,onInvite,currentRoomCode}){
         uid:request.from,name:request.fromName,avatar:request.fromAvatar,addedAt:Date.now()
       });
       await setDoc(doc(db,'users',request.from,'friends',userId),{
-        uid:userId,name:userProfile?.name||'لاعب',avatar:userProfile?.avatar||'🧔',addedAt:Date.now()
+        uid:userId,name:userProfile?.name||t('player'),avatar:userProfile?.avatar||'🧔',addedAt:Date.now()
       });
       await updateDoc(doc(db,'friendRequests',request.id),{status:'accepted'});
-      showToast('✅ تمت إضافة الصديق');
-    }catch(e){showToast('❌ فشل');}
+      showToast(t('fr_added'));
+    }catch(e){showToast(t('fr_fail'));}
   };
 
   const rejectRequest=async(requestId)=>{
@@ -240,28 +243,28 @@ export function FriendSystem({userId,userProfile,onInvite,currentRoomCode}){
   };
 
   const inviteFriend=async(friend)=>{
-    if(!currentRoomCode){showToast('أنشئ غرفة أولاً');return;}
+    if(!currentRoomCode){showToast(t('fr_createRoomFirst'));return;}
     try{
       await addDoc(collection(db,'notifications'),{
         to:friend.uid,type:'game_invite',
-        fromName:userProfile?.name||'لاعب',fromAvatar:userProfile?.avatar||'🧔',
+        fromName:userProfile?.name||t('player'),fromAvatar:userProfile?.avatar||'🧔',
         roomCode:currentRoomCode,createdAt:Date.now(),read:false
       });
-      showToast(`✅ تم إرسال دعوة لـ ${friend.name}`);
-    }catch(e){showToast('❌ فشل الإرسال');}
+      showToast(t('fr_inviteSent',{name:friend.name}));
+    }catch(e){showToast(t('fr_sendFail'));}
   };
 
   return(
-    <div style={{minHeight:'100vh',background:T.night,fontFamily:'Changa,sans-serif',color:T.cream,paddingBottom:80}}>
+    <div style={{minHeight:'100vh',background:T.night,fontFamily:'Changa,sans-serif',color:T.cream,paddingBottom:80,direction:dir}}>
       {/* Header */}
       <div style={{background:T.bg2,borderBottom:`1px solid ${T.border}`,padding:'20px 20px 0',position:'sticky',top:0,zIndex:100}}>
-        <div style={{color:T.gold,fontSize:20,fontWeight:800,marginBottom:4}}>👥 الأصدقاء</div>
-        <div style={{color:T.smoke,fontSize:12,marginBottom:14}}>العب مع أصدقائك</div>
+        <div style={{color:T.gold,fontSize:20,fontWeight:800,marginBottom:4}}>👥 {t('nav_friends')}</div>
+        <div style={{color:T.smoke,fontSize:12,marginBottom:14}}>{t('friends_sub')}</div>
         <div style={{display:'flex',gap:8}}>
-          {[{id:'friends',l:`أصدقائي (${friends.length})`},{id:'requests',l:`الطلبات ${requests.length>0?`(${requests.length})`:''}`},{id:'search',l:'بحث'}].map(t=>(
-            <button key={t.id} onClick={()=>setTab(t.id)} style={{padding:'7px 14px',borderRadius:'10px 10px 0 0',border:`1px solid ${tab===t.id?T.gold:'rgba(255,255,255,0.1)'}`,borderBottom:'none',background:tab===t.id?`${T.gold}15`:'transparent',color:tab===t.id?T.gold:T.smoke,fontSize:12,fontWeight:700,cursor:'pointer',fontFamily:'inherit',position:'relative'}}>
-              {t.l}
-              {t.id==='requests'&&requests.length>0&&<div style={{position:'absolute',top:-4,right:-4,width:8,height:8,borderRadius:'50%',background:T.redL}}/>}
+          {[{id:'friends',l:`${t('fr_my')} (${friends.length})`},{id:'requests',l:`${t('fr_requests')} ${requests.length>0?`(${requests.length})`:''}`},{id:'search',l:t('fr_search')}].map(tb=>(
+            <button key={tb.id} onClick={()=>setTab(tb.id)} style={{padding:'7px 14px',borderRadius:'10px 10px 0 0',border:`1px solid ${tab===tb.id?T.gold:'rgba(255,255,255,0.1)'}`,borderBottom:'none',background:tab===tb.id?`${T.gold}15`:'transparent',color:tab===tb.id?T.gold:T.smoke,fontSize:12,fontWeight:700,cursor:'pointer',fontFamily:'inherit',position:'relative'}}>
+              {tb.l}
+              {tb.id==='requests'&&requests.length>0&&<div style={{position:'absolute',top:-4,insetInlineEnd:-4,width:8,height:8,borderRadius:'50%',background:T.redL}}/>}
             </button>
           ))}
         </div>
@@ -274,8 +277,8 @@ export function FriendSystem({userId,userProfile,onInvite,currentRoomCode}){
             {friends.length===0?(
               <div style={{textAlign:'center',padding:40}}>
                 <div style={{fontSize:48,marginBottom:12}}>👥</div>
-                <div style={{color:T.smoke,fontSize:14,marginBottom:8}}>لا يوجد أصدقاء بعد</div>
-                <button onClick={()=>setTab('search')} style={{background:`linear-gradient(135deg,${T.gold},${T.goldL})`,color:T.night,border:'none',borderRadius:12,padding:'10px 24px',fontWeight:700,cursor:'pointer',fontSize:14,fontFamily:'inherit'}}>ابحث عن أصدقاء</button>
+                <div style={{color:T.smoke,fontSize:14,marginBottom:8}}>{t('fr_none')}</div>
+                <button onClick={()=>setTab('search')} style={{background:`linear-gradient(135deg,${T.gold},${T.goldL})`,color:T.night,border:'none',borderRadius:12,padding:'10px 24px',fontWeight:700,cursor:'pointer',fontSize:14,fontFamily:'inherit'}}>{t('fr_findFriends')}</button>
               </div>
             ):(
               <div style={{display:'flex',flexDirection:'column',gap:10}}>
@@ -283,11 +286,11 @@ export function FriendSystem({userId,userProfile,onInvite,currentRoomCode}){
                   <div key={f.id} style={{background:T.bg2,border:`1px solid rgba(255,255,255,0.07)`,borderRadius:14,padding:'14px 16px',display:'flex',alignItems:'center',gap:12}}>
                     <div style={{width:44,height:44,borderRadius:'50%',background:`${T.greenL}22`,border:`2px solid ${T.greenL}44`,display:'flex',alignItems:'center',justifyContent:'center',fontSize:22}}>{f.avatar||'🧔'}</div>
                     <div style={{flex:1}}>
-                      <div style={{color:T.cream,fontWeight:700,fontSize:15}}>{f.name||'لاعب'}</div>
-                      <div style={{color:T.smoke,fontSize:11,marginTop:2}}>{f.wins||0} انتصار</div>
+                      <div style={{color:T.cream,fontWeight:700,fontSize:15}}>{f.name||t('player')}</div>
+                      <div style={{color:T.smoke,fontSize:11,marginTop:2}}>{f.wins||0} {t('winsShort')}</div>
                     </div>
                     {currentRoomCode&&(
-                      <button onClick={()=>inviteFriend(f)} style={{background:`${T.greenL}22`,color:T.greenL,border:`1px solid ${T.greenL}44`,borderRadius:10,padding:'7px 14px',fontWeight:700,cursor:'pointer',fontSize:12,fontFamily:'inherit'}}>دعوة 🎮</button>
+                      <button onClick={()=>inviteFriend(f)} style={{background:`${T.greenL}22`,color:T.greenL,border:`1px solid ${T.greenL}44`,borderRadius:10,padding:'7px 14px',fontWeight:700,cursor:'pointer',fontSize:12,fontFamily:'inherit'}}>{t('fr_invite')} 🎮</button>
                     )}
                   </div>
                 ))}
@@ -300,18 +303,18 @@ export function FriendSystem({userId,userProfile,onInvite,currentRoomCode}){
         {tab==='requests'&&(
           <div>
             {requests.length===0?(
-              <div style={{textAlign:'center',padding:40,color:T.smoke,fontSize:14}}>لا توجد طلبات صداقة</div>
+              <div style={{textAlign:'center',padding:40,color:T.smoke,fontSize:14}}>{t('fr_noRequests')}</div>
             ):(
               <div style={{display:'flex',flexDirection:'column',gap:10}}>
                 {requests.map(r=>(
                   <div key={r.id} style={{background:T.bg2,border:`1px solid ${T.gold}33`,borderRadius:14,padding:'14px 16px',display:'flex',alignItems:'center',gap:12}}>
                     <div style={{fontSize:28}}>{r.fromAvatar||'🧔'}</div>
                     <div style={{flex:1}}>
-                      <div style={{color:T.cream,fontWeight:700,fontSize:15}}>{r.fromName||'لاعب'}</div>
-                      <div style={{color:T.smoke,fontSize:11,marginTop:2}}>يريد إضافتك صديقاً</div>
+                      <div style={{color:T.cream,fontWeight:700,fontSize:15}}>{r.fromName||t('player')}</div>
+                      <div style={{color:T.smoke,fontSize:11,marginTop:2}}>{t('fr_wantsAdd')}</div>
                     </div>
                     <div style={{display:'flex',gap:8}}>
-                      <button onClick={()=>acceptRequest(r)} style={{background:`${T.greenL}22`,color:T.greenL,border:`1px solid ${T.greenL}44`,borderRadius:10,padding:'7px 12px',fontWeight:700,cursor:'pointer',fontSize:12,fontFamily:'inherit'}}>✅ قبول</button>
+                      <button onClick={()=>acceptRequest(r)} style={{background:`${T.greenL}22`,color:T.greenL,border:`1px solid ${T.greenL}44`,borderRadius:10,padding:'7px 12px',fontWeight:700,cursor:'pointer',fontSize:12,fontFamily:'inherit'}}>✅ {t('fr_accept')}</button>
                       <button onClick={()=>rejectRequest(r.id)} style={{background:`${T.redL}11`,color:T.redL,border:`1px solid ${T.red}33`,borderRadius:10,padding:'7px 12px',fontWeight:700,cursor:'pointer',fontSize:12,fontFamily:'inherit'}}>❌</button>
                     </div>
                   </div>
@@ -325,9 +328,9 @@ export function FriendSystem({userId,userProfile,onInvite,currentRoomCode}){
         {tab==='search'&&(
           <div>
             <div style={{display:'flex',gap:8,marginBottom:16}}>
-              <input value={search} onChange={e=>setSearch(e.target.value)} onKeyDown={e=>e.key==='Enter'&&searchPlayers()} placeholder="ابحث باسم اللاعب..." style={{flex:1,background:T.bg2,border:`1px solid ${T.border}`,borderRadius:12,padding:'11px 16px',color:'#fff',fontSize:14,outline:'none',fontFamily:'inherit',direction:'rtl'}}/>
+              <input value={search} onChange={e=>setSearch(e.target.value)} onKeyDown={e=>e.key==='Enter'&&searchPlayers()} placeholder={t('fr_searchPlaceholder')} style={{flex:1,background:T.bg2,border:`1px solid ${T.border}`,borderRadius:12,padding:'11px 16px',color:'#fff',fontSize:14,outline:'none',fontFamily:'inherit',direction:dir}}/>
               <button onClick={searchPlayers} style={{background:`linear-gradient(135deg,${T.gold},${T.goldL})`,color:T.night,border:'none',borderRadius:12,padding:'11px 18px',fontWeight:700,cursor:'pointer',fontSize:14,fontFamily:'inherit'}}>
-                {searching?'...':'بحث'}
+                {searching?'...':t('fr_search')}
               </button>
             </div>
             <div style={{display:'flex',flexDirection:'column',gap:10}}>
@@ -337,19 +340,19 @@ export function FriendSystem({userId,userProfile,onInvite,currentRoomCode}){
                   <div key={p.id} style={{background:T.bg2,border:`1px solid rgba(255,255,255,0.07)`,borderRadius:14,padding:'14px 16px',display:'flex',alignItems:'center',gap:12}}>
                     <div style={{fontSize:28}}>{p.avatar||'🧔'}</div>
                     <div style={{flex:1}}>
-                      <div style={{color:T.cream,fontWeight:700,fontSize:15}}>{p.name||'لاعب'}</div>
-                      <div style={{color:T.smoke,fontSize:11,marginTop:2}}>📍 {p.city||'—'} · {p.wins||0} انتصار</div>
+                      <div style={{color:T.cream,fontWeight:700,fontSize:15}}>{p.name||t('player')}</div>
+                      <div style={{color:T.smoke,fontSize:11,marginTop:2}}>📍 {p.city||'—'} · {p.wins||0} {t('winsShort')}</div>
                     </div>
                     {isFriend?(
-                      <div style={{color:T.greenL,fontSize:12,fontWeight:700}}>✓ صديق</div>
+                      <div style={{color:T.greenL,fontSize:12,fontWeight:700}}>✓ {t('fr_isFriend')}</div>
                     ):(
-                      <button onClick={()=>sendRequest(p)} style={{background:`${T.gold}22`,color:T.gold,border:`1px solid ${T.gold}44`,borderRadius:10,padding:'7px 14px',fontWeight:700,cursor:'pointer',fontSize:12,fontFamily:'inherit'}}>إضافة +</button>
+                      <button onClick={()=>sendRequest(p)} style={{background:`${T.gold}22`,color:T.gold,border:`1px solid ${T.gold}44`,borderRadius:10,padding:'7px 14px',fontWeight:700,cursor:'pointer',fontSize:12,fontFamily:'inherit'}}>{t('fr_add')} +</button>
                     )}
                   </div>
                 );
               })}
               {searchResults.length===0&&search&&!searching&&(
-                <div style={{textAlign:'center',color:T.smoke,padding:30,fontSize:13}}>لا توجد نتائج</div>
+                <div style={{textAlign:'center',color:T.smoke,padding:30,fontSize:13}}>{t('fr_noResults')}</div>
               )}
             </div>
           </div>
@@ -363,6 +366,7 @@ export function FriendSystem({userId,userProfile,onInvite,currentRoomCode}){
 
 // ── Notification Center ───────────────────────────────────
 export function NotificationCenter({userId,onGameInvite}){
+  const{t,dir}=useLang();
   const[notifs,setNotifs]=useState([]);
   const[open,setOpen]=useState(false);
 
@@ -392,24 +396,24 @@ export function NotificationCenter({userId,onGameInvite}){
         {notifs.length>0&&<div style={{position:'absolute',top:-4,right:-4,width:16,height:16,borderRadius:'50%',background:T.redL,color:'#fff',fontSize:9,fontWeight:800,display:'flex',alignItems:'center',justifyContent:'center',border:`2px solid ${T.night}`}}>{notifs.length>9?'9+':notifs.length}</div>}
       </button>
       {open&&(
-        <div style={{position:'absolute',top:44,right:0,width:300,background:T.bg2,border:`1px solid ${T.border}`,borderRadius:16,overflow:'hidden',boxShadow:'0 8px 32px #00000088',zIndex:500}}>
+        <div style={{position:'absolute',top:44,insetInlineEnd:0,width:300,background:T.bg2,border:`1px solid ${T.border}`,borderRadius:16,overflow:'hidden',boxShadow:'0 8px 32px #00000088',zIndex:500,direction:dir}}>
           <div style={{background:'#0a1a0a',padding:'12px 16px',borderBottom:`1px solid ${T.border}`,display:'flex',justifyContent:'space-between',alignItems:'center'}}>
-            <div style={{color:T.gold,fontWeight:700,fontSize:14}}>🔔 الإشعارات</div>
+            <div style={{color:T.gold,fontWeight:700,fontSize:14}}>🔔 {t('notif_title')}</div>
             <button onClick={()=>setOpen(false)} style={{background:'transparent',border:'none',color:T.smoke,cursor:'pointer',fontSize:16}}>✕</button>
           </div>
           <div style={{maxHeight:300,overflowY:'auto'}}>
             {notifs.length===0?(
-              <div style={{textAlign:'center',color:T.smoke,padding:24,fontSize:13}}>لا توجد إشعارات</div>
+              <div style={{textAlign:'center',color:T.smoke,padding:24,fontSize:13}}>{t('notif_none')}</div>
             ):notifs.map(n=>(
               <div key={n.id} onClick={()=>handleNotif(n)} style={{padding:'12px 16px',borderBottom:`1px solid rgba(255,255,255,0.05)`,cursor:'pointer',display:'flex',gap:10,alignItems:'center',transition:'background 0.2s'}} onMouseEnter={e=>e.currentTarget.style.background='rgba(255,255,255,0.04)'} onMouseLeave={e=>e.currentTarget.style.background='transparent'}>
                 <div style={{fontSize:24}}>{n.fromAvatar||'🧔'}</div>
                 <div style={{flex:1}}>
                   <div style={{color:T.cream,fontSize:13,fontWeight:600}}>
-                    {n.type==='game_invite'?`${n.fromName} دعاك للعب 🎮`:n.type==='friend_request'?`${n.fromName} أرسل طلب صداقة`:n.message||'إشعار جديد'}
+                    {n.type==='game_invite'?`${n.fromName} ${t('notif_invited')} 🎮`:n.type==='friend_request'?`${n.fromName} ${t('notif_friendReq')}`:n.message||t('notif_new')}
                   </div>
-                  {n.type==='game_invite'&&<div style={{color:T.greenL,fontSize:11,marginTop:2,fontWeight:700}}>كود الغرفة: {n.roomCode}</div>}
+                  {n.type==='game_invite'&&<div style={{color:T.greenL,fontSize:11,marginTop:2,fontWeight:700}}>{t('notif_roomCode')}: {n.roomCode}</div>}
                 </div>
-                {n.type==='game_invite'&&<div style={{background:`${T.greenL}22`,color:T.greenL,fontSize:10,padding:'3px 8px',borderRadius:8,fontWeight:700,whiteSpace:'nowrap'}}>انضم ▶</div>}
+                {n.type==='game_invite'&&<div style={{background:`${T.greenL}22`,color:T.greenL,fontSize:10,padding:'3px 8px',borderRadius:8,fontWeight:700,whiteSpace:'nowrap'}}>{t('notif_join')} ▶</div>}
               </div>
             ))}
           </div>

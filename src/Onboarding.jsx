@@ -1,67 +1,24 @@
 import React,{useState}from'react';
+import{useLang}from'./i18n';
 
 const T={gold:'#C9A84C',goldL:'#F0C060',green:'#006C35',greenL:'#1a8a4a',night:'#07070F',bg2:'#0D0D1A',cream:'#F0EEE8',smoke:'#888',border:'#C9A84C33'};
 
+// Slide data is language-agnostic (icons/colors); text comes from i18n keys.
 const SLIDES=[
-  {
-    id:1,
-    icon:'🃏',
-    title:'مرحباً في بلوت المملكة!',
-    subtitle:'اللعبة الأصيلة — العب مع أصدقائك',
-    content:[
-      {icon:'🎴',text:'٣٢ ورقة — من ٧ حتى الإيس'},
-      {icon:'👥',text:'٤ لاعبين — فريقان (A و B)'},
-      {icon:'🏆',text:'أول فريق يصل ١٥٢ نقطة يفوز'},
-    ],
-    bg:'linear-gradient(135deg,#0D4A2A,#071f10)',
-    accent:'#C9A84C',
-  },
-  {
-    id:2,
-    icon:'🎯',
-    title:'طريقة اللعب',
-    subtitle:'بسيطة — ممتعة — تنافسية',
-    content:[
-      {icon:'🗣️',text:'المزايدة: اختر حكم أو صن أو پاس'},
-      {icon:'♠️',text:'الأتو: اللون الذي تختاره يكسب دائماً'},
-      {icon:'☀️',text:'صن: بدون أتو — النقاط تتضاعف!'},
-    ],
-    bg:'linear-gradient(135deg,#1A3A6B,#0a1a2a)',
-    accent:'#2E86C1',
-  },
-  {
-    id:3,
-    icon:'☕',
-    title:'القهوة والحكم',
-    subtitle:'الحالات الخاصة في البلوت',
-    content:[
-      {icon:'☕',text:'قهوة: الخصم ٠ نقطة → نقاطك تتضاعف!'},
-      {icon:'✅',text:'حكم نجح: الفريق المزايد يحصل على نقاطه'},
-      {icon:'❌',text:'حكم فشل: الخصم يأخذ كل النقاط'},
-    ],
-    bg:'linear-gradient(135deg,#2a1a00,#1a0f00)',
-    accent:'#C9A84C',
-  },
-  {
-    id:4,
-    icon:'🚀',
-    title:'جاهز للعب؟',
-    subtitle:'أنشئ غرفة وادعُ أصدقاءك الآن',
-    content:[
-      {icon:'🏠',text:'أنشئ غرفة واشارك الكود'},
-      {icon:'📱',text:'أرسل الدعوة عبر واتساب'},
-      {icon:'🪙',text:'اكسب رصيداً بكل انتصار'},
-    ],
-    bg:'linear-gradient(135deg,#1a0a40,#0a0620)',
-    accent:'#9060FF',
-  },
+  {id:1,icon:'🃏',k:'ob1',icons:['🎴','👥','🏆'],bg:'linear-gradient(135deg,#0D4A2A,#071f10)',accent:'#C9A84C'},
+  {id:2,icon:'🎯',k:'ob2',icons:['🗣️','♠️','☀️'],bg:'linear-gradient(135deg,#1A3A6B,#0a1a2a)',accent:'#2E86C1'},
+  {id:3,icon:'☕',k:'ob3',icons:['☕','✅','❌'],bg:'linear-gradient(135deg,#2a1a00,#1a0f00)',accent:'#C9A84C'},
+  {id:4,icon:'🚀',k:'ob4',icons:['🏠','📱','🪙'],bg:'linear-gradient(135deg,#1a0a40,#0a0620)',accent:'#9060FF'},
 ];
 
 export default function OnboardingTutorial({onComplete}){
+  const{t,dir}=useLang();
+  const arrow=dir==='rtl'?'←':'→';
   const[slide,setSlide]=useState(0);
   const[animating,setAnimating]=useState(false);
 
-  const current=SLIDES[slide];
+  const s=SLIDES[slide];
+  const current={...s,title:t(s.k+'_title'),subtitle:t(s.k+'_sub'),content:s.icons.map((ic,i)=>({icon:ic,text:t(s.k+'_'+['a','b','c'][i])}))};
   const isLast=slide===SLIDES.length-1;
 
   const next=()=>{
@@ -74,18 +31,18 @@ export default function OnboardingTutorial({onComplete}){
   const skip=()=>{onComplete&&onComplete();};
 
   return(
-    <div style={{position:'fixed',inset:0,zIndex:1000,fontFamily:'Changa,sans-serif',overflow:'hidden'}}>
+    <div style={{position:'fixed',inset:0,zIndex:1000,fontFamily:'Changa,sans-serif',overflow:'hidden',direction:dir}}>
       <div style={{minHeight:'100vh',background:current.bg,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:24,transition:'background 0.5s ease',position:'relative'}}>
 
         {/* Skip button */}
         {!isLast&&(
-          <button onClick={skip} style={{position:'absolute',top:20,left:20,background:'rgba(255,255,255,0.1)',color:'rgba(255,255,255,0.6)',border:'1px solid rgba(255,255,255,0.2)',borderRadius:10,padding:'7px 14px',cursor:'pointer',fontSize:13,fontFamily:'inherit'}}>
-            تخطي
+          <button onClick={skip} style={{position:'absolute',top:20,insetInlineStart:20,background:'rgba(255,255,255,0.1)',color:'rgba(255,255,255,0.6)',border:'1px solid rgba(255,255,255,0.2)',borderRadius:10,padding:'7px 14px',cursor:'pointer',fontSize:13,fontFamily:'inherit'}}>
+            {t('ob_skip')}
           </button>
         )}
 
         {/* Slide counter */}
-        <div style={{position:'absolute',top:24,right:24,display:'flex',gap:6}}>
+        <div style={{position:'absolute',top:24,insetInlineEnd:24,display:'flex',gap:6}}>
           {SLIDES.map((_,i)=>(
             <div key={i} onClick={()=>setSlide(i)} style={{width:i===slide?24:8,height:8,borderRadius:4,background:i===slide?current.accent:'rgba(255,255,255,0.2)',transition:'all 0.3s ease',cursor:'pointer'}}/>
           ))}
@@ -108,7 +65,7 @@ export default function OnboardingTutorial({onComplete}){
           {/* Feature list */}
           <div style={{display:'flex',flexDirection:'column',gap:12,marginBottom:40}}>
             {current.content.map((item,i)=>(
-              <div key={i} style={{background:'rgba(255,255,255,0.08)',border:`1px solid ${current.accent}33`,borderRadius:14,padding:'14px 18px',display:'flex',alignItems:'center',gap:14,textAlign:'right',animation:`slideIn 0.4s ${i*0.1}s ease both`}}>
+              <div key={i} style={{background:'rgba(255,255,255,0.08)',border:`1px solid ${current.accent}33`,borderRadius:14,padding:'14px 18px',display:'flex',alignItems:'center',gap:14,textAlign:dir==='rtl'?'right':'left',animation:`slideIn 0.4s ${i*0.1}s ease both`}}>
                 <span style={{fontSize:24,flexShrink:0}}>{item.icon}</span>
                 <span style={{color:'rgba(255,255,255,0.9)',fontSize:15,fontWeight:600,lineHeight:1.4}}>{item.text}</span>
               </div>
@@ -117,7 +74,7 @@ export default function OnboardingTutorial({onComplete}){
 
           {/* Button */}
           <button onClick={next} style={{background:`linear-gradient(135deg,${current.accent},${current.accent}cc)`,color:current.accent===T.gold?T.night:'#fff',border:'none',borderRadius:16,padding:'16px 48px',fontWeight:800,cursor:'pointer',fontSize:18,fontFamily:'inherit',boxShadow:`0 6px 24px ${current.accent}44`,width:'100%',maxWidth:300}}>
-            {isLast?'🚀 ابدأ اللعب!':'التالي ←'}
+            {isLast?'🚀 '+t('ob_start'):t('ob_next')+' '+arrow}
           </button>
 
           {/* Progress text */}
@@ -137,40 +94,42 @@ export default function OnboardingTutorial({onComplete}){
 
 // ── Share Score Card ──────────────────────────────────────
 export function ShareScoreCard({winner,loser,winnerScore,loserScore,isGahwa,onClose}){
+  const{t,dir}=useLang();
+  const teamName=winner===0?'A':'B';
   const share=()=>{
-    const text=`🃏 بلوت المملكة\n\n${isGahwa?'☕ قهوة!':''}\nالفائز: Team ${winner===0?'A':'B'} 🏆\nالنتيجة: ${winnerScore} - ${loserScore}\n\nانضم وتحداني! 👊\nbaloot-almamlaka-latest.vercel.app`;
+    const text=`🃏 ${t('appName')}\n\n${isGahwa?'☕ '+t('gahwa'):''}\n${t('winnerLabel')}: ${t('team')} ${teamName} 🏆\n${winnerScore} - ${loserScore}\n\nbaloot-almamlaka-latest.vercel.app`;
     if(navigator.share){
-      navigator.share({title:'بلوت المملكة',text}).catch(()=>{});
+      navigator.share({title:t('appName'),text}).catch(()=>{});
     }else{
       navigator.clipboard?.writeText(text);
     }
   };
 
   return(
-    <div style={{position:'fixed',inset:0,background:'#000c',display:'flex',alignItems:'center',justifyContent:'center',zIndex:700,padding:16,backdropFilter:'blur(8px)'}}>
+    <div style={{position:'fixed',inset:0,background:'#000c',display:'flex',alignItems:'center',justifyContent:'center',zIndex:700,padding:16,backdropFilter:'blur(8px)',direction:dir}}>
       <div style={{background:'linear-gradient(135deg,#0D2A1A,#071f10)',border:`2px solid ${T.gold}`,borderRadius:24,padding:28,maxWidth:320,width:'100%',textAlign:'center',boxShadow:`0 0 80px ${T.gold}33`}}>
-        <div style={{fontSize:16,color:T.smoke,marginBottom:8,letterSpacing:2}}>🃏 بلوت المملكة</div>
-        
+        <div style={{fontSize:16,color:T.smoke,marginBottom:8,letterSpacing:2}}>🃏 {t('appName')}</div>
+
         {isGahwa&&(
           <div style={{background:`${T.gold}22`,border:`1px solid ${T.gold}44`,borderRadius:12,padding:'8px',marginBottom:12}}>
-            <div style={{color:T.gold,fontWeight:800,fontSize:16}}>☕ قهوة!</div>
+            <div style={{color:T.gold,fontWeight:800,fontSize:16}}>☕ {t('gahwa')}</div>
           </div>
         )}
 
         <div style={{fontSize:48,marginBottom:8}}>🏆</div>
         <div style={{color:T.gold,fontSize:22,fontWeight:800,marginBottom:4}}>
-          Team {winner===0?'A':'B'} فازت!
+          {t('team')} {teamName} {t('teamWon')}
         </div>
 
         <div style={{display:'flex',gap:12,margin:'20px 0',justifyContent:'center',alignItems:'center'}}>
           <div style={{textAlign:'center'}}>
             <div style={{color:T.greenL,fontSize:36,fontWeight:800}}>{winnerScore}</div>
-            <div style={{color:T.smoke,fontSize:11}}>الفائز</div>
+            <div style={{color:T.smoke,fontSize:11}}>{t('winnerLabel')}</div>
           </div>
           <div style={{color:T.smoke,fontSize:20,fontWeight:700}}>—</div>
           <div style={{textAlign:'center'}}>
             <div style={{color:'rgba(255,255,255,0.4)',fontSize:36,fontWeight:800}}>{loserScore}</div>
-            <div style={{color:T.smoke,fontSize:11}}>الخاسر</div>
+            <div style={{color:T.smoke,fontSize:11}}>{t('loserLabel')}</div>
           </div>
         </div>
 
@@ -179,9 +138,9 @@ export function ShareScoreCard({winner,loser,winnerScore,loserScore,isGahwa,onCl
         </div>
 
         <div style={{display:'flex',gap:10}}>
-          <button onClick={onClose} style={{flex:1,background:'rgba(255,255,255,0.06)',color:T.smoke,border:'1px solid rgba(255,255,255,0.1)',borderRadius:12,padding:'12px',fontWeight:700,cursor:'pointer',fontSize:14,fontFamily:'inherit'}}>إغلاق</button>
+          <button onClick={onClose} style={{flex:1,background:'rgba(255,255,255,0.06)',color:T.smoke,border:'1px solid rgba(255,255,255,0.1)',borderRadius:12,padding:'12px',fontWeight:700,cursor:'pointer',fontSize:14,fontFamily:'inherit'}}>{t('close')}</button>
           <button onClick={share} style={{flex:2,background:'linear-gradient(135deg,#25D366,#128c7e)',color:'#fff',border:'none',borderRadius:12,padding:'12px',fontWeight:800,cursor:'pointer',fontSize:14,fontFamily:'inherit',boxShadow:'0 4px 16px #25D36644'}}>
-            📱 شارك واتساب
+            📱 {t('shareWhatsapp')}
           </button>
         </div>
       </div>

@@ -4,6 +4,7 @@ import { db } from './firebase';
 import { SUITS as CARD_SUITS, buildDeck, shuffle, dealHands, getHands, cardValue, trickWinner, calcResult, botPickCard, botBid, genCode, sounds, haptics, getThemeStyles } from './GameLogic';
 import { ReactionBar, spawnReaction, spawnCoins } from './Reactions';
 import { settleMultiplayerGame } from './functions';
+import { useLang } from './i18n';
 
 const RANKAR = {A:'أ',K:'ك',Q:'ق',J:'ج','10':'١٠','9':'٩','8':'٨','7':'٧'};
 const BOT_NAMES = [{name:'محمد',avatar:'👲'},{name:'عبدالله',avatar:'🧔'},{name:'سعد',avatar:'🤴'},{name:'فهد',avatar:'🧙'}];
@@ -44,6 +45,7 @@ const seatTeam=s=>s%2;
 
 // ── Entry / Lobby ─────────────────────────────────────────
 export default function MultiplayerScreen({profile,mode,onExit,onProfileUpdate}){
+  const {t,dir}=useLang();
   const [stage,setStage]=useState('entry'); // entry|lobby|game
   const [roomCode,setRoomCode]=useState('');
   const [joinInput,setJoinInput]=useState('');
@@ -62,7 +64,7 @@ export default function MultiplayerScreen({profile,mode,onExit,onProfileUpdate})
         players:[{...me(),seat:0}],createdAt:serverTimestamp(),gd:null,reaction:null,
       });
       setRoomCode(code);setStage('lobby');
-    }catch(e){setErr('تعذر إنشاء الغرفة: '+(e.code||e.message));}
+    }catch(e){setErr(t('mp_createFail')+': '+(e.code||e.message));}
     setBusy(false);
   };
 
@@ -72,17 +74,17 @@ export default function MultiplayerScreen({profile,mode,onExit,onProfileUpdate})
       await runTransaction(db,async tx=>{
         const ref=doc(db,'rooms',code);
         const snap=await tx.get(ref);
-        if(!snap.exists())throw new Error('الغرفة غير موجودة');
+        if(!snap.exists())throw new Error(t('mp_roomNotFound'));
         const r=snap.data();
         if(r.players.some(p=>p.uid===profile.uid))return; // already in
-        if(r.status!=='waiting')throw new Error('اللعبة بدأت بالفعل');
-        if(r.players.length>=4)throw new Error('الغرفة ممتلئة');
+        if(r.status!=='waiting')throw new Error(t('mp_gameStarted'));
+        if(r.players.length>=4)throw new Error(t('mp_roomFull'));
         const used=r.players.map(p=>p.seat);
         const seat=[0,1,2,3].find(s=>!used.includes(s));
         tx.update(ref,{players:[...r.players,{...me(),seat}]});
       });
       setRoomCode(code);setStage('lobby');
-    }catch(e){setErr(e.message||'تعذر الانضمام');}
+    }catch(e){setErr(e.message||t('mp_joinFail'));}
     setBusy(false);
   };
 
@@ -94,7 +96,7 @@ export default function MultiplayerScreen({profile,mode,onExit,onProfileUpdate})
       const open=snap.docs.map(d=>d.data()).find(r=>r.players.length<4&&!r.players.some(p=>p.uid===profile.uid));
       if(open){await joinRoom(open.code);return;}
       await createRoom(true);
-    }catch(e){setErr('تعذر البحث: '+(e.code||e.message));setBusy(false);}
+    }catch(e){setErr(t('mp_searchFail')+': '+(e.code||e.message));setBusy(false);}
   };
 
   useEffect(()=>{
@@ -116,27 +118,27 @@ export default function MultiplayerScreen({profile,mode,onExit,onProfileUpdate})
 
   // entry (join by code / errors / spinners)
   return(
-    <div style={{...S.page,display:'flex',alignItems:'center',justifyContent:'center',padding:20}}>
+    <div style={{...S.page,direction:dir,display:'flex',alignItems:'center',justifyContent:'center',padding:20}}>
       <div style={{...S.panel,width:'100%',maxWidth:340,textAlign:'center',animation:'popIn .3s ease both'}}>
         {mode==='join'?(
           <>
             <div style={{fontSize:34,marginBottom:6}}>🔑</div>
-            <div style={{fontSize:16,fontWeight:800,color:'#F0C040',marginBottom:14}}>انضم لغرفة</div>
+            <div style={{fontSize:16,fontWeight:800,color:'#F0C040',marginBottom:14}}>{t('mp_joinRoom')}</div>
             <input style={{...S.input,textAlign:'center',fontSize:22,letterSpacing:6,direction:'ltr'}} maxLength={6} inputMode="numeric" placeholder="000000" value={joinInput} onChange={e=>setJoinInput(e.target.value.replace(/\D/g,''))}/>
             {err&&<div style={{color:'#E74C3C',fontSize:12,marginTop:10}}>{err}</div>}
             <div style={{display:'flex',gap:8,marginTop:16}}>
-              <button onClick={onExit} style={{...S.btn,flex:1,background:'rgba(255,255,255,.08)',color:'rgba(240,237,229,.7)',border:'1px solid rgba(255,255,255,.1)'}}>رجوع</button>
-              <button disabled={busy||joinInput.length!==6} onClick={()=>joinRoom(joinInput)} style={{...S.btn,flex:2,background:'linear-gradient(135deg,#8B6914,#F0C040)',color:'#07090A',opacity:joinInput.length===6?1:.5}}>{busy?'...':'انضم ▶'}</button>
+              <button onClick={onExit} style={{...S.btn,flex:1,background:'rgba(255,255,255,.08)',color:'rgba(240,237,229,.7)',border:'1px solid rgba(255,255,255,.1)'}}>{t('back')}</button>
+              <button disabled={busy||joinInput.length!==6} onClick={()=>joinRoom(joinInput)} style={{...S.btn,flex:2,background:'linear-gradient(135deg,#8B6914,#F0C040)',color:'#07090A',opacity:joinInput.length===6?1:.5}}>{busy?'...':t('mp_joinBtn')+' ▶'}</button>
             </div>
           </>
         ):(
           <>
             <div style={{fontSize:34,marginBottom:6}}>{mode==='quick'?'⚡':'👥'}</div>
-            <div style={{fontSize:15,fontWeight:700,color:'#F0C040',marginBottom:10}}>{err?'حدث خطأ':mode==='quick'?'نبحث عن لاعبين…':'ننشئ الغرفة…'}</div>
+            <div style={{fontSize:15,fontWeight:700,color:'#F0C040',marginBottom:10}}>{err?t('mp_error'):mode==='quick'?t('mp_searching'):t('mp_creating')}</div>
             {err?(
               <>
                 <div style={{color:'#E74C3C',fontSize:12,marginBottom:14}}>{err}</div>
-                <button onClick={onExit} style={{...S.btn,width:'100%',background:'rgba(255,255,255,.08)',color:'rgba(240,237,229,.7)',border:'1px solid rgba(255,255,255,.1)'}}>رجوع</button>
+                <button onClick={onExit} style={{...S.btn,width:'100%',background:'rgba(255,255,255,.08)',color:'rgba(240,237,229,.7)',border:'1px solid rgba(255,255,255,.1)'}}>{t('back')}</button>
               </>
             ):(
               <div style={{display:'flex',justifyContent:'center'}}><div style={{width:30,height:30,border:'3px solid rgba(240,192,64,.2)',borderTopColor:'#F0C040',borderRadius:'50%',animation:'spin .8s linear infinite'}}/></div>
@@ -149,6 +151,7 @@ export default function MultiplayerScreen({profile,mode,onExit,onProfileUpdate})
 }
 
 function Lobby({profile,code,onExit,onStart}){
+  const {t,dir}=useLang();
   const [room,setRoom]=useState(null);
   const [busy,setBusy]=useState(false);
 
@@ -208,20 +211,20 @@ function Lobby({profile,code,onExit,onStart}){
   };
 
   const share=()=>{
-    const text=`🃏 بلوت المملكة\nانضم لغرفتي! الكود: ${code}\nbaloot-almamlaka-latest.vercel.app`;
-    if(navigator.share)navigator.share({title:'بلوت المملكة',text}).catch(()=>{});
+    const text=`🃏 ${t('appName')}\n${t('mp_shareCode')}: ${code}\nbaloot-almamlaka-latest.vercel.app`;
+    if(navigator.share)navigator.share({title:t('appName'),text}).catch(()=>{});
     else navigator.clipboard?.writeText(text);
   };
 
   const players=room?.players||[];
   return(
-    <div style={{...S.page,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:20,gap:16}}>
-      <div style={{fontFamily:"Changa,sans-serif",fontSize:30,color:'#F0C040'}}>غرفة الأصدقاء</div>
+    <div style={{...S.page,direction:dir,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:20,gap:16}}>
+      <div style={{fontFamily:"Changa,sans-serif",fontSize:30,color:'#F0C040'}}>{t('mp_room')}</div>
       <div onClick={share} style={{display:'flex',alignItems:'center',gap:10,background:'rgba(240,192,64,.1)',border:'1px dashed rgba(240,192,64,.4)',borderRadius:14,padding:'10px 22px',cursor:'pointer'}}>
         <span style={{fontSize:26,fontWeight:800,letterSpacing:8,color:'#F0C040',direction:'ltr'}}>{code}</span>
         <span style={{fontSize:18}}>📋</span>
       </div>
-      <div style={{...S.dim,fontSize:11}}>شارك الكود مع أصدقائك — {room?.public?'غرفة عامة':'غرفة خاصة'}</div>
+      <div style={{...S.dim,fontSize:11}}>{t('mp_shareCode')} — {room?.public?t('mp_publicRoom'):t('mp_privateRoom')}</div>
 
       <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,width:'100%',maxWidth:320}}>
         {[0,1,2,3].map(seat=>{
@@ -229,17 +232,17 @@ function Lobby({profile,code,onExit,onStart}){
           return(
             <div key={seat} style={{...S.panel,padding:'14px 10px',textAlign:'center',border:p?'1px solid rgba(46,204,113,.4)':'1px dashed rgba(255,255,255,.15)',animation:p?'popIn .3s ease both':'none'}}>
               <div style={{fontSize:30,marginBottom:4}}>{p?p.avatar:'💺'}</div>
-              <div style={{fontSize:12,fontWeight:700,color:p?'#F0EDE5':'rgba(240,237,229,.35)'}}>{p?p.name:'مقعد فارغ'}</div>
-              <div style={{fontSize:9,color:'rgba(240,237,229,.5)',marginTop:2}}>فريق {seat%2===0?'أ':'ب'}{p?.uid===room?.hostUid?' · مضيف 👑':''}</div>
+              <div style={{fontSize:12,fontWeight:700,color:p?'#F0EDE5':'rgba(240,237,229,.35)'}}>{p?p.name:t('mp_emptySeat')}</div>
+              <div style={{fontSize:9,color:'rgba(240,237,229,.5)',marginTop:2}}>{t('mp_teamLabel')} {seat%2===0?t('teamA'):t('teamB')}{p?.uid===room?.hostUid?' · '+t('mp_host')+' 👑':''}</div>
             </div>
           );
         })}
       </div>
 
       <div style={{display:'flex',gap:8,width:'100%',maxWidth:320}}>
-        <button onClick={leave} style={{...S.btn,flex:1,background:'rgba(255,255,255,.08)',color:'rgba(240,237,229,.7)',border:'1px solid rgba(255,255,255,.1)'}}>خروج</button>
-        {isHost&&<button onClick={startGame} disabled={busy} style={{...S.btn,flex:2,background:'linear-gradient(135deg,#8B6914,#F0C040)',color:'#07090A'}}>{players.length<4?'ابدأ مع روبوتات 🤖':'ابدأ اللعب 🃏'}</button>}
-        {!isHost&&<div style={{flex:2,display:'flex',alignItems:'center',justifyContent:'center',fontSize:12,color:'rgba(240,237,229,.5)'}}>بانتظار المضيف…</div>}
+        <button onClick={leave} style={{...S.btn,flex:1,background:'rgba(255,255,255,.08)',color:'rgba(240,237,229,.7)',border:'1px solid rgba(255,255,255,.1)'}}>{t('exit')}</button>
+        {isHost&&<button onClick={startGame} disabled={busy} style={{...S.btn,flex:2,background:'linear-gradient(135deg,#8B6914,#F0C040)',color:'#07090A'}}>{players.length<4?t('mp_startBots'):t('mp_start')}</button>}
+        {!isHost&&<div style={{flex:2,display:'flex',alignItems:'center',justifyContent:'center',fontSize:12,color:'rgba(240,237,229,.5)'}}>{t('mp_waitingHost')}</div>}
       </div>
     </div>
   );
@@ -247,6 +250,7 @@ function Lobby({profile,code,onExit,onStart}){
 
 // ── Live game ─────────────────────────────────────────────
 function MPGame({profile,code,onExit,onProfileUpdate}){
+  const {t:tt,dir}=useLang();
   const [room,setRoom]=useState(null);
   const [sel,setSel]=useState(null);
   const [pendingTrumpPick,setPendingTrumpPick]=useState(false);
@@ -373,7 +377,7 @@ function MPGame({profile,code,onExit,onProfileUpdate}){
     if(lastWinnerRef.current===k)return;
     lastWinnerRef.current=k;
     if(gd.trickPlays.length===0&&gd.phase!=='bidding'){
-      showT(`${bySeat(lw.seat)?.name||''} أخذ الضربة (+${lw.value}) 🏆`);
+      showT(`${bySeat(lw.seat)?.name||''} ${tt('tookTrick')} (+${lw.value}) 🏆`);
       sounds.win();
       if(seatTeam(lw.seat)===seatTeam(mySeat))haptics.win();
     }
@@ -461,10 +465,10 @@ function MPGame({profile,code,onExit,onProfileUpdate}){
 
       {/* Header */}
       <div style={{position:'absolute',top:'calc(env(safe-area-inset-top,0px) + 8px)',left:0,right:0,display:'flex',alignItems:'center',justifyContent:'space-between',padding:'0 10px',zIndex:20}}>
-        <button onClick={onExit} style={{...S.btn,background:'rgba(255,255,255,.08)',color:'rgba(240,237,229,.7)',border:'1px solid rgba(255,255,255,.1)',fontSize:11,padding:'5px 10px'}}>خروج</button>
+        <button onClick={onExit} style={{...S.btn,background:'rgba(255,255,255,.08)',color:'rgba(240,237,229,.7)',border:'1px solid rgba(255,255,255,.1)',fontSize:11,padding:'5px 10px'}}>{tt('exit')}</button>
         <div style={{padding:'5px 14px',borderRadius:20,fontSize:12,fontWeight:700,border:'1.5px solid rgba(240,192,64,.3)',background:'rgba(240,192,64,.08)',color:'#F0C040'}}>
-          {gd.phase==='bidding'?'🗣️ مزايدة':gd.contract?.type==='sun'?'☀️ صن':trumpInfo?`حكم ${trumpInfo.symbol}`:'—'}
-          <span style={{marginRight:8,opacity:.6,fontSize:10}}>غرفة {code}</span>
+          {gd.phase==='bidding'?'🗣️ '+tt('bidding'):gd.contract?.type==='sun'?'☀️ '+tt('sun'):trumpInfo?`${tt('hokum')} ${trumpInfo.symbol}`:'—'}
+          <span style={{marginInlineStart:8,opacity:.6,fontSize:10}}>{tt('tourn_room')} {code}</span>
         </div>
         <div style={{background:'rgba(10,14,12,.8)',border:'1px solid rgba(240,192,64,.18)',borderRadius:10,padding:'4px 10px',fontSize:13,fontWeight:800}}>
           <span style={S.gold}>{gd.scores[myTeamKey]}</span><span style={S.dim}> — </span><span style={S.gold}>{gd.scores[myTeamKey==='a'?'b':'a']}</span>
@@ -481,7 +485,7 @@ function MPGame({profile,code,onExit,onProfileUpdate}){
           <div key={r} style={{position:'absolute',...pos,display:'flex',flexDirection:'column',alignItems:'center',gap:3,zIndex:10}}>
             <div style={{width:38,height:38,borderRadius:'50%',border:`2px solid ${a?'#F0C040':'#7A5B1A'}`,background:'rgba(16,26,18,.9)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:18,animation:a?'turnGlow 1.1s ease-in-out infinite':'none'}}>{p?.avatar||'🧔'}</div>
             <span style={{color:a?'#F0C040':'rgba(240,237,229,.6)',fontSize:10,fontWeight:700}}>{p?.name||'…'}{p?.isBot?' 🤖':''}</span>
-            {a&&<span style={{color:'rgba(240,192,64,.7)',fontSize:9}}>{gd.phase==='bidding'?'يزايد…':'يفكر…'}</span>}
+            {a&&<span style={{color:'rgba(240,192,64,.7)',fontSize:9}}>{gd.phase==='bidding'?tt('bidding_ing'):tt('thinking')}</span>}
             {gd.phase==='playing'&&!a&&<div style={{fontSize:9,color:'rgba(240,237,229,.35)'}}>🂠×{hands[seat]?.length||0}</div>}
           </div>
         );
@@ -489,7 +493,7 @@ function MPGame({profile,code,onExit,onProfileUpdate}){
 
       {/* Trump badge */}
       <div style={{position:'absolute',top:'calc(env(safe-area-inset-top,0px) + 58px)',right:8,zIndex:20,display:'flex',flexDirection:'column',alignItems:'center',gap:3,background:'rgba(10,14,12,.7)',border:'1px solid rgba(240,192,64,.18)',borderRadius:10,padding:'6px 8px'}}>
-        <span style={{fontSize:9,color:'rgba(240,237,229,.5)',fontWeight:700}}>الكوز</span>
+        <span style={{fontSize:9,color:'rgba(240,237,229,.5)',fontWeight:700}}>{tt('trump')}</span>
         <span style={{fontSize:26,filter:'drop-shadow(0 0 8px rgba(240,192,64,.5))',color:trumpInfo?(trumpInfo.isRed?'#E74C3C':'#F0EDE5'):'rgba(240,237,229,.3)'}}>{gd.contract?.type==='sun'?'☀️':trumpInfo?trumpInfo.symbol:'?'}</span>
       </div>
 
@@ -500,7 +504,7 @@ function MPGame({profile,code,onExit,onProfileUpdate}){
             const pos=REL_POS[rel(p.seat)];
             return <CardFace key={p.card.id} card={p.card} theme={theme} style={{top:pos.top,left:pos.left+'%',transform:`rotate(${pos.rot}deg)`,zIndex:i+1,animation:'popIn .3s ease both',cursor:'default'}}/>;
           })}
-          {gd.trickPlays.length===0&&<div style={{position:'absolute',top:'50%',left:'50%',transform:'translate(-50%,-50%)',color:'rgba(240,237,229,.35)',fontSize:11,fontWeight:600,whiteSpace:'nowrap'}}>{gd.currentPlayer===mySeat?'دورك أنت':`دور ${bySeat(gd.currentPlayer)?.name||''}`}</div>}
+          {gd.trickPlays.length===0&&<div style={{position:'absolute',top:'50%',left:'50%',transform:'translate(-50%,-50%)',color:'rgba(240,237,229,.35)',fontSize:11,fontWeight:600,whiteSpace:'nowrap'}}>{gd.currentPlayer===mySeat?tt('yourTurn'):`${tt('turnOf')} ${bySeat(gd.currentPlayer)?.name||''}`}</div>}
         </div>
       )}
 
@@ -509,16 +513,16 @@ function MPGame({profile,code,onExit,onProfileUpdate}){
         <div style={{...S.panel,position:'absolute',bottom:'calc(env(safe-area-inset-bottom,0px) + 124px)',width:'min(88vw,320px)',zIndex:40,animation:'popIn .3s ease both'}}>
           {!pendingTrumpPick?(
             <>
-              <div style={{textAlign:'center',fontSize:13,fontWeight:800,color:'#F0C040',marginBottom:12}}>دورك للمزايدة 🗣️</div>
+              <div style={{textAlign:'center',fontSize:13,fontWeight:800,color:'#F0C040',marginBottom:12}}>{tt('yourBidTurn')} 🗣️</div>
               <div style={{display:'flex',gap:8}}>
-                <button onClick={()=>humanBid('hokum')} style={{...S.btn,flex:1,background:'linear-gradient(135deg,#8B6914,#F0C040)',color:'#07090A',fontSize:13,padding:'11px 6px'}}>حكم</button>
-                <button onClick={()=>humanBid('sun')} style={{...S.btn,flex:1,background:'linear-gradient(135deg,#B8860B,#FFD166)',color:'#07090A',fontSize:13,padding:'11px 6px'}}>☀️ صن</button>
-                <button onClick={()=>humanBid('pass')} style={{...S.btn,flex:1,background:'rgba(255,255,255,.08)',color:'rgba(240,237,229,.7)',border:'1px solid rgba(255,255,255,.1)',fontSize:13,padding:'11px 6px'}}>پاس</button>
+                <button onClick={()=>humanBid('hokum')} style={{...S.btn,flex:1,background:'linear-gradient(135deg,#8B6914,#F0C040)',color:'#07090A',fontSize:13,padding:'11px 6px'}}>{tt('hokum')}</button>
+                <button onClick={()=>humanBid('sun')} style={{...S.btn,flex:1,background:'linear-gradient(135deg,#B8860B,#FFD166)',color:'#07090A',fontSize:13,padding:'11px 6px'}}>☀️ {tt('sun')}</button>
+                <button onClick={()=>humanBid('pass')} style={{...S.btn,flex:1,background:'rgba(255,255,255,.08)',color:'rgba(240,237,229,.7)',border:'1px solid rgba(255,255,255,.1)',fontSize:13,padding:'11px 6px'}}>{tt('pass')}</button>
               </div>
             </>
           ):(
             <>
-              <div style={{textAlign:'center',fontSize:13,fontWeight:800,color:'#F0C040',marginBottom:12}}>اختر لون الحكم</div>
+              <div style={{textAlign:'center',fontSize:13,fontWeight:800,color:'#F0C040',marginBottom:12}}>{tt('chooseTrump')}</div>
               <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}}>
                 {CARD_SUITS.map(s=>(
                   <button key={s.symbol} onClick={()=>pickTrump(s)} style={{...S.btn,display:'flex',alignItems:'center',justifyContent:'center',gap:8,background:'rgba(255,255,255,.06)',border:`1.5px solid ${s.isRed?'#c0392b':'#666'}`,color:s.isRed?'#E74C3C':'#F0EDE5',fontSize:13,padding:'11px 6px'}}>
@@ -548,17 +552,17 @@ function MPGame({profile,code,onExit,onProfileUpdate}){
             <div style={{fontSize:48,marginBottom:6}}>{gd.roundResult.isGahwa?'☕':gd.roundResult.made?'✅':'❌'}</div>
             <div style={{fontFamily:"Changa,sans-serif",fontSize:22,color:'#F0C040',marginBottom:10}}>{gd.roundResult.reason}</div>
             <div style={{display:'flex',justifyContent:'center',gap:28,margin:'12px 0 18px'}}>
-              {[['أ',gd.scores.a],['ب',gd.scores.b]].map(([t,v])=>(
-                <div key={t} style={{display:'flex',flexDirection:'column',alignItems:'center',gap:2}}>
+              {[[tt('teamA'),gd.scores.a],[tt('teamB'),gd.scores.b]].map(([lbl,v])=>(
+                <div key={lbl} style={{display:'flex',flexDirection:'column',alignItems:'center',gap:2}}>
                   <span style={{fontSize:30,fontWeight:800,color:'#F0C040',lineHeight:1}}>{v}</span>
-                  <span style={{color:'rgba(240,237,229,.6)',fontSize:11}}>الفريق {t}</span>
+                  <span style={{color:'rgba(240,237,229,.6)',fontSize:11}}>{tt('mp_teamLabel')} {lbl}</span>
                 </div>
               ))}
             </div>
             {isHost?(
-              <button onClick={continueRound} style={{...S.btn,width:'100%',padding:13,fontSize:15,background:'linear-gradient(135deg,#8B6914,#F0C040)',color:'#07090A'}}>الجولة التالية ▶</button>
+              <button onClick={continueRound} style={{...S.btn,width:'100%',padding:13,fontSize:15,background:'linear-gradient(135deg,#8B6914,#F0C040)',color:'#07090A'}}>{tt('nextRound')} ▶</button>
             ):(
-              <div style={{fontSize:12,color:'rgba(240,237,229,.5)'}}>بانتظار المضيف…</div>
+              <div style={{fontSize:12,color:'rgba(240,237,229,.5)'}}>{tt('mp_waitingHost')}</div>
             )}
           </div>
         </div>
@@ -569,16 +573,16 @@ function MPGame({profile,code,onExit,onProfileUpdate}){
         <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,.88)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:500,padding:20}}>
           <div style={{background:'radial-gradient(ellipse at top,#1A3D20,#0C1410)',border:'1px solid #F0C040',borderRadius:22,padding:'34px 26px',textAlign:'center',boxShadow:'0 0 40px rgba(240,192,64,.25)',width:'100%',maxWidth:320,animation:'popIn .5s cubic-bezier(.34,1.56,.64,1)'}}>
             <div style={{fontSize:58}}>{winnerTeam===seatTeam(mySeat)?'🏆':'💔'}</div>
-            <div style={{fontFamily:"Changa,sans-serif",fontSize:28,color:'#F0C040',margin:'10px 0 5px'}}>{winnerTeam===seatTeam(mySeat)?'فريقك يفوز!':'فريقك خسر'}</div>
+            <div style={{fontFamily:"Changa,sans-serif",fontSize:28,color:'#F0C040',margin:'10px 0 5px'}}>{winnerTeam===seatTeam(mySeat)?tt('mp_yourTeamWins'):tt('mp_yourTeamLost')}</div>
             <div style={{display:'flex',justifyContent:'center',gap:28,margin:'18px 0'}}>
-              {[['أ',gd.scores.a,winnerTeam===0],['ب',gd.scores.b,winnerTeam===1]].map(([t,v,w])=>(
-                <div key={t} style={{display:'flex',flexDirection:'column',alignItems:'center',gap:2}}>
+              {[[tt('teamA'),gd.scores.a,winnerTeam===0],[tt('teamB'),gd.scores.b,winnerTeam===1]].map(([lbl,v,w])=>(
+                <div key={lbl} style={{display:'flex',flexDirection:'column',alignItems:'center',gap:2}}>
                   <span style={{fontSize:34,fontWeight:800,color:w?'#F0C040':'rgba(240,237,229,.4)',lineHeight:1}}>{v}</span>
-                  <span style={{color:'rgba(240,237,229,.6)',fontSize:11}}>الفريق {t}</span>
+                  <span style={{color:'rgba(240,237,229,.6)',fontSize:11}}>{tt('mp_teamLabel')} {lbl}</span>
                 </div>
               ))}
             </div>
-            <button onClick={onExit} style={{...S.btn,width:'100%',padding:13,fontSize:15,background:'linear-gradient(135deg,#8B6914,#F0C040)',color:'#07090A'}}>الرئيسية</button>
+            <button onClick={onExit} style={{...S.btn,width:'100%',padding:13,fontSize:15,background:'linear-gradient(135deg,#8B6914,#F0C040)',color:'#07090A'}}>{tt('nav_home')}</button>
           </div>
         </div>
       )}

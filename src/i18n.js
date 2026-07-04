@@ -66,6 +66,56 @@ const STRINGS = {
     online: 'متصل', vsComputer: 'ضد الكمبيوتر', dailyReward: 'مكافأة يومية',
     freeBonus: 'هدية مجانية', featured: 'المميّز', quickPlay: 'لعبة سريعة',
     locked: 'مقفل', unlockAt: 'يفتح عند المستوى',
+    player: 'لاعب', winsShort: 'انتصار',
+    // onboarding
+    ob_skip: 'تخطي', ob_next: 'التالي', ob_start: 'ابدأ اللعب!',
+    ob1_title: 'مرحباً في بلوت المملكة!', ob1_sub: 'اللعبة الأصيلة — العب مع أصدقائك',
+    ob1_a: '٣٢ ورقة — من ٧ حتى الإيس', ob1_b: '٤ لاعبين — فريقان (أ و ب)', ob1_c: 'أول فريق يصل ١٥٢ نقطة يفوز',
+    ob2_title: 'طريقة اللعب', ob2_sub: 'بسيطة — ممتعة — تنافسية',
+    ob2_a: 'المزايدة: اختر حكم أو صن أو باس', ob2_b: 'الأتو: اللون الذي تختاره يكسب دائماً', ob2_c: 'صن: بدون أتو — النقاط تتضاعف!',
+    ob3_title: 'القهوة والحكم', ob3_sub: 'الحالات الخاصة في البلوت',
+    ob3_a: 'قهوة: الخصم ٠ نقطة → نقاطك تتضاعف!', ob3_b: 'حكم نجح: الفريق المزايد يحصل على نقاطه', ob3_c: 'حكم فشل: الخصم يأخذ كل النقاط',
+    ob4_title: 'جاهز للعب؟', ob4_sub: 'أنشئ غرفة وادعُ أصدقاءك الآن',
+    ob4_a: 'أنشئ غرفة وشارك الكود', ob4_b: 'أرسل الدعوة عبر واتساب', ob4_c: 'اكسب رصيداً بكل انتصار',
+    shareWhatsapp: 'شارك واتساب', close: 'إغلاق', winnerLabel: 'الفائز', loserLabel: 'الخاسر', teamWon: 'فازت!', gahwa: 'قهوة!',
+    // friends
+    friends_sub: 'العب مع أصدقائك', fr_my: 'أصدقائي', fr_requests: 'الطلبات', fr_search: 'بحث',
+    fr_none: 'لا يوجد أصدقاء بعد', fr_findFriends: 'ابحث عن أصدقاء', fr_invite: 'دعوة',
+    fr_noRequests: 'لا توجد طلبات صداقة', fr_wantsAdd: 'يريد إضافتك صديقاً', fr_accept: 'قبول',
+    fr_searchPlaceholder: 'ابحث باسم اللاعب...', fr_isFriend: 'صديق', fr_add: 'إضافة', fr_noResults: 'لا توجد نتائج',
+    fr_reqSent: '✅ تم إرسال طلب الصداقة', fr_sendFail: '❌ فشل الإرسال', fr_added: '✅ تمت إضافة الصديق', fr_fail: '❌ فشل',
+    fr_createRoomFirst: 'أنشئ غرفة أولاً', fr_inviteSent: '✅ تم إرسال دعوة لـ {name}',
+    // notifications
+    notif_title: 'الإشعارات', notif_none: 'لا توجد إشعارات', notif_invited: 'دعاك للعب', notif_friendReq: 'أرسل طلب صداقة',
+    notif_new: 'إشعار جديد', notif_roomCode: 'كود الغرفة', notif_join: 'انضم',
+    // daily reward
+    daily_title: 'مكافأة يومية', daily_claimed: 'تم الاستلام!', daily_added: 'أضفنا {n} رصيد لحسابك',
+    daily_sub: 'سجّل دخولك يومياً للحصول على مكافآت أكبر', daily_todayReward: 'مكافأة اليوم — يوم {n}',
+    daily_claim: 'استلم المكافأة', daily_vipBonus: 'مكافأة VIP!',
+    // tournaments
+    tourn_title: 'البطولات', tourn_sub: 'تنافس واربح جوائز ضخمة', tourn_all: 'كل البطولات', tourn_mine: 'بطولاتي',
+    tourn_activeStat: 'بطولات نشطة', tourn_biggest: 'أكبر جائزة', tourn_playersToday: 'لاعبون اليوم',
+    tourn_prize: 'جائزة', coinsShort: 'رصيد', sar: 'ريال', sarFull: 'ريال سعودي',
+    tourn_registered: 'اللاعبون المسجلون', tourn_full: 'البطولة ممتلئة', tourn_spotsLeft: '{n} مقعد متبقي',
+    tourn_view: 'عرض', tourn_join: 'انضم للبطولة', tourn_joined: 'مسجل', tourn_fullShort: 'ممتلئة',
+    freq_weekly: 'أسبوعية', freq_monthly: 'شهرية', freq_daily: 'يومية',
+    tourn_weekly: 'بطولة الأسبوع', tourn_kingdom: 'كأس المملكة', tourn_quick: 'بطولة سريعة', tourn_mega: 'البطولة الكبرى',
+    status_open: 'مفتوح', status_active: 'جارية', status_completed: 'منتهية',
+    tourn_first: 'المركز الأول', tourn_second: 'المركز الثاني', tourn_third: 'المركز الثالث',
+    tourn_emptySeat: 'مقعد فارغ', tourn_matches: 'جدول المباريات', tourn_final: 'النهائي', tourn_semi: 'نصف النهائي', tourn_round: 'الدور {n}',
+    tourn_winnerShort: 'فائز', tourn_room: 'غرفة', tourn_liveShort: 'جارية',
+    tourn_champ: 'بطل البطولة', tourn_grandPrize: 'الجائزة الكبرى', tourn_rounds: 'جولات',
+    tourn_payMethod: 'طريقة الدفع', tourn_pay: 'ادفع', tourn_joinPay: 'انضم',
+    tourn_loginFirst: 'سجّل دخولك أولاً', tourn_registeredToast: '🎉 تم التسجيل في البطولة!', tourn_failed: '❌ فشل',
+    tourn_loginView: 'سجّل دخولك لعرض بطولاتك', tourn_noneMine: 'لم تنضم لأي بطولة بعد', tourn_joinNow: 'انضم الآن', tourn_winnerBadge: 'فائز!',
+    // multiplayer lobby
+    mp_room: 'غرفة الأصدقاء', mp_shareCode: 'شارك الكود مع أصدقائك', mp_publicRoom: 'غرفة عامة', mp_privateRoom: 'غرفة خاصة',
+    mp_emptySeat: 'مقعد فارغ', mp_host: 'مضيف', mp_teamLabel: 'فريق',
+    mp_startBots: 'ابدأ مع روبوتات 🤖', mp_start: 'ابدأ اللعب 🃏', mp_waitingHost: 'بانتظار المضيف…',
+    mp_joinRoom: 'انضم لغرفة', mp_joinBtn: 'انضم', mp_searching: 'نبحث عن لاعبين…', mp_creating: 'ننشئ الغرفة…', mp_error: 'حدث خطأ',
+    mp_roomNotFound: 'الغرفة غير موجودة', mp_gameStarted: 'اللعبة بدأت بالفعل', mp_roomFull: 'الغرفة ممتلئة',
+    mp_createFail: 'تعذر إنشاء الغرفة', mp_joinFail: 'تعذر الانضمام', mp_searchFail: 'تعذر البحث',
+    mp_yourTeamWins: 'فريقك يفوز!', mp_yourTeamLost: 'فريقك خسر',
   },
   en: {
     dir: 'ltr',
@@ -120,6 +170,56 @@ const STRINGS = {
     online: 'online', vsComputer: 'Vs. Computer', dailyReward: 'Daily reward',
     freeBonus: 'Free bonus', featured: 'Featured', quickPlay: 'Quick Match',
     locked: 'Locked', unlockAt: 'Unlocks at level',
+    player: 'Player', winsShort: 'wins',
+    // onboarding
+    ob_skip: 'Skip', ob_next: 'Next', ob_start: 'Start playing!',
+    ob1_title: 'Welcome to Baloot Kingdom!', ob1_sub: 'The authentic game — play with friends',
+    ob1_a: '32 cards — from 7 up to Ace', ob1_b: '4 players — two teams (A & B)', ob1_c: 'First team to reach 152 points wins',
+    ob2_title: 'How to play', ob2_sub: 'Simple — fun — competitive',
+    ob2_a: 'Bidding: choose Hokum, Sun, or Pass', ob2_b: 'Trump: your chosen suit always wins', ob2_c: 'Sun: no trump — points double!',
+    ob3_title: 'Gahwa & Hokum', ob3_sub: 'Special cases in Baloot',
+    ob3_a: 'Gahwa: opponent scores 0 → your points double!', ob3_b: 'Hokum made: the bidding team keeps its points', ob3_c: 'Hokum failed: the opponent takes all points',
+    ob4_title: 'Ready to play?', ob4_sub: 'Create a room and invite your friends now',
+    ob4_a: 'Create a room and share the code', ob4_b: 'Send the invite over WhatsApp', ob4_c: 'Earn coins with every win',
+    shareWhatsapp: 'Share on WhatsApp', close: 'Close', winnerLabel: 'Winner', loserLabel: 'Loser', teamWon: 'won!', gahwa: 'Gahwa!',
+    // friends
+    friends_sub: 'Play with your friends', fr_my: 'My friends', fr_requests: 'Requests', fr_search: 'Search',
+    fr_none: 'No friends yet', fr_findFriends: 'Find friends', fr_invite: 'Invite',
+    fr_noRequests: 'No friend requests', fr_wantsAdd: 'wants to add you', fr_accept: 'Accept',
+    fr_searchPlaceholder: 'Search by player name...', fr_isFriend: 'Friend', fr_add: 'Add', fr_noResults: 'No results',
+    fr_reqSent: '✅ Friend request sent', fr_sendFail: '❌ Failed to send', fr_added: '✅ Friend added', fr_fail: '❌ Failed',
+    fr_createRoomFirst: 'Create a room first', fr_inviteSent: '✅ Invite sent to {name}',
+    // notifications
+    notif_title: 'Notifications', notif_none: 'No notifications', notif_invited: 'invited you to play', notif_friendReq: 'sent a friend request',
+    notif_new: 'New notification', notif_roomCode: 'Room code', notif_join: 'Join',
+    // daily reward
+    daily_title: 'Daily reward', daily_claimed: 'Claimed!', daily_added: 'Added {n} coins to your account',
+    daily_sub: 'Sign in daily for bigger rewards', daily_todayReward: 'Today’s reward — day {n}',
+    daily_claim: 'Claim reward', daily_vipBonus: 'VIP bonus!',
+    // tournaments
+    tourn_title: 'Tournaments', tourn_sub: 'Compete and win huge prizes', tourn_all: 'All tournaments', tourn_mine: 'My tournaments',
+    tourn_activeStat: 'Active', tourn_biggest: 'Biggest prize', tourn_playersToday: 'Players today',
+    tourn_prize: 'prize', coinsShort: 'coins', sar: 'SAR', sarFull: 'Saudi Riyal',
+    tourn_registered: 'Registered players', tourn_full: 'Tournament full', tourn_spotsLeft: '{n} spots left',
+    tourn_view: 'View', tourn_join: 'Join tournament', tourn_joined: 'Registered', tourn_fullShort: 'Full',
+    freq_weekly: 'Weekly', freq_monthly: 'Monthly', freq_daily: 'Daily',
+    tourn_weekly: 'Weekly Cup', tourn_kingdom: 'Kingdom Cup', tourn_quick: 'Quick Cup', tourn_mega: 'Mega Tournament',
+    status_open: 'Open', status_active: 'Live', status_completed: 'Ended',
+    tourn_first: '1st place', tourn_second: '2nd place', tourn_third: '3rd place',
+    tourn_emptySeat: 'Empty seat', tourn_matches: 'Bracket', tourn_final: 'Final', tourn_semi: 'Semifinal', tourn_round: 'Round {n}',
+    tourn_winnerShort: 'Winner', tourn_room: 'Room', tourn_liveShort: 'Live',
+    tourn_champ: 'Champion', tourn_grandPrize: 'Grand prize', tourn_rounds: 'rounds',
+    tourn_payMethod: 'Payment method', tourn_pay: 'Pay', tourn_joinPay: 'Join',
+    tourn_loginFirst: 'Sign in first', tourn_registeredToast: '🎉 Registered for the tournament!', tourn_failed: '❌ Failed',
+    tourn_loginView: 'Sign in to view your tournaments', tourn_noneMine: 'You haven’t joined any tournament yet', tourn_joinNow: 'Join now', tourn_winnerBadge: 'Winner!',
+    // multiplayer lobby
+    mp_room: 'Friends Room', mp_shareCode: 'Share the code with your friends', mp_publicRoom: 'Public room', mp_privateRoom: 'Private room',
+    mp_emptySeat: 'Empty seat', mp_host: 'Host', mp_teamLabel: 'Team',
+    mp_startBots: 'Start with bots 🤖', mp_start: 'Start game 🃏', mp_waitingHost: 'Waiting for host…',
+    mp_joinRoom: 'Join a room', mp_joinBtn: 'Join', mp_searching: 'Finding players…', mp_creating: 'Creating room…', mp_error: 'An error occurred',
+    mp_roomNotFound: 'Room not found', mp_gameStarted: 'The game already started', mp_roomFull: 'Room is full',
+    mp_createFail: 'Could not create the room', mp_joinFail: 'Could not join', mp_searchFail: 'Search failed',
+    mp_yourTeamWins: 'Your team wins!', mp_yourTeamLost: 'Your team lost',
   },
 };
 
@@ -155,8 +255,13 @@ export function applyDir() {
 }
 
 // Translate. Falls back to Arabic, then to the key itself.
-export function t(key) {
-  return (STRINGS[current] && STRINGS[current][key]) ?? STRINGS.ar[key] ?? key;
+// Optional vars object interpolates {placeholders}: t('x',{name:'Ali'}).
+export function t(key, vars) {
+  let s = (STRINGS[current] && STRINGS[current][key]) ?? STRINGS.ar[key] ?? key;
+  if (vars && typeof s === 'string') {
+    for (const k in vars) s = s.replace(new RegExp('\\{' + k + '\\}', 'g'), vars[k]);
+  }
+  return s;
 }
 
 function subscribe(cb) { listeners.add(cb); return () => listeners.delete(cb); }
