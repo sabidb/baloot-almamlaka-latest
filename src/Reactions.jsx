@@ -16,6 +16,24 @@ export function spawnReaction(emoji, x, y) {
   setTimeout(() => el.remove(), 1700);
 }
 
+// Celebratory coin burst — coins fly out and up from (x,y). Used on wins.
+// Relies on the global `pfly` keyframe injected by App.
+export function spawnCoins(x, y, n = 16) {
+  for (let i = 0; i < n; i++) {
+    const el = document.createElement('div');
+    el.textContent = Math.random() < 0.75 ? '🪙' : '✨';
+    const a = (Math.PI * 2 / n) * i + Math.random() * 0.5, d = 90 + Math.random() * 140;
+    Object.assign(el.style, {
+      position: 'fixed', left: x + 'px', top: y + 'px', fontSize: (16 + Math.random() * 14) + 'px',
+      pointerEvents: 'none', zIndex: '9999',
+      animation: `pfly ${0.8 + Math.random() * 0.9}s cubic-bezier(.2,.7,.4,1) forwards`,
+      '--tx': Math.cos(a) * d + 'px', '--ty': (Math.sin(a) * d - 80) + 'px',
+    });
+    document.body.appendChild(el);
+    setTimeout(() => el.remove(), 1800);
+  }
+}
+
 // Quick-chat (تقطيق) bar: collapsed round button that expands into the
 // reaction row. onSend lets multiplayer broadcast to the room.
 export function ReactionBar({ onSend }) {

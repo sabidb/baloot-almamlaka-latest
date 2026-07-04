@@ -63,6 +63,36 @@ export const FRAMES = {
   rainbow:  { ring:'conic',               glow:'#F0C040',            anim:true  },
 };
 export function getFrame(profile){ return FRAMES[profile?.activeFrame||'none']||FRAMES.none; }
+
+// Card backs: CSS pattern for face-down cards / the deck.
+export const CARD_BACKS = {
+  classic:  { bg:'repeating-linear-gradient(45deg,#0d5c2a,#0d5c2a 5px,#0a4a22 5px,#0a4a22 10px)', border:'#F0C040' },
+  royal:    { bg:'repeating-linear-gradient(45deg,#3b1a6b,#3b1a6b 5px,#2a1050 5px,#2a1050 10px)', border:'#a855f7' },
+  gold:     { bg:'radial-gradient(circle at 3px 3px,#F0C040 1.4px,transparent 0) 0 0/9px 9px,#3a2a08', border:'#F0C040' },
+  ruby:     { bg:'repeating-linear-gradient(-45deg,#7a0b32,#7a0b32 5px,#5a0824 5px,#5a0824 10px)', border:'#e11d5c' },
+  sapphire: { bg:'repeating-linear-gradient(45deg,#16296b,#16296b 5px,#0f1f52 5px,#0f1f52 10px)', border:'#3b82f6' },
+  ocean:    { bg:'repeating-radial-gradient(circle at 50% 50%,#0b5a6b,#0b5a6b 4px,#083f4a 4px,#083f4a 8px)', border:'#22b8cf' },
+  ornate:   { bg:'radial-gradient(circle at 3px 3px,#F0C040 1px,transparent 0) 0 0/8px 8px,radial-gradient(circle at 7px 7px,#e11d5c 1px,transparent 0) 0 0/8px 8px,#1a1030', border:'#F0C040' },
+  carbon:   { bg:'repeating-linear-gradient(90deg,#1a1a22,#1a1a22 3px,#2a2a35 3px,#2a2a35 6px)', border:'#5DE0E6' },
+};
+export function getCardBack(profile){ return CARD_BACKS[profile?.activeBack||'classic']||CARD_BACKS.classic; }
+
+// Name colors (solid or gradient) for the player's name.
+export const NAME_COLORS = {
+  default: { css:'#F0EDE5', grad:false },
+  gold:    { css:'linear-gradient(90deg,#F0C040,#FFF3C4)', grad:true },
+  emerald: { css:'linear-gradient(90deg,#22c55e,#a7f3d0)', grad:true },
+  ruby:    { css:'linear-gradient(90deg,#e11d5c,#fb7185)', grad:true },
+  sapphire:{ css:'linear-gradient(90deg,#3b82f6,#93c5fd)', grad:true },
+  royal:   { css:'linear-gradient(90deg,#a855f7,#e9d5ff)', grad:true },
+  fire:    { css:'linear-gradient(90deg,#ff5a2a,#ffd166)', grad:true },
+  rainbow: { css:'linear-gradient(90deg,#F0C040,#e11d5c,#3b82f6,#22c55e)', grad:true },
+};
+export function getNameColor(profile){ return NAME_COLORS[profile?.activeNameColor||'default']||NAME_COLORS.default; }
+
+// Profile badges (single active badge shown by the name).
+export const BADGES_MAP = { none:'', star:'⭐', crown:'👑', fire:'🔥', diamond:'💎', shield:'🛡️', trophy:'🏆', rocket:'🚀', lion:'🦁' };
+export function getBadge(profile){ return BADGES_MAP[profile?.activeBadge||'none']||''; }
 export const STORE_ITEMS = {
   decks: [
     { id:'heritage', name:'التراث السعودي', desc:'نقوش هندسية مستوحاة من التراث السعودي', cost:500, badge:'hot',      emoji:'🕌' },
@@ -88,6 +118,34 @@ export const STORE_ITEMS = {
     { id:'diamond',  name:'إطار ماسي',       name_en:'Diamond frame',   desc:'حلقة ماسية متلألئة',       desc_en:'Shimmering diamond ring',  cost:600, badge:'vip', emoji:'💎' },
     { id:'fire',     name:'إطار ناري',       name_en:'Fire frame',      desc:'حلقة نارية متحركة',        desc_en:'Animated fire ring',       cost:700, badge:'hot', emoji:'🔥' },
     { id:'rainbow',  name:'إطار قوس قزح',    name_en:'Rainbow frame',   desc:'حلقة ملوّنة دوّارة',        desc_en:'Rotating rainbow ring',    cost:1000,badge:'vip', emoji:'🌈' },
+  ],
+  backs: [
+    { id:'royal',    name:'ظهر ملكي',     name_en:'Royal back',    desc:'نقش بنفسجي فاخر',   desc_en:'Regal purple weave',   cost:300, badge:'hot',  emoji:'🟣' },
+    { id:'gold',     name:'ظهر ذهبي',     name_en:'Gold back',     desc:'نقاط ذهبية لامعة',  desc_en:'Glowing gold dots',    cost:350, badge:null,  emoji:'🟡' },
+    { id:'ruby',     name:'ظهر ياقوتي',   name_en:'Ruby back',     desc:'نقش أحمر جريء',     desc_en:'Bold red weave',       cost:350, badge:null,  emoji:'🔴' },
+    { id:'sapphire', name:'ظهر أزرق',     name_en:'Sapphire back', desc:'نقش أزرق أنيق',     desc_en:'Sleek blue weave',     cost:350, badge:null,  emoji:'🔵' },
+    { id:'ocean',    name:'ظهر محيطي',    name_en:'Ocean back',    desc:'دوائر مائية',        desc_en:'Aqua ripples',         cost:400, badge:'new', emoji:'🌊' },
+    { id:'ornate',   name:'ظهر مزخرف',    name_en:'Ornate back',   desc:'زخرفة ذهبية وحمراء', desc_en:'Gold & red ornament',  cost:600, badge:'vip', emoji:'✨' },
+    { id:'carbon',   name:'ظهر كربوني',   name_en:'Carbon back',   desc:'خطوط كربونية',       desc_en:'Carbon stripes',       cost:500, badge:'new', emoji:'⬛' },
+  ],
+  nameColors: [
+    { id:'gold',     name:'اسم ذهبي',     name_en:'Gold name',     desc:'تدرّج ذهبي',        desc_en:'Gold gradient',        cost:200, badge:'hot',  emoji:'🟡' },
+    { id:'emerald',  name:'اسم زمردي',    name_en:'Emerald name',  desc:'تدرّج أخضر',        desc_en:'Emerald gradient',     cost:200, badge:null,  emoji:'🟢' },
+    { id:'ruby',     name:'اسم ياقوتي',   name_en:'Ruby name',     desc:'تدرّج أحمر',        desc_en:'Ruby gradient',        cost:200, badge:null,  emoji:'🔴' },
+    { id:'sapphire', name:'اسم أزرق',     name_en:'Sapphire name', desc:'تدرّج أزرق',        desc_en:'Sapphire gradient',    cost:200, badge:null,  emoji:'🔵' },
+    { id:'royal',    name:'اسم ملكي',     name_en:'Royal name',    desc:'تدرّج بنفسجي',      desc_en:'Royal gradient',       cost:300, badge:'vip', emoji:'🟣' },
+    { id:'fire',     name:'اسم ناري',     name_en:'Fire name',     desc:'تدرّج ناري',        desc_en:'Fiery gradient',       cost:300, badge:'hot', emoji:'🔥' },
+    { id:'rainbow',  name:'اسم قوس قزح',  name_en:'Rainbow name',  desc:'تدرّج ملوّن',        desc_en:'Rainbow gradient',     cost:500, badge:'vip', emoji:'🌈' },
+  ],
+  badges: [
+    { id:'star',    name:'نجمة',    name_en:'Star',    desc:'شارة النجمة',   desc_en:'Star badge',    cost:150, badge:null,  emoji:'⭐' },
+    { id:'crown',   name:'تاج',     name_en:'Crown',   desc:'شارة التاج',    desc_en:'Crown badge',   cost:300, badge:'vip', emoji:'👑' },
+    { id:'fire',    name:'نار',     name_en:'Fire',    desc:'شارة النار',    desc_en:'Fire badge',    cost:200, badge:'hot', emoji:'🔥' },
+    { id:'diamond', name:'ماسة',    name_en:'Diamond', desc:'شارة الماس',    desc_en:'Diamond badge', cost:400, badge:'vip', emoji:'💎' },
+    { id:'shield',  name:'درع',     name_en:'Shield',  desc:'شارة الدرع',    desc_en:'Shield badge',  cost:200, badge:null,  emoji:'🛡️' },
+    { id:'trophy',  name:'كأس',     name_en:'Trophy',  desc:'شارة الكأس',    desc_en:'Trophy badge',  cost:250, badge:null,  emoji:'🏆' },
+    { id:'rocket',  name:'صاروخ',   name_en:'Rocket',  desc:'شارة الصاروخ',  desc_en:'Rocket badge',  cost:250, badge:'new', emoji:'🚀' },
+    { id:'lion',    name:'أسد',     name_en:'Lion',    desc:'شارة الأسد',    desc_en:'Lion badge',    cost:350, badge:null,  emoji:'🦁' },
   ],
   reactions: [
     { id:'fire_pack',   name:'حزمة النار 🔥',  desc:'٥ ردود فعل نارية متحركة', cost:200, badge:'hot',      emoji:'🔥' },

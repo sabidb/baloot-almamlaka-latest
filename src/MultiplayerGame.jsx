@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { doc, setDoc, getDocs, updateDoc, deleteDoc, onSnapshot, runTransaction, collection, query, where, limit, serverTimestamp, addDoc } from 'firebase/firestore';
 import { db } from './firebase';
 import { SUITS as CARD_SUITS, buildDeck, shuffle, dealHands, getHands, cardValue, trickWinner, calcResult, botPickCard, botBid, genCode, sounds, haptics, getThemeStyles } from './GameLogic';
-import { ReactionBar, spawnReaction } from './Reactions';
+import { ReactionBar, spawnReaction, spawnCoins } from './Reactions';
 import { settleMultiplayerGame } from './functions';
 
 const RANKAR = {A:'أ',K:'ك',Q:'ق',J:'ج','10':'١٠','9':'٩','8':'٨','7':'٧'};
@@ -388,6 +388,7 @@ function MPGame({profile,code,onExit,onProfileUpdate}){
     settledRef.current=true;
     const myTeamWon=(gd.scores.a>=gd.scores.b?0:1)===seatTeam(mySeat);
     const coinDelta=myTeamWon?50:10;
+    if(myTeamWon){haptics.win();setTimeout(()=>spawnCoins(window.innerWidth/2,window.innerHeight*0.4),300);setTimeout(()=>spawnCoins(window.innerWidth/2,window.innerHeight*0.4,12),700);}
     (async()=>{
       try{await settleMultiplayerGame(code);}catch{/* referee unreachable — server reconciles later */}
     })();

@@ -1,9 +1,9 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { doc, getDoc, setDoc, updateDoc, increment, collection, addDoc, orderBy, where, limit, getDocs, query, serverTimestamp } from 'firebase/firestore';
 import { db } from './firebase';
 import { listenAuth, signInGoogle, signOutUser, getRedirect } from './auth';
-import { SUITS as CARD_SUITS, STORE_ITEMS, BOARDS, FRAMES, buildDeck, shuffle, dealHands, cardValue, trickWinner, calcResult, botPickCard, botBid, sounds, haptics, getThemeStyles, getFrame } from './GameLogic';
-import { ReactionBar } from './Reactions';
+import { SUITS as CARD_SUITS, STORE_ITEMS, BOARDS, FRAMES, CARD_BACKS, NAME_COLORS, BADGES_MAP, buildDeck, shuffle, dealHands, cardValue, trickWinner, calcResult, botPickCard, botBid, sounds, haptics, getThemeStyles, getFrame, getCardBack, getNameColor, getBadge } from './GameLogic';
+import { ReactionBar, spawnCoins } from './Reactions';
 import { settleBotGame } from './functions';
 import OnboardingTutorial, { ShareScoreCard } from './Onboarding';
 import { FriendSystem, NotificationCenter, DailyRewardPopup } from './Social';
@@ -69,9 +69,9 @@ function Spin(){return <div style={{width:30,height:30,border:'3px solid rgba(24
 const SUIT_GLYPHS=['♠','♥','♦','♣'];
 const SUIT_COL={'♠':'#F0C040','♥':'#E0506A','♦':'#E0A060','♣':'#5FBF7A'};
 function CinematicBG(){
-  const suits=useRef(Array.from({length:10},(_,i)=>({g:SUIT_GLYPHS[i%4],left:(i*11+7)%96,size:22+((i*13)%26),dur:9+((i*7)%10),delay:-(i*2.1),rot:((i*37)%40)-20})));
-  const stars=useRef(Array.from({length:26},(_,i)=>({top:(i*53+11)%100,left:(i*37+5)%100,size:1.5+((i*7)%3),dur:2+((i*5)%4),delay:-(i*0.7)})));
-  const sparks=useRef(Array.from({length:12},(_,i)=>({left:(i*29+9)%96,size:4+((i*5)%6),dur:7+((i*6)%8),delay:-(i*1.6)})));
+  const suits=useMemo(()=>Array.from({length:10},(_,i)=>({g:SUIT_GLYPHS[i%4],left:(i*11+7)%96,size:22+((i*13)%26),dur:9+((i*7)%10),delay:-(i*2.1),rot:((i*37)%40)-20})),[]);
+  const stars=useMemo(()=>Array.from({length:26},(_,i)=>({top:(i*53+11)%100,left:(i*37+5)%100,size:1.5+((i*7)%3),dur:2+((i*5)%4),delay:-(i*0.7)})),[]);
+  const sparks=useMemo(()=>Array.from({length:12},(_,i)=>({left:(i*29+9)%96,size:4+((i*5)%6),dur:7+((i*6)%8),delay:-(i*1.6)})),[]);
   return(
     <div style={{position:'absolute',inset:0,overflow:'hidden',pointerEvents:'none',zIndex:0}}>
       {/* rotating god-rays behind the title */}
@@ -80,15 +80,15 @@ function CinematicBG(){
       <div style={{position:'absolute',top:'-14%',insetInlineStart:'-12%',width:'70%',height:'50%',borderRadius:'50%',background:'radial-gradient(circle,rgba(30,120,66,.5),transparent 65%)',filter:'blur(30px)',animation:'aurora 16s ease-in-out infinite'}}/>
       <div style={{position:'absolute',bottom:'-16%',insetInlineEnd:'-14%',width:'75%',height:'55%',borderRadius:'50%',background:'radial-gradient(circle,rgba(240,192,64,.2),transparent 65%)',filter:'blur(34px)',animation:'aurora 22s ease-in-out infinite reverse'}}/>
       {/* twinkling stars */}
-      {stars.current.map((s,i)=>(
+      {stars.map((s,i)=>(
         <span key={'st'+i} style={{position:'absolute',top:s.top+'%',left:s.left+'%',width:s.size,height:s.size,borderRadius:'50%',background:'#FFF3C4',boxShadow:'0 0 6px #FFE08A',animation:`twinkle ${s.dur}s ease-in-out ${s.delay}s infinite`}}/>
       ))}
       {/* rising gold sparks */}
-      {sparks.current.map((s,i)=>(
+      {sparks.map((s,i)=>(
         <span key={'sp'+i} style={{position:'absolute',bottom:'-20px',left:s.left+'%',width:s.size,height:s.size,borderRadius:'50%',background:'radial-gradient(circle,#FFF3C4,#F0C040)',boxShadow:'0 0 10px #F0C040',animation:`rise ${s.dur}s linear ${s.delay}s infinite`}}/>
       ))}
       {/* drifting suit glyphs */}
-      {suits.current.map((s,i)=>(
+      {suits.map((s,i)=>(
         <span key={'su'+i} style={{position:'absolute',bottom:'-40px',left:s.left+'%',fontSize:s.size,color:SUIT_COL[s.g],opacity:0,'--r':s.rot+'deg',animation:`drift ${s.dur}s linear ${s.delay}s infinite`,textShadow:`0 0 12px ${SUIT_COL[s.g]}66`}}>{s.g}</span>
       ))}
     </div>
@@ -129,6 +129,19 @@ function AvatarFrame({avatar,size=56,frame,fontSize}){
       <div style={{position:'relative',width:size,height:size,borderRadius:'50%',background:'rgba(16,26,18,.92)',border:`3px solid ${ringColor}`,boxShadow:f.glow!=='transparent'?`0 0 16px ${f.glow}77`:'none',display:'flex',alignItems:'center',justifyContent:'center',fontSize:fontSize||size*0.5}}>{avatar}</div>
     </div>
   );
+}
+
+// Player name rendered with the purchased name-color (solid or gradient).
+function NameText({name,color,style}){
+  const c=color||{css:'#F0EDE5',grad:false};
+  if(c.grad)return <span style={{background:c.css,WebkitBackgroundClip:'text',backgroundClip:'text',WebkitTextFillColor:'transparent',...style}}>{name}</span>;
+  return <span style={{color:c.css,...style}}>{name}</span>;
+}
+
+// Face-down card using the player's purchased card back.
+function CardBack({back,w=22,h=32,style}){
+  const b=back||{bg:'#0d5c2a',border:'#F0C040'};
+  return <div style={{width:w,height:h,borderRadius:4,background:b.bg,border:`1px solid ${b.border}`,boxShadow:'0 2px 5px rgba(0,0,0,.5)',...style}}/>;
 }
 
 // Ripple-on-press wrapper for tappable cards.
@@ -602,6 +615,8 @@ function GameScreen({profile,onExit,onProfileUpdate}){
     gameOverAppliedRef.current=true;
     const humanWon=scores.a>=scores.b;
     const coinDelta=humanWon?50:10;
+    // Celebration: coin burst from screen centre on a win.
+    if(humanWon){haptics.win();setTimeout(()=>spawnCoins(window.innerWidth/2,window.innerHeight*0.4),300);setTimeout(()=>spawnCoins(window.innerWidth/2,window.innerHeight*0.4,12),700);}
     // Route through the server referee (rate-limited) — clients can't mint.
     (async()=>{try{await settleBotGame(humanWon);}catch{/* rate-limited or offline */}})();
     onProfileUpdate&&onProfileUpdate({wins:(profile.wins||0)+(humanWon?1:0),losses:(profile.losses||0)+(humanWon?0:1),coins:(profile.coins||0)+coinDelta});
@@ -646,6 +661,7 @@ function GameScreen({profile,onExit,onProfileUpdate}){
   const trumpInfo=contract?.trump?CARD_SUITS.find(s=>s.symbol===contract.trump):null;
   const winnerLabel=scores.a>=scores.b?'أ':'ب';
   const theme=getThemeStyles(profile);
+  const back=getCardBack(profile);
 
   return(
     <div style={{width:'100%',height:'100%',background:theme.feltGrad,position:'relative',overflow:'hidden',display:'flex',alignItems:'center',justifyContent:'center',fontFamily:'Tajawal,sans-serif',direction:dir}}>
@@ -677,7 +693,7 @@ function GameScreen({profile,onExit,onProfileUpdate}){
             <div style={{width:38,height:38,borderRadius:'50%',border:`2px solid ${active?'#F0C040':'#7A5B1A'}`,background:'rgba(16,26,18,.9)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:18,animation:active?'turnGlow 1.1s ease-in-out infinite':'none'}}>{players[seat].avatar}</div>
             <span style={{color:active?'#F0C040':'rgba(240,237,229,.6)',fontSize:10,fontWeight:700}}>{players[seat].name}</span>
             {active&&<span style={{color:'rgba(240,192,64,.7)',fontSize:9}}>{phase==='bidding'?t('bidding_ing'):t('thinking')}</span>}
-            {phase==='playing'&&!active&&<div style={{fontSize:9,color:'rgba(240,237,229,.35)'}}>🂠×{hands[seat]?.length||0}</div>}
+            {phase==='playing'&&!active&&<div style={{display:'flex',alignItems:'center'}}>{[0,1,2].map(k=><CardBack key={k} back={back} w={13} h={19} style={{marginInlineStart:k?-8:0,transform:`rotate(${(k-1)*7}deg)`}}/>)}<span style={{fontSize:9,color:'rgba(240,237,229,.4)',marginInlineStart:4}}>{hands[seat]?.length||0}</span></div>}
           </div>
         );
       })}
@@ -843,13 +859,16 @@ function StoreScreen({profile,onUpdate}){
   const owned=profile.owned||{decks:['classic'],tables:['classic'],frames:[],reactions:[]};
   const coins=profile.coins||0;
   const BADGE={hot:{l:lang==='ar'?'الأكثر طلباً':'Hot',c:'#E74C3C'},new:{l:lang==='ar'?'جديد':'New',c:'#2ECC71'},seasonal:{l:lang==='ar'?'موسمي':'Seasonal',c:'#9B59B6'},vip:{l:'VIP',c:'#F0C040'}};
-  const ACTIVE_FIELD={decks:'activeDeck',tables:'activeTable',frames:'activeFrame'};
+  const ACTIVE_FIELD={decks:'activeDeck',tables:'activeTable',frames:'activeFrame',backs:'activeBack',nameColors:'activeNameColor',badges:'activeBadge'};
   const nm=(item)=>lang==='en'?(item.name_en||item.name):item.name;
   const ds=(item)=>lang==='en'?(item.desc_en||item.desc):item.desc;
   // small live preview for a store item
   const preview=(kind,id)=>{
     if(kind==='tables'){const b=BOARDS[id]||BOARDS.classic;return <div style={{width:46,height:46,borderRadius:10,background:`radial-gradient(ellipse at 50% 40%,${b.a},${b.b})`,border:`2px solid ${b.rail}`,boxShadow:`0 0 10px ${b.rail}66`}}/>;}
     if(kind==='frames'){const f=FRAMES[id]||FRAMES.none;const conic=f.ring==='conic';return <div style={{width:46,height:46,borderRadius:'50%',background:'rgba(16,26,18,.9)',border:conic?'3px solid transparent':`3px solid ${f.ring}`,backgroundImage:conic?'conic-gradient(#F0C040,#e11d5c,#3b82f6,#22c55e,#a855f7,#F0C040)':'none',backgroundOrigin:'border-box',boxShadow:f.glow!=='transparent'?`0 0 12px ${f.glow}`:'none',display:'flex',alignItems:'center',justifyContent:'center',fontSize:20}}>{profile.avatar}</div>;}
+    if(kind==='backs'){const bk=CARD_BACKS[id]||CARD_BACKS.classic;return <div style={{width:34,height:46,borderRadius:6,background:bk.bg,border:`1.5px solid ${bk.border}`,boxShadow:'0 3px 8px rgba(0,0,0,.5)'}}/>;}
+    if(kind==='nameColors'){const nc=NAME_COLORS[id]||NAME_COLORS.default;return <NameText name={profile.name?.slice(0,8)||'Baloot'} color={nc} style={{fontSize:17,fontWeight:900}}/>;}
+    if(kind==='badges'){return <span style={{fontSize:34}}>{BADGES_MAP[id]||'◻'}</span>;}
     return null;
   };
 
@@ -884,6 +903,9 @@ function StoreScreen({profile,onUpdate}){
     const base=kind==='decks'?{id:'classic',emoji:'🃏',name:'كلاسيك',name_en:'Classic',desc:'التصميم الأساسي',desc_en:'The default design',cost:0}
       :kind==='tables'?{id:'classic',emoji:'🟩',name:'الكلاسيك',name_en:'Classic',desc:'الطاولة الأساسية',desc_en:'The default felt',cost:0}
       :kind==='frames'?{id:'none',emoji:'⭕',name:'بدون إطار',name_en:'No frame',desc:'الحلقة الافتراضية',desc_en:'Default ring',cost:0}
+      :kind==='backs'?{id:'classic',emoji:'🂠',name:'ظهر كلاسيكي',name_en:'Classic back',desc:'الظهر الأساسي',desc_en:'The default back',cost:0}
+      :kind==='nameColors'?{id:'default',emoji:'⚪',name:'أبيض',name_en:'White',desc:'اللون الأساسي',desc_en:'Default color',cost:0}
+      :kind==='badges'?{id:'none',emoji:'🚫',name:'بدون شارة',name_en:'No badge',desc:'بدون شارة',desc_en:'No badge',cost:0}
       :null;
     const all=kind==='reactions'?items:[base,...items];
     return(
@@ -918,13 +940,16 @@ function StoreScreen({profile,onUpdate}){
         <span style={{fontSize:17,fontWeight:900,color:'#F0C040'}}>🪙 {coins}</span>
       </div>
       <div style={{display:'flex',gap:6,padding:'0 12px 12px',overflowX:'auto'}}>
-        {[{id:'tables',l:'🟩 '+t('tab_tables')},{id:'frames',l:'🖼️ '+(lang==='ar'?'إطارات':'Frames')},{id:'decks',l:'🎴 '+t('tab_decks')},{id:'coins',l:'🪙 '+t('tab_coins')}].map(tb=>(
-          <div key={tb.id} onClick={()=>setTab(tb.id)} style={{flex:'1 0 auto',textAlign:'center',padding:'9px 12px',borderRadius:12,fontSize:12,fontWeight:800,cursor:'pointer',border:`1px solid ${tab===tb.id?'#F0C040':'rgba(255,255,255,.1)'}`,background:tab===tb.id?'rgba(240,192,64,.12)':'transparent',color:tab===tb.id?'#F0C040':'rgba(240,237,229,.55)',touchAction:'manipulation',whiteSpace:'nowrap'}}>{tb.l}</div>
+        {[{id:'tables',l:'🟩 '+t('tab_tables')},{id:'frames',l:'🖼️ '+(lang==='ar'?'إطارات':'Frames')},{id:'backs',l:'🂠 '+(lang==='ar'?'ظهر الورق':'Backs')},{id:'nameColors',l:'🎨 '+(lang==='ar'?'ألوان الاسم':'Name')},{id:'badges',l:'🏅 '+(lang==='ar'?'شارات':'Badges')},{id:'decks',l:'🎴 '+t('tab_decks')},{id:'coins',l:'🪙 '+t('tab_coins')}].map(tb=>(
+          <div key={tb.id} onClick={()=>setTab(tb.id)} style={{flex:'0 0 auto',textAlign:'center',padding:'9px 13px',borderRadius:12,fontSize:12,fontWeight:800,cursor:'pointer',border:`1px solid ${tab===tb.id?'#F0C040':'rgba(255,255,255,.1)'}`,background:tab===tb.id?'rgba(240,192,64,.12)':'transparent',color:tab===tb.id?'#F0C040':'rgba(240,237,229,.55)',touchAction:'manipulation',whiteSpace:'nowrap'}}>{tb.l}</div>
         ))}
       </div>
       {tab==='decks'&&renderItems('decks',STORE_ITEMS.decks)}
       {tab==='tables'&&renderItems('tables',STORE_ITEMS.tables)}
       {tab==='frames'&&renderItems('frames',STORE_ITEMS.frames)}
+      {tab==='backs'&&renderItems('backs',STORE_ITEMS.backs)}
+      {tab==='nameColors'&&renderItems('nameColors',STORE_ITEMS.nameColors)}
+      {tab==='badges'&&renderItems('badges',STORE_ITEMS.badges)}
       {tab==='coins'&&(
         <div style={{display:'flex',flexDirection:'column',gap:10,padding:'0 12px 16px'}}>
           {STORE_ITEMS.coins.map(pack=>(
@@ -976,7 +1001,10 @@ function ProfileScreen({profile,onUpdate,onSettings,onLogout}){
           <AvatarFrame avatar={profile.avatar} size={100} fontSize={52} frame={getFrame(profile)}/>
           <div style={{position:'absolute',bottom:0,insetInlineEnd:'50%',transform:'translateX(50%) translateY(30%)',background:'#0C1410',border:`2px solid ${rank.color}`,borderRadius:12,fontSize:11,fontWeight:900,color:rank.color,padding:'2px 10px',whiteSpace:'nowrap'}}>{rank.icon} {t('level')} {level}</div>
         </div>
-        <div style={{fontSize:22,fontWeight:900,marginTop:8}}>{profile.name}</div>
+        <div style={{fontSize:22,fontWeight:900,marginTop:8,display:'flex',alignItems:'center',justifyContent:'center',gap:8}}>
+          <NameText name={profile.name} color={getNameColor(profile)}/>
+          {getBadge(profile)&&<span style={{fontSize:20,filter:'drop-shadow(0 2px 4px rgba(0,0,0,.4))'}}>{getBadge(profile)}</span>}
+        </div>
         <div style={{display:'flex',alignItems:'center',justifyContent:'center',gap:8,marginTop:4}}>
           <span style={{fontSize:12,fontWeight:700,color:rank.color}}>{rank.icon} {t(rank.key)}</span>
           <span style={{color:'rgba(240,237,229,.45)',fontSize:11}}>· 📍 {cityLabel(profile.city,lang)}</span>
