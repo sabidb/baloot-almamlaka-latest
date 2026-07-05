@@ -121,7 +121,7 @@ const STRINGS = {
     ach_firstwin: 'الفوز الأول', ach_wins10: '١٠ انتصارات', ach_wins50: '٥٠ انتصار', ach_wins250: '٢٥٠ انتصار',
     ach_games100: '١٠٠ مباراة', ach_streak5: 'سلسلة ٥ انتصارات', ach_rich: 'ثري — ٥٠٠٠ رصيد', ach_veteran: 'محترف — ٥٠٠ مباراة',
     // daily missions
-    missions: 'المهام اليومية', missionsSub: 'أكملها اليوم', missionDone: 'مكتملة', missionsReset: 'تتجدد يومياً',
+    missions: 'المهام اليومية', missionsSub: 'أكملها اليوم', missionDone: 'مكتملة', missionsReset: 'تتجدد يومياً', claim: 'استلم',
     mission_play3: 'العب ٣ مباريات', mission_win2: 'افز بمباراتين', mission_score152: 'سجّل ١٥٢ نقطة',
   },
   en: {
@@ -232,7 +232,7 @@ const STRINGS = {
     ach_firstwin: 'First win', ach_wins10: '10 wins', ach_wins50: '50 wins', ach_wins250: '250 wins',
     ach_games100: '100 games', ach_streak5: '5-win streak', ach_rich: 'Rich — 5000 coins', ach_veteran: 'Veteran — 500 games',
     // daily missions
-    missions: 'Daily Missions', missionsSub: 'Complete them today', missionDone: 'Done', missionsReset: 'Resets daily',
+    missions: 'Daily Missions', missionsSub: 'Complete them today', missionDone: 'Done', missionsReset: 'Resets daily', claim: 'Claim',
     mission_play3: 'Play 3 games', mission_win2: 'Win 2 games', mission_score152: 'Score 152 points',
   },
 };

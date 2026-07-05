@@ -47,6 +47,14 @@ service cloud.firestore {
         // be allowed to write a doc keyed by their own uid.
         allow write: if isSelf(uid) || (signedIn() && request.auth.uid == friendId);
       }
+
+      // Daily-mission progress: the referee (Cloud Functions, Admin SDK)
+      // records games/wins here so it can't be forged, and pays out claims.
+      // Clients may only read their own progress — never write it.
+      match /missions/{day} {
+        allow read: if isSelf(uid);
+        allow write: if isAdmin();
+      }
     }
 
     match /friendRequests/{id} {

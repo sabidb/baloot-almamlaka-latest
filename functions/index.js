@@ -200,6 +200,28 @@ exports.setAdminClaim = onCall({ secrets: [ADMIN_SETUP_SECRET] }, async (request
 const WIN_COINS = 50;
 const LOSS_COINS = 10;
 
+// ── Daily missions ────────────────────────────────────────────────────
+// The referee records progress in users/{uid}/missions/{day} (only the
+// Admin SDK can write it), so a client cannot fake mission completion.
+// Reset is automatic: a new UTC day = a fresh doc. Claims are idempotent.
+const MISSIONS = {
+  play3:    { field: 'games', need: 3, reward: 30 },
+  win2:     { field: 'wins',  need: 2, reward: 50 },
+  score152: { field: 'big',   need: 1, reward: 40 },
+};
+const missionDay = () => new Date().toISOString().slice(0, 10); // UTC day
+// Record one settled game against the caller's daily mission progress.
+// `big` = the player reached 152+ this game. Uses a transaction-free merge
+// of increments; the doc id (day) makes it self-resetting.
+function recordMissionProgress(tx, uid, { won, big }) {
+  tx.set(db.doc(`users/${uid}/missions/${missionDay()}`), {
+    games: FieldValue.increment(1),
+    wins: FieldValue.increment(won ? 1 : 0),
+    big: FieldValue.increment(big ? 1 : 0),
+    updatedAt: Date.now(),
+  }, { merge: true });
+}
+
 // Multiplayer: the room doc holds the authoritative game state, so the
 // server reads it directly — the client cannot lie about who won.
 exports.settleGame = onCall(async (request) => {
@@ -229,6 +251,8 @@ exports.settleGame = onCall(async (request) => {
         coins: FieldValue.increment(won ? WIN_COINS : LOSS_COINS),
         lastActive: Date.now(),
       });
+      // Winner's team reached 152, so a win here also satisfies "score 152".
+      recordMissionProgress(tx, p.uid, { won, big: won });
     });
     tx.update(roomRef, { settled: true });
     return { ok: true, winTeam };
@@ -243,6 +267,7 @@ const BOT_SETTLE_COOLDOWN_MS = 20000;
 exports.settleBotGame = onCall(async (request) => {
   if (!request.auth) throw new HttpsError('unauthenticated', 'sign in first');
   const won = !!(request.data && request.data.won);
+  const myScore = Number(request.data && request.data.myScore) || 0;
   const uid = request.auth.uid;
 
   return await db.runTransaction(async (tx) => {
@@ -261,7 +286,33 @@ exports.settleBotGame = onCall(async (request) => {
       lastActive: now,
       lastBotSettleAt: now,
     });
+    recordMissionProgress(tx, uid, { won, big: myScore >= 152 });
     return { ok: true, coins: won ? WIN_COINS : LOSS_COINS };
+  });
+});
+
+// Claim a completed daily mission's coin reward. Validated against the
+// referee-written progress doc, so the client can't claim what it hasn't
+// earned; idempotent per mission per day.
+exports.claimMission = onCall(async (request) => {
+  if (!request.auth) throw new HttpsError('unauthenticated', 'sign in first');
+  const { missionId } = request.data || {};
+  const m = MISSIONS[missionId];
+  if (!m) throw new HttpsError('invalid-argument', 'unknown mission');
+  const uid = request.auth.uid;
+  const mref = db.doc(`users/${uid}/missions/${missionDay()}`);
+
+  return await db.runTransaction(async (tx) => {
+    const msnap = await tx.get(mref);
+    const md = msnap.exists ? msnap.data() : {};
+    if ((md[m.field] || 0) < m.need) throw new HttpsError('failed-precondition', 'mission not complete');
+    if ((md.claimed || []).includes(missionId)) return { ok: true, already: true, reward: 0 };
+    tx.update(db.doc(`users/${uid}`), {
+      coins: FieldValue.increment(m.reward),
+      lastActive: Date.now(),
+    });
+    tx.set(mref, { claimed: FieldValue.arrayUnion(missionId) }, { merge: true });
+    return { ok: true, reward: m.reward };
   });
 });
 

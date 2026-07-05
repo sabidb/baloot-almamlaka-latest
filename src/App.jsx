@@ -1,10 +1,10 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
-import { doc, getDoc, setDoc, updateDoc, increment, collection, addDoc, orderBy, where, limit, getDocs, query, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc, increment, collection, addDoc, orderBy, where, limit, getDocs, query, serverTimestamp, onSnapshot } from 'firebase/firestore';
 import { db } from './firebase';
 import { listenAuth, signInGoogle, signOutUser, getRedirect } from './auth';
-import { SUITS as CARD_SUITS, STORE_ITEMS, BOARDS, FRAMES, CARD_BACKS, NAME_COLORS, BADGES_MAP, buildDeck, shuffle, dealHands, cardValue, trickWinner, calcResult, botPickCard, botBid, sounds, haptics, getThemeStyles, getFrame, getCardBack, getNameColor, getBadge, getAchievements, achievementsSummary, getMissions, bumpDailyProgress } from './GameLogic';
+import { SUITS as CARD_SUITS, STORE_ITEMS, BOARDS, FRAMES, CARD_BACKS, NAME_COLORS, BADGES_MAP, buildDeck, shuffle, dealHands, cardValue, trickWinner, calcResult, botPickCard, botBid, sounds, haptics, getThemeStyles, getFrame, getCardBack, getNameColor, getBadge, getAchievements, achievementsSummary, DAILY_MISSIONS } from './GameLogic';
 import { ReactionBar, spawnCoins } from './Reactions';
-import { settleBotGame } from './functions';
+import { settleBotGame, claimMission } from './functions';
 import OnboardingTutorial, { ShareScoreCard } from './Onboarding';
 import { FriendSystem, NotificationCenter, DailyRewardPopup } from './Social';
 import TournamentScreen from './Tournament';
@@ -313,7 +313,7 @@ export default function App(){
   return(
     <div style={{height:'100dvh',display:'flex',flexDirection:'column',background:'#07090A',fontFamily:'Changa,sans-serif',color:'#F0EDE5',direction:dir,overflow:'hidden'}}>
       <div style={{flex:1,overflow:'hidden',position:'relative'}}>
-        {tab==='home'    &&<HomeScreen    profile={profile} onGame={()=>setInGame(true)} onMultiplayer={setMpMode} onTournament={()=>setInTournament(true)} onAdmin={()=>setShowAdmin(true)} onSettings={()=>setShowSettings(true)} onTutorial={()=>setShowOnboarding(true)} onDaily={()=>setShowDaily(true)} onBoard={()=>setTab('board')}/>}
+        {tab==='home'    &&<HomeScreen    profile={profile} onGame={()=>setInGame(true)} onMultiplayer={setMpMode} onTournament={()=>setInTournament(true)} onAdmin={()=>setShowAdmin(true)} onSettings={()=>setShowSettings(true)} onTutorial={()=>setShowOnboarding(true)} onDaily={()=>setShowDaily(true)} onBoard={()=>setTab('board')} onProfilePatch={patch=>setProfile(p=>({...p,...patch}))}/>}
         {tab==='board'   &&<LeaderScreen/>}
         {tab==='store'   &&<StoreScreen   profile={profile} onUpdate={setProfile}/>}
         {tab==='friends' &&(
@@ -421,7 +421,66 @@ function AuthScreen({authUser,authErr,onDone}){
   );
 }
 
-function HomeScreen({profile,onGame,onMultiplayer,onTournament,onAdmin,onSettings,onTutorial,onDaily,onBoard}){
+// Daily missions card. Progress comes from the referee-written doc
+// users/{uid}/missions/{UTCday}; claims are validated & paid server-side.
+function MissionsCard({profile,onProfilePatch}){
+  const {t}=useLang();
+  const [prog,setProg]=useState(null);
+  const [busy,setBusy]=useState(null);
+  const day=new Date().toISOString().slice(0,10); // UTC — matches the server
+  useEffect(()=>{
+    if(!profile?.uid)return;
+    const unsub=onSnapshot(doc(db,'users',profile.uid,'missions',day),s=>setProg(s.exists()?s.data():{}));
+    return unsub;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  },[profile?.uid,day]);
+  const claimed=prog?.claimed||[];
+  const missions=DAILY_MISSIONS.map(m=>{
+    const val=Math.min(prog?.[m.field]||0,m.need);
+    const done=(prog?.[m.field]||0)>=m.need;
+    return {...m,val,done,isClaimed:claimed.includes(m.id),pct:Math.round(val/m.need*100)};
+  });
+  const claim=async(m)=>{
+    if(busy||m.isClaimed||!m.done)return;
+    setBusy(m.id);
+    try{
+      const res=await claimMission(m.id);
+      if(res?.reward){onProfilePatch&&onProfilePatch({coins:(profile.coins||0)+res.reward});spawnCoins(window.innerWidth/2,window.innerHeight*0.35,10);haptics.buy();}
+    }catch{/* not complete / already claimed / offline */}
+    setBusy(null);
+  };
+  const allClaimed=missions.every(m=>m.isClaimed);
+  return(
+    <div className="cascade" style={{margin:'0 12px 14px',borderRadius:20,padding:'14px 16px',background:'linear-gradient(135deg,#1e293b,#0f172a)',border:'1px solid rgba(240,192,64,.22)',boxShadow:'0 12px 32px rgba(0,0,0,.4)',animationDelay:'.13s'}}>
+      <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:12}}>
+        <div style={{display:'flex',alignItems:'center',gap:8,fontSize:16,fontWeight:800,color:'#FFE08A'}}>🎯 {t('missions')}</div>
+        <span style={{fontSize:10,fontWeight:700,color:allClaimed?'#2ECC71':'rgba(240,237,229,.5)'}}>{allClaimed?'✓ '+t('missionDone'):t('missionsReset')}</span>
+      </div>
+      <div style={{display:'flex',flexDirection:'column',gap:11}}>
+        {missions.map(m=>(
+          <div key={m.id} style={{display:'flex',alignItems:'center',gap:10}}>
+            <span style={{fontSize:18,width:24,textAlign:'center',filter:m.done?'none':'grayscale(.4)',opacity:m.done?1:.85}}>{m.isClaimed?'✅':m.icon}</span>
+            <div style={{flex:1}}>
+              <div style={{display:'flex',justifyContent:'space-between',fontSize:11.5,fontWeight:700,color:m.done?'#2ECC71':'#F0EDE5',marginBottom:3}}>
+                <span>{t('mission_'+m.id)}</span><span style={{opacity:.8}}>🪙{m.reward} · {m.val}/{m.need}</span>
+              </div>
+              <div style={{height:6,borderRadius:4,background:'rgba(0,0,0,.4)',overflow:'hidden'}}>
+                <div style={{height:'100%',width:`${m.pct}%`,borderRadius:4,background:m.done?'linear-gradient(90deg,#16a34a,#22c55e)':'linear-gradient(90deg,#8B6914,#F0C040)',transition:'width .5s ease'}}/>
+              </div>
+            </div>
+            {m.isClaimed?(
+              <span style={{fontSize:10,fontWeight:800,color:'#2ECC71',width:58,textAlign:'center'}}>✓ {t('missionDone')}</span>
+            ):(
+              <button onClick={()=>claim(m)} disabled={!m.done||busy===m.id} style={{...G.btn,width:58,padding:'6px 0',fontSize:11,fontWeight:800,background:m.done?'linear-gradient(135deg,#8B6914,#F0C040)':'rgba(255,255,255,.06)',color:m.done?'#07090A':'rgba(240,237,229,.35)',cursor:m.done?'pointer':'default'}}>{busy===m.id?'…':t('claim')}</button>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function HomeScreen({profile,onGame,onMultiplayer,onTournament,onAdmin,onSettings,onTutorial,onDaily,onBoard,onProfilePatch}){
   const {t,lang,toggleLang}=useLang();
   const tapRef=useRef({n:0,t:0});
   const {level}=playerLevel(profile);
@@ -494,29 +553,7 @@ function HomeScreen({profile,onGame,onMultiplayer,onTournament,onAdmin,onSetting
       </div>
 
       {/* DAILY MISSIONS */}
-      {(()=>{ const ms=getMissions(); const allDone=ms.every(m=>m.done); return(
-        <div className="cascade" style={{margin:'0 12px 14px',borderRadius:20,padding:'14px 16px',background:'linear-gradient(135deg,#1e293b,#0f172a)',border:'1px solid rgba(240,192,64,.22)',boxShadow:'0 12px 32px rgba(0,0,0,.4)',animationDelay:'.13s'}}>
-          <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:12}}>
-            <div style={{display:'flex',alignItems:'center',gap:8,fontSize:16,fontWeight:800,color:'#FFE08A'}}>🎯 {t('missions')}</div>
-            <span style={{fontSize:10,fontWeight:700,color:allDone?'#2ECC71':'rgba(240,237,229,.5)'}}>{allDone?'✓ '+t('missionDone'):t('missionsReset')}</span>
-          </div>
-          <div style={{display:'flex',flexDirection:'column',gap:10}}>
-            {ms.map(m=>(
-              <div key={m.id} style={{display:'flex',alignItems:'center',gap:10}}>
-                <span style={{fontSize:18,width:24,textAlign:'center',filter:m.done?'none':'grayscale(.4)',opacity:m.done?1:.85}}>{m.done?'✅':m.icon}</span>
-                <div style={{flex:1}}>
-                  <div style={{display:'flex',justifyContent:'space-between',fontSize:11.5,fontWeight:700,color:m.done?'#2ECC71':'#F0EDE5',marginBottom:3}}>
-                    <span>{t('mission_'+m.id)}</span><span>{m.val}/{m.need}</span>
-                  </div>
-                  <div style={{height:6,borderRadius:4,background:'rgba(0,0,0,.4)',overflow:'hidden'}}>
-                    <div style={{height:'100%',width:`${m.pct}%`,borderRadius:4,background:m.done?'linear-gradient(90deg,#16a34a,#22c55e)':'linear-gradient(90deg,#8B6914,#F0C040)',transition:'width .5s ease'}}/>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      );})()}
+      <MissionsCard profile={profile} onProfilePatch={onProfilePatch}/>
 
       {/* COLORFUL FEATURE GRID */}
       <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(150px,1fr))',gap:11,padding:'0 12px 6px'}}>
@@ -671,12 +708,11 @@ function GameScreen({profile,onExit,onProfileUpdate}){
     gameOverAppliedRef.current=true;
     const humanWon=scores.a>=scores.b;
     const coinDelta=humanWon?50:10;
-    // Track daily-mission progress (local, display-only).
-    bumpDailyProgress({won:humanWon,myScore:scores.a});
+    // Mission progress is recorded server-side by the referee (settleBotGame).
     // Celebration: coin burst from screen centre on a win.
     if(humanWon){haptics.win();setTimeout(()=>spawnCoins(window.innerWidth/2,window.innerHeight*0.4),300);setTimeout(()=>spawnCoins(window.innerWidth/2,window.innerHeight*0.4,12),700);}
     // Route through the server referee (rate-limited) — clients can't mint.
-    (async()=>{try{await settleBotGame(humanWon);}catch{/* rate-limited or offline */}})();
+    (async()=>{try{await settleBotGame(humanWon,scores.a);}catch{/* rate-limited or offline */}})();
     onProfileUpdate&&onProfileUpdate({wins:(profile.wins||0)+(humanWon?1:0),losses:(profile.losses||0)+(humanWon?0:1),coins:(profile.coins||0)+coinDelta});
     // Match telemetry — the raw data source for the anti-collusion agent
     (async()=>{try{

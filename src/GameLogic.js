@@ -122,10 +122,11 @@ export function achievementsSummary(profile){
 // ── Daily missions ────────────────────────────────────────
 // Progress is tracked locally per-day (display only, not economy). Missions
 // reset at local midnight. i18n key = 'mission_<id>'.
+// reward must match the server MISSIONS table in functions/index.js.
 export const DAILY_MISSIONS = [
-  { id:'play3',  icon:'🎯', need:3, field:'games' },
-  { id:'win2',   icon:'🏆', need:2, field:'wins'  },
-  { id:'score152',icon:'💯',need:1, field:'big'   },
+  { id:'play3',  icon:'🎯', need:3, field:'games', reward:30 },
+  { id:'win2',   icon:'🏆', need:2, field:'wins',  reward:50 },
+  { id:'score152',icon:'💯',need:1, field:'big',   reward:40 },
 ];
 const MKEY='baloot_daily_missions';
 function todayStr(){ return new Date().toISOString().slice(0,10); }

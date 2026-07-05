@@ -12,8 +12,13 @@ const fns = getFunctions(getApp(), FUNCTIONS_REGION);
 export const settleMultiplayerGame = (roomCode) =>
   httpsCallable(fns, 'settleGame')({ roomCode }).then(r => r.data);
 
-export const settleBotGame = (won) =>
-  httpsCallable(fns, 'settleBotGame')({ won }).then(r => r.data);
+export const settleBotGame = (won, myScore = 0) =>
+  httpsCallable(fns, 'settleBotGame')({ won, myScore }).then(r => r.data);
 
 export const claimDailyReward = () =>
   httpsCallable(fns, 'claimDailyReward')().then(r => r.data);
+
+// Claim a completed daily mission — validated server-side against the
+// referee's progress record. Returns { reward } (coins granted).
+export const claimMission = (missionId) =>
+  httpsCallable(fns, 'claimMission')({ missionId }).then(r => r.data);
