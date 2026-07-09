@@ -1,0 +1,48 @@
+---
+const links = [
+  { href: '#product', label: 'Product' },
+  { href: '#compliance', label: 'Compliance' },
+  { href: '#demo', label: 'Contact' },
+];
+---
+
+<header class="fixed inset-x-0 top-0 z-50">
+  <nav
+    aria-label="Main"
+    class="mx-auto mt-4 flex max-w-6xl items-center justify-between rounded-2xl border border-white/10 bg-ink-900/60 px-5 py-3 shadow-[0_8px_32px_rgba(0,0,0,0.35)] backdrop-blur-xl max-sm:mx-3 sm:px-6 lg:mx-auto lg:w-[min(72rem,calc(100%-2rem))]"
+  >
+    <a href="/" class="flex items-center gap-2.5" aria-label="RestoPos home">
+      <span
+        class="grid size-9 place-items-center rounded-xl bg-gradient-to-br from-brand-400 to-brand-600 font-display text-lg font-bold text-ink-950"
+      >
+        R
+      </span>
+      <span class="font-display text-lg font-semibold tracking-tight text-white">
+        Resto<span class="text-brand-400">Pos</span>
+      </span>
+    </a>
+
+    <ul class="hidden items-center gap-8 md:flex">
+      {
+        links.map(({ href, label }) => (
+          <li>
+            <a
+              href={href}
+              class="text-sm font-medium text-white/70 transition-colors hover:text-white"
+            >
+              {label}
+            </a>
+          </li>
+        ))
+      }
+    </ul>
+
+    <!-- Book Demo — subtle glassmorphism -->
+    <a
+      href="#demo"
+      class="rounded-full border border-white/15 bg-white/10 px-5 py-2 text-sm font-semibold text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.18),0_4px_16px_rgba(0,0,0,0.25)] backdrop-blur-md transition hover:border-white/25 hover:bg-white/15"
+    >
+      Book Demo
+    </a>
+  </nav>
+</header>

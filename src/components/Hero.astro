@@ -1,0 +1,81 @@
+---
+import DashboardPreview from './DashboardPreview.astro';
+---
+
+<section id="product" class="relative overflow-x-clip px-4 pb-24 pt-40 sm:pt-44">
+  <!-- Ambient glow -->
+  <div
+    aria-hidden="true"
+    class="pointer-events-none absolute left-1/2 top-0 -z-10 h-[36rem] w-[64rem] -translate-x-1/2 rounded-full bg-brand-500/10 blur-[140px]"
+  >
+  </div>
+
+  <div class="mx-auto max-w-4xl text-center">
+    <p
+      class="mx-auto mb-6 w-fit rounded-full border border-mint-500/25 bg-mint-500/10 px-4 py-1.5 text-xs font-semibold tracking-wide text-mint-300"
+    >
+      ZATCA Phase 2 ready — Fatoora integrated
+    </p>
+    <h1
+      class="font-display text-4xl font-bold leading-[1.08] tracking-tight text-white sm:text-6xl"
+    >
+      The point of sale your
+      <span class="bg-gradient-to-r from-brand-300 to-brand-500 bg-clip-text text-transparent">
+        restaurant
+      </span>
+      deserves
+    </h1>
+    <p class="mx-auto mt-6 max-w-2xl text-balance text-lg leading-relaxed text-white/60">
+      Orders, payments, kitchen displays and ZATCA e-invoicing — unified in one fast, beautiful
+      system built for Saudi restaurants.
+    </p>
+    <div class="mt-9 flex items-center justify-center gap-4">
+      <a
+        href="#demo"
+        class="whitespace-nowrap rounded-full bg-gradient-to-b from-brand-400 to-brand-600 px-7 py-3 text-sm font-semibold text-ink-950 shadow-[0_8px_24px_rgba(245,158,11,0.35)] transition hover:brightness-110"
+      >
+        Book a demo
+      </a>
+      <a
+        href="#compliance"
+        class="whitespace-nowrap rounded-full px-6 py-3 text-sm font-semibold text-white/70 transition hover:text-white"
+      >
+        See compliance →
+      </a>
+    </div>
+  </div>
+
+  <!-- Central floating container -->
+  <div class="mt-20 [perspective:1600px]">
+    <div class="animate-float mx-auto max-w-5xl">
+      <div
+        data-tilt
+        class="light-sweep relative overflow-hidden rounded-3xl border border-white/10 bg-ink-900/80 p-2 shadow-[0_40px_120px_rgba(0,0,0,0.55),inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-xl sm:p-3"
+      >
+        <DashboardPreview />
+      </div>
+    </div>
+  </div>
+</section>
+
+<script>
+  // 3D tilt on hover — pointer position maps to a gentle rotateX/rotateY.
+  const MAX_TILT = 6; // degrees
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+
+  for (const el of document.querySelectorAll<HTMLElement>('[data-tilt]')) {
+    el.addEventListener('pointermove', (e) => {
+      if (reduceMotion.matches || e.pointerType !== 'mouse') return;
+      const rect = el.getBoundingClientRect();
+      const x = (e.clientX - rect.left) / rect.width - 0.5;
+      const y = (e.clientY - rect.top) / rect.height - 0.5;
+      el.classList.add('is-tilting');
+      el.style.transform = `rotateX(${(-y * MAX_TILT).toFixed(2)}deg) rotateY(${(x * MAX_TILT).toFixed(2)}deg)`;
+    });
+
+    el.addEventListener('pointerleave', () => {
+      el.classList.remove('is-tilting');
+      el.style.transform = 'rotateX(0deg) rotateY(0deg)';
+    });
+  }
+</script>

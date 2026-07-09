@@ -1,0 +1,62 @@
+---
+import ZatcaReceipt from './ZatcaReceipt.jsx';
+
+const points = [
+  {
+    title: 'Phase 2 (Integration) ready',
+    body: 'Invoices are cleared and reported through the Fatoora platform in real time — no manual uploads, no end-of-day batching.',
+  },
+  {
+    title: 'Cryptographic stamp on every receipt',
+    body: 'Each simplified tax invoice carries a compliant QR code and cryptographic stamp, verifiable by any ZATCA scanner.',
+  },
+  {
+    title: 'VAT handled automatically',
+    body: '15% VAT is calculated, itemised and reported per line item — bilingual (Arabic / English) out of the box.',
+  },
+];
+---
+
+<section id="compliance" class="relative px-4 py-24 sm:py-32">
+  <div
+    aria-hidden="true"
+    class="pointer-events-none absolute right-0 top-1/3 -z-10 h-[28rem] w-[36rem] rounded-full bg-mint-500/[0.07] blur-[120px]"
+  >
+  </div>
+
+  <div class="mx-auto grid max-w-6xl items-center gap-14 lg:grid-cols-2 lg:gap-20">
+    <div>
+      <p class="text-sm font-semibold uppercase tracking-widest text-mint-400">Compliance</p>
+      <h2
+        class="mt-3 font-display text-3xl font-bold leading-tight tracking-tight text-white sm:text-4xl"
+      >
+        Built for ZATCA.<br />Trusted at the till.
+      </h2>
+      <p class="mt-5 max-w-lg text-base leading-relaxed text-white/60">
+        Every order placed in RestoPos becomes a fully compliant e-invoice — stamped, QR-coded and
+        reported to ZATCA without your staff lifting a finger.
+      </p>
+
+      <ul class="mt-9 space-y-6">
+        {
+          points.map(({ title, body }) => (
+            <li class="flex gap-4">
+              <span
+                aria-hidden="true"
+                class="mt-0.5 grid size-6 shrink-0 place-items-center rounded-full border border-mint-500/30 bg-mint-500/10 text-xs font-bold text-mint-300"
+              >
+                ✓
+              </span>
+              <div>
+                <h3 class="font-semibold text-white">{title}</h3>
+                <p class="mt-1 text-sm leading-relaxed text-white/55">{body}</p>
+              </div>
+            </li>
+          ))
+        }
+      </ul>
+    </div>
+
+    <ZatcaReceipt client:visible />
+  </div>
+</section>
