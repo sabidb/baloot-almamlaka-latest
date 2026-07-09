@@ -1,5 +1,6 @@
 ---
 import LogoMark from './LogoMark.astro';
+import { APP_URL } from '../config';
 
 const links = [
   { href: '/', label: 'Home' },
@@ -39,6 +40,13 @@ const isActive = (href: string) => path === href;
         ))
       }
 
+      <a
+        href={APP_URL}
+        class="ease-out-quad text-[13px] tracking-wide text-bone/70 transition-colors duration-300 hover:text-bone"
+      >
+        Sign in
+      </a>
+
       <!-- Book Demo — subtle glassmorphism, brand gold -->
       <a
         href="/contact"
@@ -70,6 +78,7 @@ const isActive = (href: string) => path === href;
           </a>
         ))
       }
+      <a href={APP_URL} class="text-sm text-bone/80">Sign in</a>
       <a href="/contact" class="text-sm font-medium text-gold">Book Demo →</a>
     </div>
   </div>

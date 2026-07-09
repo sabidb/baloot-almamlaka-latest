@@ -1,5 +1,6 @@
 ---
 import Layout from '../layouts/Layout.astro';
+import { APP_URL } from '../config';
 
 const plans = [
   {
@@ -101,7 +102,7 @@ const plans = [
               </ul>
 
               <a
-                href="/contact"
+                href={APP_URL}
                 class:list={[
                   'ease-out-quad mt-8 rounded-full px-6 py-3 text-center text-sm font-semibold transition-colors duration-300',
                   plan.highlighted
