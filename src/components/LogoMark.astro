@@ -1,0 +1,15 @@
+---
+// The RestoPOS logo mark — green→gold gradient square with a white R.
+interface Props {
+  class?: string;
+}
+
+const { class: className = 'size-8 rounded-lg text-[15px]' } = Astro.props;
+---
+
+<span
+  aria-hidden="true"
+  class:list={['brand-gradient grid place-items-center font-extrabold text-white', className]}
+>
+  R
+</span>

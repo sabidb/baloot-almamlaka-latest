@@ -16,6 +16,11 @@
   --color-gold-bright: #dcc08a;
   --color-gold-dim: #8a7245;
 
+  /* Leaf — the green half of the logo gradient */
+  --color-leaf: #4c7a52;
+  --color-leaf-bright: #6f9e74;
+  --color-leaf-dim: #3a5c40;
+
   --color-bone: #f5f3ee;
   --color-hairline: #262622;
 
@@ -45,6 +50,11 @@
       transform: translateY(-12px);
     }
   }
+}
+
+/* The RestoPOS logo gradient — green to gold, sampled from the mark */
+.brand-gradient {
+  background-image: linear-gradient(135deg, #4c7a52 0%, #8a8443 52%, #c1922e 100%);
 }
 
 html {

@@ -1,12 +1,14 @@
 ---
+import LogoMark from './LogoMark.astro';
+
 const year = new Date().getFullYear();
 ---
 
 <footer class="mt-32 border-t border-hairline">
   <div class="mx-auto flex max-w-6xl flex-col justify-between gap-10 px-6 py-14 md:flex-row md:px-8">
     <div class="max-w-xs">
-      <div class="mb-4 flex items-center gap-2">
-        <span class="size-2 rounded-full bg-gold"></span>
+      <div class="mb-4 flex items-center gap-2.5">
+        <LogoMark class="size-7 rounded-md text-[13px]" />
         <span class="text-[15px] font-semibold tracking-tight text-bone">
           Resto<span class="text-gold">POS</span>
         </span>

@@ -3,10 +3,15 @@ import DashboardPreview from './DashboardPreview.astro';
 ---
 
 <section class="relative overflow-x-clip px-6 pb-24 pt-40 md:px-8 md:pt-48">
-  <!-- Ambient gold glow -->
+  <!-- Ambient glow — green and gold, echoing the logo gradient -->
   <div
     aria-hidden="true"
-    class="pointer-events-none absolute left-1/2 top-0 -z-10 h-[36rem] w-[64rem] -translate-x-1/2 rounded-full bg-gold/[0.06] blur-[140px]"
+    class="pointer-events-none absolute left-1/4 top-0 -z-10 h-[32rem] w-[40rem] -translate-x-1/2 rounded-full bg-leaf/[0.07] blur-[140px]"
+  >
+  </div>
+  <div
+    aria-hidden="true"
+    class="pointer-events-none absolute right-1/4 top-10 -z-10 h-[32rem] w-[40rem] translate-x-1/2 rounded-full bg-gold/[0.06] blur-[140px]"
   >
   </div>
 
@@ -28,7 +33,7 @@ import DashboardPreview from './DashboardPreview.astro';
     <div class="mt-10 flex flex-wrap items-center justify-center gap-4">
       <a
         href="/contact"
-        class="ease-out-quad whitespace-nowrap rounded-full bg-gold px-7 py-3.5 text-sm font-semibold text-charcoal transition-colors duration-300 hover:bg-gold-bright"
+        class="brand-gradient ease-out-quad whitespace-nowrap rounded-full px-7 py-3.5 text-sm font-semibold text-white shadow-[0_8px_28px_rgba(76,122,82,0.35)] transition duration-300 hover:brightness-110"
       >
         Request a demo
       </a>

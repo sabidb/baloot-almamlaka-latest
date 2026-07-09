@@ -231,7 +231,7 @@ export default function ZatcaReceipt() {
         initial={reduce ? false : { opacity: 0, scale: 0.8 }}
         animate={inView ? { opacity: 1, scale: 1 } : {}}
         transition={{ delay: reduce ? 0 : 3.4, type: 'spring', stiffness: 260, damping: 20 }}
-        className="absolute -right-3 -top-3 rounded-full border border-gold/40 bg-charcoal px-3.5 py-1.5 text-[11px] font-semibold text-gold shadow-lg"
+        className="absolute -right-3 -top-3 rounded-full border border-leaf-bright/40 bg-charcoal px-3.5 py-1.5 text-[11px] font-semibold text-leaf-bright shadow-lg"
       >
         ✓ ZATCA Phase 2
       </motion.div>

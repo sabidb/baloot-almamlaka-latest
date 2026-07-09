@@ -76,7 +76,7 @@ const plans = [
               ]}
             >
               {plan.highlighted && (
-                <span class="absolute -top-3 left-8 rounded-full bg-gold px-3 py-1 text-[10px] font-semibold uppercase tracking-widest text-charcoal">
+                <span class="brand-gradient absolute -top-3 left-8 rounded-full px-3 py-1 text-[10px] font-semibold uppercase tracking-widest text-white">
                   Most chosen
                 </span>
               )}
@@ -104,7 +104,7 @@ const plans = [
                 class:list={[
                   'ease-out-quad mt-8 rounded-full px-6 py-3 text-center text-sm font-semibold transition-colors duration-300',
                   plan.highlighted
-                    ? 'bg-gold text-charcoal hover:bg-gold-bright'
+                    ? 'brand-gradient text-white hover:brightness-110'
                     : 'border border-bone/20 text-bone hover:border-bone/50',
                 ]}
               >

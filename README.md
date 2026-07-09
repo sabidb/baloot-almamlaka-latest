@@ -33,8 +33,10 @@ src/
 
 Official RestoPOS guidelines — all tokens live in `src/styles/global.css` under `@theme`:
 
+- **Logo gradient** green `#4C7A52` → gold `#C1922E` (white R) — `.brand-gradient`
 - **Charcoal** `#0A0A0A` (soft `#141414`, raised `#1B1B1B`) — surfaces
 - **Gold** `#C5A059` (bright `#DCC08A`, dim `#8A7245`) — accent
+- **Leaf** `#4C7A52` (bright `#6F9E74`, dim `#3A5C40`) — live/compliance signals
 - **Bone** `#F5F3EE` — text / receipt paper · **Hairline** `#262622` — borders
 - **Inter** for UI, **JetBrains Mono** for receipts and numbers
 - Voice: *"Restaurant billing, done quietly."*

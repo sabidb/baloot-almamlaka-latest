@@ -29,7 +29,7 @@ const orders = [
       RestoPOS — Manager Console
     </span>
     <span
-      class="ml-auto rounded-full border border-gold/30 bg-gold/10 px-2.5 py-0.5 text-[10px] font-semibold text-gold"
+      class="ml-auto rounded-full border border-leaf-bright/30 bg-leaf/15 px-2.5 py-0.5 text-[10px] font-semibold text-leaf-bright"
     >
       ● Live
     </span>
@@ -43,7 +43,7 @@ const orders = [
           <span
             class:list={[
               'size-8 rounded-lg',
-              i === 0 ? 'bg-gradient-to-br from-gold to-gold-dim' : 'bg-bone/[0.06]',
+              i === 0 ? 'brand-gradient' : 'bg-bone/[0.06]',
             ]}
           />
         ))
@@ -61,7 +61,7 @@ const orders = [
               <p class="mt-1 truncate font-mono text-sm font-semibold text-bone sm:text-lg">
                 {value}
               </p>
-              <p class="mt-0.5 text-[10px] font-semibold text-gold">{delta}</p>
+              <p class="mt-0.5 text-[10px] font-semibold text-leaf-bright">{delta}</p>
             </div>
           ))
         }
@@ -80,7 +80,7 @@ const orders = [
                   class:list={[
                     'flex-1 rounded-t-sm',
                     i === bars.length - 1
-                      ? 'bg-gradient-to-t from-gold-dim to-gold'
+                      ? 'bg-gradient-to-t from-leaf to-gold'
                       : 'bg-bone/10',
                   ]}
                   style={`height:${h}%`}
@@ -107,7 +107,7 @@ const orders = [
                     class:list={[
                       'rounded-full px-2 py-0.5 text-[9px] font-semibold',
                       status === 'Ready'
-                        ? 'bg-gold/20 text-gold-bright'
+                        ? 'bg-leaf/20 text-leaf-bright'
                         : status === 'Preparing'
                           ? 'bg-gold/10 text-gold'
                           : 'bg-bone/10 text-bone/50',

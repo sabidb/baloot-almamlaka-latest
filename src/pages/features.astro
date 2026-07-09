@@ -63,7 +63,7 @@ const features = [
     <section class="relative mx-auto mt-24 max-w-6xl px-6 md:px-8">
       <div
         aria-hidden="true"
-        class="absolute bottom-4 left-[15px] top-4 w-px bg-gradient-to-b from-gold/40 via-hairline to-transparent md:left-1/2 md:-translate-x-1/2"
+        class="absolute bottom-4 left-[15px] top-4 w-px bg-gradient-to-b from-leaf/50 via-gold/30 to-transparent md:left-1/2 md:-translate-x-1/2"
       >
       </div>
       <div class="relative grid gap-10 md:grid-cols-3 md:gap-8">
@@ -101,6 +101,107 @@ const features = [
             </div>
           ))
         }
+      </div>
+    </section>
+
+    <!-- Advanced tools -->
+    <section class="mx-auto mt-32 max-w-6xl px-6 md:px-8">
+      <div data-reveal>
+        <p class="mb-5 text-[12px] uppercase tracking-[0.2em] text-gold">The toolkit</p>
+        <h2 class="max-w-xl text-balance text-display-md font-bold text-bone">
+          Advanced tools for owners who run the numbers.
+        </h2>
+      </div>
+
+      <div class="mt-14 grid gap-6 lg:grid-cols-2">
+        <!-- Manager Console -->
+        <div data-reveal>
+          <div class="ease-out-quad h-full rounded-2xl border border-hairline bg-charcoal-soft/40 p-8 transition-colors duration-500 hover:border-gold/30">
+            <h3 class="font-semibold text-bone">Manager Console</h3>
+            <p class="mt-2 text-sm leading-relaxed text-bone/50">
+              A live dashboard for owners: today's counter ticking in real time, Close Day
+              history, and one-tap export of any report to WhatsApp or PDF.
+            </p>
+            <div class="mt-6 rounded-xl border border-hairline bg-charcoal p-4 font-mono text-[11px]">
+              <div class="flex items-center justify-between text-bone/40">
+                <span>TODAY · ALL BRANCHES</span>
+                <span class="text-leaf-bright">● LIVE</span>
+              </div>
+              <div class="mt-3 flex items-baseline justify-between">
+                <span class="text-2xl font-semibold text-bone">SAR 48,210</span>
+                <span class="text-leaf-bright">+11.4%</span>
+              </div>
+              <div class="mt-4 flex gap-2">
+                <span class="rounded-md border border-hairline px-2.5 py-1 text-bone/60">↗ WhatsApp</span>
+                <span class="rounded-md border border-hairline px-2.5 py-1 text-bone/60">↧ PDF</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Close Day -->
+        <div data-reveal style="--reveal-delay: 0.08s">
+          <div class="ease-out-quad h-full rounded-2xl border border-hairline bg-charcoal-soft/40 p-8 transition-colors duration-500 hover:border-gold/30">
+            <h3 class="font-semibold text-bone">Close Day</h3>
+            <p class="mt-2 text-sm leading-relaxed text-bone/50">
+              End every shift with a report that reconciles to the riyal — sales, VAT collected,
+              and invoice counts, matched against what was reported to Fatoora.
+            </p>
+            <div class="mt-6 rounded-xl border border-hairline bg-charcoal p-4 font-mono text-[11px] text-bone/60">
+              <div class="flex justify-between py-1"><span>Invoices issued</span><span class="text-bone">342</span></div>
+              <div class="flex justify-between py-1"><span>VAT collected (15%)</span><span class="text-bone">1,872.30</span></div>
+              <div class="flex justify-between py-1"><span>Reported to Fatoora</span><span class="text-leaf-bright">342 / 342 ✓</span></div>
+              <div class="mt-2 flex justify-between border-t border-hairline pt-2"><span>Variance</span><span class="text-leaf-bright">SAR 0.00</span></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Device approval -->
+        <div data-reveal>
+          <div class="ease-out-quad h-full rounded-2xl border border-hairline bg-charcoal-soft/40 p-8 transition-colors duration-500 hover:border-gold/30">
+            <h3 class="font-semibold text-bone">Device-level access control</h3>
+            <p class="mt-2 text-sm leading-relaxed text-bone/50">
+              Every till logs in individually. A new device can't bill a single riyal until an
+              owner explicitly approves it.
+            </p>
+            <div class="mt-6 space-y-2 rounded-xl border border-hairline bg-charcoal p-4 font-mono text-[11px]">
+              <div class="flex items-center justify-between">
+                <span class="text-bone/60">Till 01 · Front counter</span>
+                <span class="text-leaf-bright">APPROVED</span>
+              </div>
+              <div class="flex items-center justify-between">
+                <span class="text-bone/60">Till 02 · Drive-thru</span>
+                <span class="text-leaf-bright">APPROVED</span>
+              </div>
+              <div class="flex items-center justify-between">
+                <span class="text-bone/60">Tablet 07 · Unknown</span>
+                <span class="rounded-md border border-gold/40 px-2 py-0.5 text-gold">PENDING</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Supermarket mode -->
+        <div data-reveal style="--reveal-delay: 0.08s">
+          <div class="ease-out-quad h-full rounded-2xl border border-hairline bg-charcoal-soft/40 p-8 transition-colors duration-500 hover:border-gold/30">
+            <h3 class="font-semibold text-bone">Supermarket mode</h3>
+            <p class="mt-2 text-sm leading-relaxed text-bone/50">
+              The same core switches into a barcode-first retail flow for grocery and convenience
+              formats — same compliance, same reports, different rhythm.
+            </p>
+            <div class="mt-6 flex items-center gap-4 rounded-xl border border-hairline bg-charcoal p-4">
+              <svg viewBox="0 0 60 24" class="h-9 w-24 text-bone/70" aria-hidden="true">
+                {[1, 4, 6, 9, 13, 15, 19, 22, 26, 28, 31, 35, 38, 40, 44, 47, 51, 54, 57].map((x, i) => (
+                  <rect x={x} y="0" width={i % 3 === 0 ? 2 : 1} height="24" fill="currentColor" />
+                ))}
+              </svg>
+              <div class="font-mono text-[11px]">
+                <p class="text-bone">6281000123457</p>
+                <p class="text-bone/50">Scanned · SAR 4.50 · VAT incl.</p>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </section>
 
