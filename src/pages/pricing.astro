@@ -3,45 +3,47 @@ import Layout from '../layouts/Layout.astro';
 
 const plans = [
   {
-    name: 'Single Branch',
-    price: '299',
+    name: 'Starter',
+    price: '99',
     period: '/ month',
     tagline: 'For one location getting started with compliant billing.',
     features: [
-      '1 branch, unlimited devices',
-      'ZATCA Phase 2 invoicing',
+      '1 branch, up to 2 devices',
+      'ZATCA Phase 2 invoicing — signed, QR-coded, auto-reported to Fatoora',
       'Thermal & PDF receipts',
-      'Daily Close Day reports',
+      'KOT kitchen ticket printing',
+      'Close Day reports & Transactions tab',
       'Email support',
     ],
     highlighted: false,
   },
   {
-    name: 'Multi-Branch',
-    price: '699',
+    name: 'Growth',
+    price: '149',
     period: '/ month',
-    tagline: 'For groups running several branches under one brand.',
+    tagline: 'For restaurants growing past a single branch.',
     features: [
-      'Up to 5 branches',
-      'Everything in Single Branch',
-      'Manager Console dashboard',
-      'Consolidated VAT reporting',
-      'WhatsApp Business alerts',
-      'Priority support',
+      'Up to 3 branches, unlimited devices',
+      'Everything in Starter',
+      'Manager Console — live "today" counter, Close Day history, WhatsApp share, PDF export',
+      'ZATCA status banner',
+      'Device-level login approval & access control',
+      'Priority chat support',
     ],
     highlighted: true,
   },
   {
-    name: 'Enterprise',
-    price: 'Custom',
-    period: '',
-    tagline: 'For chains and supermarket groups with custom needs.',
+    name: 'Pro',
+    price: '249',
+    period: '/ month',
+    tagline: 'For chains and supermarket groups that want it all.',
     features: [
       'Unlimited branches',
+      'Everything in Growth',
       'Supermarket / retail mode',
-      'Dedicated onboarding',
-      'Custom integrations',
-      'SLA-backed support',
+      'Windows desktop app option',
+      'Dedicated ZATCA/Fatoora onboarding',
+      'Priority support with faster SLA',
     ],
     highlighted: false,
   },
@@ -83,8 +85,7 @@ const plans = [
               <h3 class="text-lg font-semibold text-bone">{plan.name}</h3>
               <div class="mt-4 flex items-baseline gap-1">
                 <span class="text-display-md font-extrabold text-bone">
-                  {plan.price !== 'Custom' && 'SAR '}
-                  {plan.price}
+                  SAR {plan.price}
                 </span>
                 <span class="text-sm text-bone/40">{plan.period}</span>
               </div>
@@ -108,7 +109,7 @@ const plans = [
                     : 'border border-bone/20 text-bone hover:border-bone/50',
                 ]}
               >
-                {plan.price === 'Custom' ? 'Contact sales' : 'Get started'}
+                Get started
               </a>
             </div>
           </div>
@@ -118,7 +119,8 @@ const plans = [
 
     <section class="mx-auto mt-24 max-w-3xl px-6 text-center md:px-8">
       <p class="text-sm text-bone/40" data-reveal>
-        All prices exclude 15% VAT. Billed monthly in Saudi riyals.
+        All prices exclude 15% VAT. Billed monthly in Saudi riyals.<br />
+        Manager Console unlocks at Growth; Supermarket mode is a Pro feature.
       </p>
     </section>
   </div>

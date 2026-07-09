@@ -6,44 +6,56 @@ const steps = [
   {
     n: '01',
     title: 'Order',
-    body: 'Staff take orders on any tablet — dine-in, parcel, or phone — with kitchen tickets routed automatically.',
+    body: 'Dine-in, parcel, or telephone — each order type routes its own kitchen ticket, auto-titled so the kitchen knows the flow at a glance.',
   },
   {
     n: '02',
     title: 'Bill',
-    body: 'A ZATCA-compliant invoice generates instantly: signed, QR-coded, and itemized in Arabic and English.',
+    body: 'A ZATCA-compliant invoice generates instantly: signed, QR-coded, and itemized in Arabic and English. Hold it as a draft first if the table isn’t done.',
   },
   {
     n: '03',
     title: 'Report',
-    body: 'The invoice is reported to Fatoora in the background. Your Close Day report reconciles itself.',
+    body: 'The invoice is reported to Fatoora in the background through a dedicated reporting queue. Your Close Day report reconciles itself.',
   },
 ];
 
 const features = [
   {
     title: 'Multi-branch, one account',
-    body: 'Run every branch under one tenant with isolated data, shared reporting, and a single subscription.',
+    body: 'Run every branch under one tenant with fully isolated data per VAT number, shared reporting, and a single subscription.',
   },
   {
     title: 'Thermal printing that just works',
-    body: 'Direct QZ Tray integration means receipts print correctly the first time, on the printer you already own.',
+    body: 'Direct QZ Tray integration — silent printing with no browser dialogs, auto-reconnect so printers never drop mid-shift, tuned for legibility on any thermal paper.',
   },
   {
     title: 'Arabic and English, natively',
     body: 'Every screen, receipt, and report is bilingual by default — not translated as an afterthought.',
   },
   {
-    title: 'Manager console',
-    body: "Owners get a live dashboard: today's counter, Close Day history, and one-tap WhatsApp or PDF export.",
+    title: 'Smart kitchen tickets',
+    body: 'KOTs print the moment an order lands, auto-labelled Telephone, Parcel, or Dine-in based on order type.',
+  },
+  {
+    title: 'Receipt styles with live preview',
+    body: 'Four preset bill styles — including bilingual Arabic/English layouts — previewed live and set in thermal-safe fonts.',
+  },
+  {
+    title: 'Windows desktop app',
+    body: 'A native desktop wrapper with automatic updates, for restaurants running Windows POS terminals instead of tablets.',
+  },
+  {
+    title: 'Close Day & Transactions',
+    body: 'End-of-day archiving that reconciles to the riyal, next to a full transaction log you can audit any time.',
   },
   {
     title: 'Supermarket mode',
     body: 'The same core switches into a barcode-first retail flow for grocery and convenience formats.',
   },
   {
-    title: 'Device-level access control',
-    body: 'Every till logs in individually. New devices need explicit approval before they can bill a single riyal.',
+    title: 'Support built in',
+    body: 'Live chat inside the admin panel — talk to us without leaving the dashboard, on every plan’s admin tools.',
   },
 ];
 ---
@@ -119,15 +131,19 @@ const features = [
           <div class="ease-out-quad h-full rounded-2xl border border-hairline bg-charcoal-soft/40 p-8 transition-colors duration-500 hover:border-gold/30">
             <h3 class="font-semibold text-bone">Manager Console</h3>
             <p class="mt-2 text-sm leading-relaxed text-bone/50">
-              A live dashboard for owners: today's counter ticking in real time, Close Day
-              history, and one-tap export of any report to WhatsApp or PDF.
+              A separate live app for owners — installable on any phone. Today's counter ticking
+              in real time, Close Day history, one-tap WhatsApp share or PDF export, and a ZATCA
+              status banner so compliance is visible at a glance.
             </p>
             <div class="mt-6 rounded-xl border border-hairline bg-charcoal p-4 font-mono text-[11px]">
-              <div class="flex items-center justify-between text-bone/40">
+              <div class="rounded-md border border-leaf-bright/30 bg-leaf/10 px-2.5 py-1 text-center text-leaf-bright">
+                ZATCA · CONNECTED
+              </div>
+              <div class="mt-3 flex items-center justify-between text-bone/40">
                 <span>TODAY · ALL BRANCHES</span>
                 <span class="text-leaf-bright">● LIVE</span>
               </div>
-              <div class="mt-3 flex items-baseline justify-between">
+              <div class="mt-2 flex items-baseline justify-between">
                 <span class="text-2xl font-semibold text-bone">SAR 48,210</span>
                 <span class="text-leaf-bright">+11.4%</span>
               </div>
@@ -161,8 +177,8 @@ const features = [
           <div class="ease-out-quad h-full rounded-2xl border border-hairline bg-charcoal-soft/40 p-8 transition-colors duration-500 hover:border-gold/30">
             <h3 class="font-semibold text-bone">Device-level access control</h3>
             <p class="mt-2 text-sm leading-relaxed text-bone/50">
-              Every till logs in individually. A new device can't bill a single riyal until an
-              owner explicitly approves it.
+              A default-deny security model: every till logs in individually, and a new device
+              can't bill a single riyal until an owner explicitly approves it.
             </p>
             <div class="mt-6 space-y-2 rounded-xl border border-hairline bg-charcoal p-4 font-mono text-[11px]">
               <div class="flex items-center justify-between">
@@ -198,6 +214,58 @@ const features = [
               <div class="font-mono text-[11px]">
                 <p class="text-bone">6281000123457</p>
                 <p class="text-bone/50">Scanned · SAR 4.50 · VAT incl.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Fatoora onboarding -->
+        <div data-reveal>
+          <div class="ease-out-quad h-full rounded-2xl border border-hairline bg-charcoal-soft/40 p-8 transition-colors duration-500 hover:border-gold/30">
+            <h3 class="font-semibold text-bone">Fatoora onboarding, automated</h3>
+            <p class="mt-2 text-sm leading-relaxed text-bone/50">
+              Every new client goes through an automated 7-step ZATCA onboarding — from device
+              registration to production reporting — handled by our dedicated Fatoora pipeline.
+              You supply one portal OTP; we do the rest.
+            </p>
+            <div class="mt-6 space-y-1.5 rounded-xl border border-hairline bg-charcoal p-4 font-mono text-[11px]">
+              <div class="flex items-center justify-between text-bone/40">
+                <span>ONBOARDING</span>
+                <span class="text-gold">STEP 5 / 7</span>
+              </div>
+              <div class="mt-2 flex items-center justify-between">
+                <span class="text-bone/60">Device registered</span>
+                <span class="text-leaf-bright">✓</span>
+              </div>
+              <div class="flex items-center justify-between">
+                <span class="text-bone/60">Compliance checks passed</span>
+                <span class="text-leaf-bright">✓</span>
+              </div>
+              <div class="flex items-center justify-between">
+                <span class="text-bone/60">Fatoora portal OTP</span>
+                <span class="rounded-md border border-gold/40 px-2 py-0.5 text-gold">PENDING</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- KOT smart titles -->
+        <div data-reveal style="--reveal-delay: 0.08s">
+          <div class="ease-out-quad h-full rounded-2xl border border-hairline bg-charcoal-soft/40 p-8 transition-colors duration-500 hover:border-gold/30">
+            <h3 class="font-semibold text-bone">Kitchen tickets with smart titles</h3>
+            <p class="mt-2 text-sm leading-relaxed text-bone/50">
+              KOTs print the moment an order lands and label themselves — Telephone, Parcel, or
+              Dine-in — so the kitchen reads the flow before the first line item.
+            </p>
+            <div class="mt-6 rounded-xl border border-hairline bg-charcoal p-4 font-mono text-[11px]">
+              <div class="flex items-center justify-between">
+                <span class="font-semibold text-bone">KOT #114 · TELEPHONE</span>
+                <span class="text-bone/40">20:42</span>
+              </div>
+              <div class="mt-2 space-y-0.5 text-bone/60">
+                <p>2× Grilled Broast Platter</p>
+                <p>1× Bukhari Rice</p>
+                <p class="text-bone/40">— extra garlic sauce</p>
               </div>
             </div>
           </div>
