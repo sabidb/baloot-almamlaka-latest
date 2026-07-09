@@ -1,11 +1,46 @@
-<footer class="border-t border-white/5 px-4 py-10">
-  <div
-    class="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 text-sm text-white/40 sm:flex-row"
-  >
-    <p>
-      <span class="font-display font-semibold text-white/70">Resto<span class="text-brand-400">Pos</span></span>
-      — POS &amp; e-invoicing for Saudi restaurants
-    </p>
-    <p>© 2026 RestoPos. All rights reserved.</p>
+---
+const year = new Date().getFullYear();
+---
+
+<footer class="mt-32 border-t border-hairline">
+  <div class="mx-auto flex max-w-6xl flex-col justify-between gap-10 px-6 py-14 md:flex-row md:px-8">
+    <div class="max-w-xs">
+      <div class="mb-4 flex items-center gap-2">
+        <span class="size-2 rounded-full bg-gold"></span>
+        <span class="text-[15px] font-semibold tracking-tight text-bone">
+          Resto<span class="text-gold">POS</span>
+        </span>
+      </div>
+      <p class="text-sm leading-relaxed text-bone/50">
+        ZATCA Phase 2-compliant billing for Saudi restaurants. Built for precision, priced for
+        growth.
+      </p>
+    </div>
+
+    <div class="grid grid-cols-2 gap-10 text-sm sm:grid-cols-3">
+      <div class="flex flex-col gap-3">
+        <span class="text-[11px] uppercase tracking-widest text-bone/40">Product</span>
+        <a href="/features" class="text-bone/70 transition-colors duration-300 hover:text-gold">Features</a>
+        <a href="/pricing" class="text-bone/70 transition-colors duration-300 hover:text-gold">Pricing</a>
+      </div>
+      <div class="flex flex-col gap-3">
+        <span class="text-[11px] uppercase tracking-widest text-bone/40">Company</span>
+        <a href="/contact" class="text-bone/70 transition-colors duration-300 hover:text-gold">Contact</a>
+      </div>
+      <div class="flex flex-col gap-3">
+        <span class="text-[11px] uppercase tracking-widest text-bone/40">Compliance</span>
+        <span class="text-bone/70">ZATCA Phase 2</span>
+        <span class="text-bone/70">Fatoora Integrated</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="border-t border-hairline">
+    <div
+      class="mx-auto flex max-w-6xl flex-col items-center justify-between gap-2 px-6 py-5 sm:flex-row md:px-8"
+    >
+      <p class="text-xs text-bone/30">© {year} RestoPOS. Makkah, Saudi Arabia.</p>
+      <p class="text-xs text-bone/30">Precision billing, quietly done.</p>
+    </div>
   </div>
 </footer>

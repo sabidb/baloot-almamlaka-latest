@@ -3,53 +3,51 @@ import ZatcaReceipt from './ZatcaReceipt.jsx';
 
 const points = [
   {
-    title: 'Phase 2 (Integration) ready',
-    body: 'Invoices are cleared and reported through the Fatoora platform in real time — no manual uploads, no end-of-day batching.',
+    title: 'ZATCA Phase 2, handled',
+    body: "Every invoice is signed, QR-coded, and reported the moment it's printed. No spreadsheets, no manual uploads to Fatoora.",
   },
   {
     title: 'Cryptographic stamp on every receipt',
     body: 'Each simplified tax invoice carries a compliant QR code and cryptographic stamp, verifiable by any ZATCA scanner.',
   },
   {
-    title: 'VAT handled automatically',
-    body: '15% VAT is calculated, itemised and reported per line item — bilingual (Arabic / English) out of the box.',
+    title: 'Arabic and English, natively',
+    body: 'Every screen, receipt, and report is bilingual by default — not translated as an afterthought.',
   },
 ];
 ---
 
-<section id="compliance" class="relative px-4 py-24 sm:py-32">
+<section id="compliance" class="relative px-6 py-24 md:px-8 sm:py-32">
   <div
     aria-hidden="true"
-    class="pointer-events-none absolute right-0 top-1/3 -z-10 h-[28rem] w-[36rem] rounded-full bg-mint-500/[0.07] blur-[120px]"
+    class="pointer-events-none absolute right-0 top-1/3 -z-10 h-[28rem] w-[36rem] rounded-full bg-gold/[0.05] blur-[120px]"
   >
   </div>
 
   <div class="mx-auto grid max-w-6xl items-center gap-14 lg:grid-cols-2 lg:gap-20">
-    <div>
-      <p class="text-sm font-semibold uppercase tracking-widest text-mint-400">Compliance</p>
-      <h2
-        class="mt-3 font-display text-3xl font-bold leading-tight tracking-tight text-white sm:text-4xl"
-      >
+    <div data-reveal>
+      <p class="text-[12px] uppercase tracking-[0.2em] text-gold">Compliance</p>
+      <h2 class="mt-4 text-balance text-display-lg font-extrabold text-bone">
         Built for ZATCA.<br />Trusted at the till.
       </h2>
-      <p class="mt-5 max-w-lg text-base leading-relaxed text-white/60">
-        Every order placed in RestoPos becomes a fully compliant e-invoice — stamped, QR-coded and
+      <p class="mt-6 max-w-lg leading-relaxed text-bone/55">
+        Every order placed in RestoPOS becomes a fully compliant e-invoice — stamped, QR-coded and
         reported to ZATCA without your staff lifting a finger.
       </p>
 
-      <ul class="mt-9 space-y-6">
+      <ul class="mt-10 space-y-6">
         {
           points.map(({ title, body }) => (
             <li class="flex gap-4">
               <span
                 aria-hidden="true"
-                class="mt-0.5 grid size-6 shrink-0 place-items-center rounded-full border border-mint-500/30 bg-mint-500/10 text-xs font-bold text-mint-300"
+                class="mt-0.5 grid size-6 shrink-0 place-items-center rounded-full border border-gold/30 bg-gold/10 text-xs font-bold text-gold"
               >
                 ✓
               </span>
               <div>
-                <h3 class="font-semibold text-white">{title}</h3>
-                <p class="mt-1 text-sm leading-relaxed text-white/55">{body}</p>
+                <h3 class="font-semibold text-bone">{title}</h3>
+                <p class="mt-1 text-sm leading-relaxed text-bone/50">{body}</p>
               </div>
             </li>
           ))

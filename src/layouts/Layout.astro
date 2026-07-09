@@ -9,8 +9,8 @@ interface Props {
 }
 
 const {
-  title = 'RestoPos — ZATCA-compliant POS for modern restaurants',
-  description = 'RestoPos is the all-in-one, ZATCA Phase 2 compliant point of sale built for restaurants in Saudi Arabia. Orders, payments and e-invoicing in one elegant system.',
+  title = 'RestoPOS — ZATCA-Compliant Restaurant Billing',
+  description = 'RestoPOS is ZATCA Phase 2-compliant point of sale software for Saudi restaurants. Bilingual invoicing, thermal printing, and Fatoora reporting built in.',
 } = Astro.props;
 ---
 
@@ -28,16 +28,32 @@ const {
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap"
       rel="stylesheet"
     />
     <title>{title}</title>
   </head>
-  <body class="min-h-screen overflow-x-clip">
+  <body class="flex min-h-screen flex-col">
     <Navbar />
-    <main>
+    <main class="flex-1">
       <slot />
     </main>
     <Footer />
+
+    <script>
+      // Reveal-on-scroll: [data-reveal] elements fade up when they enter view.
+      const observer = new IntersectionObserver(
+        (entries) => {
+          for (const entry of entries) {
+            if (entry.isIntersecting) {
+              entry.target.classList.add('is-visible');
+              observer.unobserve(entry.target);
+            }
+          }
+        },
+        { threshold: 0.15 }
+      );
+      document.querySelectorAll('[data-reveal]').forEach((el) => observer.observe(el));
+    </script>
   </body>
 </html>

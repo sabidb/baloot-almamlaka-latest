@@ -3,10 +3,63 @@ import Layout from '../layouts/Layout.astro';
 import Hero from '../components/Hero.astro';
 import Compliance from '../components/Compliance.astro';
 import DemoCta from '../components/DemoCta.astro';
+
+const trust = ['Broast Al-Bahr', 'Sweet Cinnamon'];
+
+const pillars = [
+  {
+    label: 'Compliance',
+    title: 'ZATCA Phase 2, handled',
+    body: "Every invoice is signed, QR-coded, and reported the moment it's printed. No spreadsheets, no manual uploads to Fatoora.",
+  },
+  {
+    label: 'Speed',
+    title: 'Built for the rush',
+    body: 'Order, print, and close a table in seconds — on the same tablet your staff already knows how to use.',
+  },
+  {
+    label: 'Clarity',
+    title: 'One number you can trust',
+    body: 'Daily closes, VAT breakdowns, and branch reports that reconcile to the riyal — every time.',
+  },
+];
 ---
 
 <Layout>
   <Hero />
+
+  <!-- Trust bar -->
+  <div class="px-6 md:px-8" data-reveal>
+    <div
+      class="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-6 border-y border-hairline py-6"
+    >
+      <span class="text-xs uppercase tracking-widest text-bone/40">Trusted by</span>
+      <div class="flex flex-wrap gap-x-10 gap-y-3">
+        {trust.map((name) => <span class="text-sm font-medium text-bone/60">{name}</span>)}
+      </div>
+    </div>
+  </div>
+
+  <!-- Pillars -->
+  <section class="mx-auto max-w-6xl px-6 py-28 md:px-8">
+    <h2 class="max-w-xl text-balance text-display-lg font-bold text-bone" data-reveal>
+      Three things a POS in Saudi Arabia has to get right.
+    </h2>
+    <div class="mt-16 grid gap-8 md:grid-cols-3">
+      {
+        pillars.map((p, i) => (
+          <div data-reveal style={`--reveal-delay: ${i * 0.1}s`}>
+            <div class="ease-out-quad h-full rounded-2xl border border-hairline bg-charcoal-soft/40 p-8 transition-colors duration-500 hover:border-gold/30">
+              <span class="text-[11px] uppercase tracking-widest text-gold">{p.label}</span>
+              <h3 class="mt-4 text-xl font-semibold text-bone">{p.title}</h3>
+              <p class="mt-3 text-sm leading-relaxed text-bone/55">{p.body}</p>
+            </div>
+          </div>
+        ))
+      }
+    </div>
+  </section>
+
   <Compliance />
   <DemoCta />
 </Layout>

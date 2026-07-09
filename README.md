@@ -1,6 +1,7 @@
-# RestoPos — Landing Page
+# RestoPOS — Landing Page
 
-Marketing site for **RestoPos**, a ZATCA-compliant point of sale for restaurants in Saudi Arabia.
+Marketing site for **RestoPOS**, a ZATCA Phase 2-compliant point of sale for restaurants in
+Saudi Arabia.
 
 Built with [Astro](https://astro.build), [Tailwind CSS v4](https://tailwindcss.com) and
 [Framer Motion](https://www.framer.com/motion/) (React island for the animated ZATCA receipt).
@@ -10,26 +11,33 @@ Built with [Astro](https://astro.build), [Tailwind CSS v4](https://tailwindcss.c
 ```
 src/
 ├── layouts/
-│   └── Layout.astro          # Base HTML shell — fonts, meta, navbar + footer
+│   └── Layout.astro          # Base HTML shell — fonts, meta, navbar + footer, reveal script
 ├── components/
 │   ├── Navbar.astro          # Persistent glassmorphism navbar with Book Demo CTA
-│   ├── Hero.astro            # Floating 3D-tilt container + light-sweep animation
-│   ├── DashboardPreview.astro# Placeholder RestoPos dashboard UI
+│   ├── Hero.astro            # Floating 3D-tilt container + light-sweep + bilingual word
+│   ├── DashboardPreview.astro# Placeholder RestoPOS Manager Console UI
 │   ├── Compliance.astro      # ZATCA trust section
-│   ├── ZatcaReceipt.jsx      # React island — receipt with self-drawing QR (Framer Motion)
-│   ├── DemoCta.astro         # Book-a-demo section
+│   ├── ZatcaReceipt.jsx      # React island — receipt prints itself, QR draws itself
+│   ├── DemoCta.astro         # CTA band
 │   └── Footer.astro
 ├── pages/
-│   └── index.astro
+│   ├── index.astro           # Home — hero, trust bar, pillars, compliance, CTA
+│   ├── features.astro        # Order → Bill → Report sequence + feature grid
+│   ├── pricing.astro         # Single Branch / Multi-Branch / Enterprise plans
+│   └── contact.astro         # Demo request form
 └── styles/
     └── global.css            # Tailwind + brand tokens + keyframe utilities
 ```
 
 ## Branding
 
-All brand tokens (colors, fonts) live in `src/styles/global.css` under `@theme`.
-Swap the values there to apply the official RestoPos guidelines — components
-reference tokens only.
+Official RestoPOS guidelines — all tokens live in `src/styles/global.css` under `@theme`:
+
+- **Charcoal** `#0A0A0A` (soft `#141414`, raised `#1B1B1B`) — surfaces
+- **Gold** `#C5A059` (bright `#DCC08A`, dim `#8A7245`) — accent
+- **Bone** `#F5F3EE` — text / receipt paper · **Hairline** `#262622` — borders
+- **Inter** for UI, **JetBrains Mono** for receipts and numbers
+- Voice: *"Restaurant billing, done quietly."*
 
 ## Commands
 

@@ -1,48 +1,93 @@
 ---
 const links = [
-  { href: '#product', label: 'Product' },
-  { href: '#compliance', label: 'Compliance' },
-  { href: '#demo', label: 'Contact' },
+  { href: '/', label: 'Home' },
+  { href: '/features', label: 'Features' },
+  { href: '/pricing', label: 'Pricing' },
+  { href: '/contact', label: 'Contact' },
 ];
+
+const path = Astro.url.pathname.replace(/\/$/, '') || '/';
+const isActive = (href: string) => path === href;
 ---
 
-<header class="fixed inset-x-0 top-0 z-50">
-  <nav
-    aria-label="Main"
-    class="mx-auto mt-4 flex max-w-6xl items-center justify-between rounded-2xl border border-white/10 bg-ink-900/60 px-5 py-3 shadow-[0_8px_32px_rgba(0,0,0,0.35)] backdrop-blur-xl max-sm:mx-3 sm:px-6 lg:mx-auto lg:w-[min(72rem,calc(100%-2rem))]"
-  >
-    <a href="/" class="flex items-center gap-2.5" aria-label="RestoPos home">
+<header
+  class="fixed inset-x-0 top-0 z-50 border-b border-hairline bg-charcoal/85 backdrop-blur-md"
+>
+  <nav aria-label="Main" class="mx-auto flex h-16 max-w-6xl items-center justify-between px-6 md:px-8">
+    <a href="/" class="group flex items-center gap-2" aria-label="RestoPOS home">
       <span
-        class="grid size-9 place-items-center rounded-xl bg-gradient-to-br from-brand-400 to-brand-600 font-display text-lg font-bold text-ink-950"
-      >
-        R
-      </span>
-      <span class="font-display text-lg font-semibold tracking-tight text-white">
-        Resto<span class="text-brand-400">Pos</span>
+        class="ease-out-quad size-2 rounded-full bg-gold transition-transform duration-300 group-hover:scale-125"
+      ></span>
+      <span class="text-[15px] font-semibold tracking-tight text-bone">
+        Resto<span class="text-gold">POS</span>
       </span>
     </a>
 
-    <ul class="hidden items-center gap-8 md:flex">
+    <div class="hidden items-center gap-8 md:flex">
       {
         links.map(({ href, label }) => (
-          <li>
-            <a
-              href={href}
-              class="text-sm font-medium text-white/70 transition-colors hover:text-white"
-            >
-              {label}
-            </a>
-          </li>
+          <a
+            href={href}
+            class:list={[
+              'ease-out-quad text-[13px] tracking-wide transition-colors duration-300',
+              isActive(href) ? 'text-gold' : 'text-bone/70 hover:text-bone',
+            ]}
+            aria-current={isActive(href) ? 'page' : undefined}
+          >
+            {label}
+          </a>
         ))
       }
-    </ul>
 
-    <!-- Book Demo — subtle glassmorphism -->
-    <a
-      href="#demo"
-      class="rounded-full border border-white/15 bg-white/10 px-5 py-2 text-sm font-semibold text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.18),0_4px_16px_rgba(0,0,0,0.25)] backdrop-blur-md transition hover:border-white/25 hover:bg-white/15"
+      <!-- Book Demo — subtle glassmorphism, brand gold -->
+      <a
+        href="/contact"
+        class="ease-out-quad rounded-full border border-gold/40 bg-gold/10 px-4 py-2 text-[13px] font-medium tracking-wide text-gold shadow-[inset_0_1px_0_rgba(220,192,138,0.15)] backdrop-blur-md transition-all duration-300 hover:bg-gold hover:text-charcoal"
+      >
+        Book Demo
+      </a>
+    </div>
+
+    <button
+      id="menu-toggle"
+      class="flex h-8 w-8 flex-col items-center justify-center gap-1.5 text-bone md:hidden"
+      aria-label="Toggle menu"
+      aria-expanded="false"
+      aria-controls="mobile-menu"
     >
-      Book Demo
-    </a>
+      <span class="menu-line ease-out-quad block h-px w-5 bg-bone transition-transform duration-300"></span>
+      <span class="menu-line ease-out-quad block h-px w-5 bg-bone transition-opacity duration-300"></span>
+      <span class="menu-line ease-out-quad block h-px w-5 bg-bone transition-transform duration-300"></span>
+    </button>
   </nav>
+
+  <div id="mobile-menu" hidden class="border-b border-hairline bg-charcoal md:hidden">
+    <div class="flex flex-col gap-4 px-6 py-4">
+      {
+        links.map(({ href, label }) => (
+          <a href={href} class="text-sm text-bone/80">
+            {label}
+          </a>
+        ))
+      }
+      <a href="/contact" class="text-sm font-medium text-gold">Book Demo →</a>
+    </div>
+  </div>
 </header>
+
+<script>
+  const toggle = document.getElementById('menu-toggle');
+  const menu = document.getElementById('mobile-menu');
+  const lines = toggle?.querySelectorAll('.menu-line');
+
+  toggle?.addEventListener('click', () => {
+    const open = menu!.hidden;
+    menu!.hidden = !open;
+    toggle.setAttribute('aria-expanded', String(open));
+    if (lines) {
+      (lines[0] as HTMLElement).style.transform = open ? 'rotate(45deg) translateY(6.5px)' : '';
+      (lines[1] as HTMLElement).style.opacity = open ? '0' : '';
+      (lines[2] as HTMLElement).style.transform = open ? 'rotate(-45deg) translateY(-6.5px)' : '';
+    }
+  });
+</script>

@@ -2,45 +2,41 @@
 import DashboardPreview from './DashboardPreview.astro';
 ---
 
-<section id="product" class="relative overflow-x-clip px-4 pb-24 pt-40 sm:pt-44">
-  <!-- Ambient glow -->
+<section class="relative overflow-x-clip px-6 pb-24 pt-40 md:px-8 md:pt-48">
+  <!-- Ambient gold glow -->
   <div
     aria-hidden="true"
-    class="pointer-events-none absolute left-1/2 top-0 -z-10 h-[36rem] w-[64rem] -translate-x-1/2 rounded-full bg-brand-500/10 blur-[140px]"
+    class="pointer-events-none absolute left-1/2 top-0 -z-10 h-[36rem] w-[64rem] -translate-x-1/2 rounded-full bg-gold/[0.06] blur-[140px]"
   >
   </div>
 
   <div class="mx-auto max-w-4xl text-center">
-    <p
-      class="mx-auto mb-6 w-fit rounded-full border border-mint-500/25 bg-mint-500/10 px-4 py-1.5 text-xs font-semibold tracking-wide text-mint-300"
-    >
-      ZATCA Phase 2 ready — Fatoora integrated
+    <p class="mb-6 text-[12px] uppercase tracking-[0.2em] text-gold">
+      Restaurant billing, done quietly
     </p>
-    <h1
-      class="font-display text-4xl font-bold leading-[1.08] tracking-tight text-white sm:text-6xl"
-    >
-      The point of sale your
-      <span class="bg-gradient-to-r from-brand-300 to-brand-500 bg-clip-text text-transparent">
-        restaurant
-      </span>
-      deserves
+    <h1 class="text-balance text-display-xl font-extrabold text-bone">
+      Every bill,<br />
+      <span class="bilingual" data-bilingual>
+        <span data-lang="ar" lang="ar">متوافقة تماماً</span>
+        <span data-lang="en" aria-hidden="true">fully compliant</span>
+      </span><span class="text-gold">.</span>
     </h1>
-    <p class="mx-auto mt-6 max-w-2xl text-balance text-lg leading-relaxed text-white/60">
-      Orders, payments, kitchen displays and ZATCA e-invoicing — unified in one fast, beautiful
-      system built for Saudi restaurants.
+    <p class="mx-auto mt-8 max-w-md text-balance text-lg leading-relaxed text-bone/60">
+      RestoPOS is ZATCA Phase 2-certified point of sale for Saudi restaurants — from the till to
+      the Fatoora portal, without the paperwork in between.
     </p>
-    <div class="mt-9 flex items-center justify-center gap-4">
+    <div class="mt-10 flex flex-wrap items-center justify-center gap-4">
       <a
-        href="#demo"
-        class="whitespace-nowrap rounded-full bg-gradient-to-b from-brand-400 to-brand-600 px-7 py-3 text-sm font-semibold text-ink-950 shadow-[0_8px_24px_rgba(245,158,11,0.35)] transition hover:brightness-110"
+        href="/contact"
+        class="ease-out-quad whitespace-nowrap rounded-full bg-gold px-7 py-3.5 text-sm font-semibold text-charcoal transition-colors duration-300 hover:bg-gold-bright"
       >
-        Book a demo
+        Request a demo
       </a>
       <a
-        href="#compliance"
-        class="whitespace-nowrap rounded-full px-6 py-3 text-sm font-semibold text-white/70 transition hover:text-white"
+        href="/features"
+        class="ease-out-quad whitespace-nowrap rounded-full border border-bone/20 px-7 py-3.5 text-sm font-medium text-bone transition-colors duration-300 hover:border-bone/50"
       >
-        See compliance →
+        See how it works
       </a>
     </div>
   </div>
@@ -50,7 +46,7 @@ import DashboardPreview from './DashboardPreview.astro';
     <div class="animate-float mx-auto max-w-5xl">
       <div
         data-tilt
-        class="light-sweep relative overflow-hidden rounded-3xl border border-white/10 bg-ink-900/80 p-2 shadow-[0_40px_120px_rgba(0,0,0,0.55),inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-xl sm:p-3"
+        class="light-sweep relative overflow-hidden rounded-3xl border border-hairline bg-charcoal-soft/80 p-2 shadow-gold backdrop-blur-xl sm:p-3"
       >
         <DashboardPreview />
       </div>
@@ -59,9 +55,21 @@ import DashboardPreview from './DashboardPreview.astro';
 </section>
 
 <script>
+  // Bilingual word — Arabic and English swap every 2.6s.
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+
+  for (const el of document.querySelectorAll('[data-bilingual]')) {
+    if (reduceMotion.matches) continue;
+    setInterval(() => {
+      el.classList.toggle('show-en');
+      const showEn = el.classList.contains('show-en');
+      el.querySelector('[data-lang="ar"]')?.setAttribute('aria-hidden', String(showEn));
+      el.querySelector('[data-lang="en"]')?.setAttribute('aria-hidden', String(!showEn));
+    }, 2600);
+  }
+
   // 3D tilt on hover — pointer position maps to a gentle rotateX/rotateY.
   const MAX_TILT = 6; // degrees
-  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
 
   for (const el of document.querySelectorAll<HTMLElement>('[data-tilt]')) {
     el.addEventListener('pointermove', (e) => {
