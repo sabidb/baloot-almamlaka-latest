@@ -1,5 +1,6 @@
 ---
 import DashboardPreview from './DashboardPreview.astro';
+import { APP_URL } from '../config';
 ---
 
 <section class="relative overflow-x-clip px-6 pb-24 pt-40 md:px-8 md:pt-48">
@@ -32,16 +33,22 @@ import DashboardPreview from './DashboardPreview.astro';
     </p>
     <div class="mt-10 flex flex-wrap items-center justify-center gap-4">
       <a
+        href={APP_URL}
+        class="brand-gradient ease-out-quad whitespace-nowrap rounded-full px-8 py-3.5 text-sm font-semibold text-white shadow-[0_8px_28px_rgba(76,122,82,0.35)] transition duration-300 hover:brightness-110"
+      >
+        Register now
+      </a>
+      <a
         href="/contact"
-        class="brand-gradient ease-out-quad whitespace-nowrap rounded-full px-7 py-3.5 text-sm font-semibold text-white shadow-[0_8px_28px_rgba(76,122,82,0.35)] transition duration-300 hover:brightness-110"
+        class="ease-out-quad whitespace-nowrap rounded-full border border-bone/20 px-7 py-3.5 text-sm font-medium text-bone transition-colors duration-300 hover:border-bone/50"
       >
         Request a demo
       </a>
       <a
         href="/features"
-        class="ease-out-quad whitespace-nowrap rounded-full border border-bone/20 px-7 py-3.5 text-sm font-medium text-bone transition-colors duration-300 hover:border-bone/50"
+        class="ease-out-quad whitespace-nowrap px-2 py-3.5 text-sm font-medium text-bone/60 transition-colors duration-300 hover:text-bone"
       >
-        See how it works
+        See how it works →
       </a>
     </div>
   </div>
