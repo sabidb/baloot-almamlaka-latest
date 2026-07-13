@@ -140,7 +140,7 @@ export function playTone(freq,vol=0.1,type='sine'){
       gain.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+i*0.12+0.15);
       osc.start(ctx.currentTime+i*0.12);osc.stop(ctx.currentTime+i*0.12+0.15);
     });
-  }catch(e){}
+  }catch{ /* audio unsupported — ignore */ }
 }
 export const sounds={
   deal:()=>playTone(440,0.1,'triangle'),
@@ -150,3 +150,146 @@ export const sounds={
   tick:()=>playTone(880,0.05,'square'),
   buy: ()=>playTone([523,659],0.1,'sine'),
 };
+
+// ── Legal move enforcement (Baloot rules) ─────────────────
+// Must-follow-suit; in hokum must cut with trump when void, and
+// must over-trump a trump already on the table when able.
+export function legalPlays(hand, trick, mode, trump){
+  if(!trick || trick.length===0) return [...hand];
+  const led = trick[0].card.suit.symbol;
+  const following = hand.filter(c=>c.suit.symbol===led);
+  const trumpsInTrick = trick.filter(p=>p.card.suit.symbol===trump);
+  const highestTrump = trumpsInTrick.length
+    ? Math.max(...trumpsInTrick.map(p=>cardStrength(p.card,mode,trump))) : -1;
+  if(following.length){
+    // Following a trump lead: must raise above the highest trump if possible.
+    if(mode==='hokum' && led===trump && trumpsInTrick.length){
+      const higher = following.filter(c=>cardStrength(c,mode,trump)>highestTrump);
+      if(higher.length) return higher;
+    }
+    return following;
+  }
+  // Void in led suit
+  if(mode==='hokum'){
+    const trumps = hand.filter(c=>c.suit.symbol===trump);
+    if(trumps.length){
+      if(trumpsInTrick.length){
+        const higher = trumps.filter(c=>cardStrength(c,mode,trump)>highestTrump);
+        if(higher.length) return higher; // must over-trump when able
+      }
+      return trumps; // otherwise must still cut with a trump
+    }
+  }
+  return [...hand]; // sun mode void, or no trump in hand → free
+}
+
+// Would card `c`, played by seat `myIndex`, win the current partial trick?
+export function wouldWin(c, trick, myIndex, mode, trump){
+  const t=[...trick,{player:myIndex,card:c}];
+  return trickWinner(t,mode,trump).card===c;
+}
+
+// ── Improved bot: play legal, cooperate with partner, win cheaply ──
+export function botChoose(hand, trick, mode, trump, myIndex){
+  const legal=legalPlays(hand,trick,mode,trump);
+  if(legal.length===1) return legal[0];
+  const byValueAsc=[...legal].sort((a,b)=>cardValue(a,mode,trump)-cardValue(b,mode,trump));
+  const byStrengthDesc=[...legal].sort((a,b)=>cardStrength(b,mode,trump)-cardStrength(a,mode,trump));
+  if(!trick || trick.length===0) return byStrengthDesc[0]; // lead strong
+  const winning=trickWinner(trick,mode,trump);
+  const partnerWinning=(winning.player%2)===(myIndex%2);
+  if(partnerWinning) return byValueAsc[0]; // partner has it — dump lowest value
+  const winners=legal.filter(c=>wouldWin(c,trick,myIndex,mode,trump));
+  if(winners.length) return winners.sort((a,b)=>cardValue(a,mode,trump)-cardValue(b,mode,trump))[0];
+  return byValueAsc[0]; // can't win — dump lowest value
+}
+
+// Points captured in a completed (or partial) trick.
+export function trickPoints(trick,mode,trump){
+  return trick.reduce((s,p)=>s+cardValue(p.card,mode,trump),0);
+}
+
+// Sort a hand for display: group by suit, strongest first within suit.
+export function sortHand(hand,mode,trump){
+  const order=SUITS.map(s=>s.symbol);
+  return [...hand].sort((a,b)=>{
+    const sa=order.indexOf(a.suit.symbol), sb=order.indexOf(b.suit.symbol);
+    if(sa!==sb) return sa-sb;
+    return cardStrength(b,mode,trump)-cardStrength(a,mode,trump);
+  });
+}
+
+// ── Customization catalogs (tiered avatars + inventory) ───
+export const AVATAR_CATALOG=[
+  {emoji:'🧔',tier:'free',cost:0},
+  {emoji:'👲',tier:'free',cost:0},
+  {emoji:'🧕',tier:'free',cost:0},
+  {emoji:'👨‍💼',tier:'free',cost:0},
+  {emoji:'👩‍💼',tier:'free',cost:0},
+  {emoji:'🤴',tier:'premium',cost:300},
+  {emoji:'👸',tier:'premium',cost:300},
+  {emoji:'🧙',tier:'premium',cost:500},
+  {emoji:'🦸',tier:'premium',cost:600},
+  {emoji:'🎩',tier:'premium',cost:800},
+];
+export const FREE_AVATARS=AVATAR_CATALOG.filter(a=>a.tier==='free').map(a=>a.emoji);
+
+// Profile frames (border ring around the avatar). Some are earned, not sold.
+export const FRAMES=[
+  {id:'none',    name:'بدون',    cost:0,   ring:'rgba(255,255,255,.15)'},
+  {id:'gold',    name:'ذهبي',    reward:'first_win', ring:'#F0C040'},
+  {id:'emerald', name:'زمردي',   cost:400, ring:'#2ECC71'},
+  {id:'sapphire',name:'ياقوتي',  cost:600, ring:'#3498DB'},
+  {id:'royal',   name:'ملكي',    cost:1000,ring:'conic-gradient(#8B6914,#F0C040,#FFE08A,#F0C040,#8B6914)'},
+  {id:'champion',name:'بطل',     reward:'ten_wins',  ring:'conic-gradient(#E74C3C,#F0C040,#E74C3C)'},
+];
+// Name plates (pill behind the player name).
+export const NAMEPLATES=[
+  {id:'none',   name:'بدون',   cost:0,   bg:'transparent',                                   fg:'#F0EDE5'},
+  {id:'desert', name:'الصحراء',cost:300, bg:'linear-gradient(90deg,#8B6914,#C9A84C)',        fg:'#07090A'},
+  {id:'night',  name:'الليل',  cost:300, bg:'linear-gradient(90deg,#0a0a2a,#3498DB)',        fg:'#fff'},
+  {id:'veteran',name:'مخضرم',  reward:'five_wins', bg:'linear-gradient(90deg,#1A5C28,#2ECC71)', fg:'#fff'},
+  {id:'royal',  name:'ملكي',   cost:800, bg:'linear-gradient(90deg,#4A0072,#9B59B6)',        fg:'#fff'},
+];
+// Chat / reaction bubbles (styling of the in-game reaction pop).
+export const CHAT_BUBBLES=[
+  {id:'none', name:'كلاسيك', cost:0,   bg:'rgba(8,12,10,.95)',  border:'#7A5B1A', fg:'#F0C040'},
+  {id:'coffee',name:'قهوة ☕',cost:200, bg:'#2a1a00',            border:'#C9A84C', fg:'#F0C040'},
+  {id:'fire', name:'نار 🔥', cost:250, bg:'#2a0a00',            border:'#E74C3C', fg:'#FFD08A'},
+  {id:'royal',name:'ملكي 👑',reward:'first_win', bg:'#1a0020',  border:'#9B59B6', fg:'#E0C0FF'},
+];
+
+// Default inventory for a brand-new player.
+export function defaultInventory(){
+  return {
+    avatars:  [...FREE_AVATARS],
+    tables:   ['classic'],
+    frames:   ['none'],
+    nameplates:['none'],
+    bubbles:  ['none'],
+  };
+}
+
+// Achievement grants keyed off win count. Returns the item ids a player
+// should now own (frames/nameplates/bubbles) given their total wins.
+export function achievementGrants(wins){
+  const g={frames:[],nameplates:[],bubbles:[]};
+  if(wins>=1){ g.frames.push('gold'); g.bubbles.push('royal'); }
+  if(wins>=5){ g.nameplates.push('veteran'); }
+  if(wins>=10){ g.frames.push('champion'); }
+  return g;
+}
+
+// Merge achievement grants into an inventory, returning {inventory, earned}.
+export function applyAchievements(inventory, wins){
+  const inv=inventory && typeof inventory==='object'
+    ? {...defaultInventory(),...inventory} : defaultInventory();
+  const g=achievementGrants(wins);
+  const earned=[];
+  for(const key of ['frames','nameplates','bubbles']){
+    const owned=new Set(inv[key]||[]);
+    for(const id of g[key]) if(!owned.has(id)){ owned.add(id); earned.push({key,id}); }
+    inv[key]=[...owned];
+  }
+  return {inventory:inv, earned};
+}
