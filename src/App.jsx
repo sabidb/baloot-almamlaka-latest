@@ -9,6 +9,7 @@ import {
   REACTIONS, defaultInventory, applyAchievements,
   sounds, setMuted, startAmbience, stopAmbience,
 } from './GameLogic';
+import LudoScreen from './Ludo';
 
 const firebaseConfig = {
   apiKey:            import.meta.env.VITE_FIREBASE_API_KEY,
@@ -124,7 +125,7 @@ export default function App(){
   const [profile,setProfile]=useState(null);
   const [loading,setLoading]=useState(!!auth); // no backend → skip loading, go straight to guest/login
   const [tab,setTab]=useState('home');
-  const [inGame,setInGame]=useState(false);
+  const [game,setGame]=useState(null); // null | 'baloot' | 'ludo'
 
   useEffect(()=>{
     const style=document.createElement('style');
@@ -136,6 +137,7 @@ export default function App(){
       @keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
       @keyframes popIn{from{opacity:0;transform:scale(.7)}to{opacity:1;transform:scale(1)}}
       @keyframes pfly{0%{opacity:1;transform:translate(0,0) scale(1)}100%{opacity:0;transform:translate(var(--tx),var(--ty)) scale(0)}}
+      @keyframes pulse{0%,100%{transform:translate(-50%,-60%) scale(1)}50%{transform:translate(-50%,-60%) scale(1.14)}}
       select option{background:#0C1410}
     `;
     document.head.appendChild(style);
@@ -167,9 +169,14 @@ export default function App(){
 
   if(!profile)return <AuthScreen onDone={setProfile}/>;
 
-  if(inGame)return(
+  if(game==='baloot')return(
     <div style={{height:'100dvh',overflow:'hidden'}}>
-      <GameScreen profile={profile} onUpdate={setProfile} onExit={()=>{setInGame(false);setTab('home');}}/>
+      <GameScreen profile={profile} onUpdate={setProfile} onExit={()=>{setGame(null);setTab('home');}}/>
+    </div>
+  );
+  if(game==='ludo')return(
+    <div style={{height:'100dvh',overflow:'hidden'}}>
+      <LudoScreen profile={profile} onExit={()=>{setGame(null);setTab('home');}}/>
     </div>
   );
 
@@ -178,7 +185,7 @@ export default function App(){
   return(
     <div style={{height:'100dvh',display:'flex',flexDirection:'column',background:'#07090A',fontFamily:'Tajawal,sans-serif',color:'#F0EDE5',direction:'rtl',overflow:'hidden'}}>
       <div style={{flex:1,overflow:'hidden',position:'relative'}}>
-        {tab==='home'    &&<HomeScreen    profile={profile} onGame={()=>setInGame(true)}/>}
+        {tab==='home'    &&<HomeScreen    profile={profile} onGame={setGame}/>}
         {tab==='board'   &&<LeaderScreen/>}
         {tab==='store'   &&<StoreScreen   profile={profile} onUpdate={setProfile}/>}
         {tab==='friends' &&<FriendScreen/>}
@@ -300,7 +307,7 @@ function HomeScreen({profile,onGame}){
     {id:'quick', icon:'⚡',title:'لعبة سريعة',  sub:'العب مع لاعبين عشوائيين',color:'#2ECC71', online:false},
   ];
   const pickMode=m=>{
-    if(m.id==='bot'||m.id==='quick'){ onGame(); return; }
+    if(m.id==='bot'||m.id==='quick'){ onGame('baloot'); return; }
     showNote('🔒 اللعب أونلاين مع الأصدقاء — قريباً');
   };
   return(
@@ -331,6 +338,14 @@ function HomeScreen({profile,onGame}){
             <span style={{color:'rgba(240,237,229,.6)',fontSize:10,textAlign:'center',lineHeight:1.3}}>{m.sub}</span>
           </div>
         ))}
+      </div>
+      <div onClick={()=>onGame('ludo')} style={{margin:'0 12px 12px',display:'flex',alignItems:'center',gap:12,background:'linear-gradient(135deg,rgba(155,89,182,.25),rgba(52,152,219,.18))',border:'1px solid rgba(240,192,64,.25)',borderRadius:16,padding:'14px 16px',cursor:'pointer',touchAction:'manipulation'}}>
+        <span style={{fontSize:34}}>🎲</span>
+        <div style={{flex:1}}>
+          <div style={{fontSize:15,fontWeight:900,color:'#F0C040'}}>لودو المملكة</div>
+          <div style={{color:'rgba(240,237,229,.7)',fontSize:11,marginTop:2}}>لعبة اللودو الكلاسيكية · ضد الروبوت · بالوضع الأفقي</div>
+        </div>
+        <span style={{fontSize:20,color:'#F0C040'}}>‹</span>
       </div>
       <div style={{display:'flex',background:'rgba(13,20,16,.75)',border:'1px solid rgba(240,192,64,.1)',borderRadius:14,margin:'0 12px',overflow:'hidden'}}>
         {[['٦.٢م','لاعب'],['٩٨٤','مباراة الآن'],['٤.٨','التقييم']].map(([n,l],i)=>(
