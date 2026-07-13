@@ -3,14 +3,20 @@ import {
   LUDO_COLORS, RING, HOME_PATHS, CENTER, FINISH,
   initLudo, movableTokens, applyMove, playerFinished, botPickToken, tokenCell, rollDie,
 } from './LudoLogic';
-import { sounds, setMuted } from './GameLogic';
+import { sounds, setMuted, REACTIONS } from './GameLogic';
+
+const PHRASES = ['أحسنت! 👍','لعبة موفقة 🎉','بالتوفيق 🍀','يالله بسرعة ⏱️','ما شاء الله','لا بأس 😅'];
+const TURN_SECONDS = 15;
 
 const CELL = 100/15;
 const pos = (r,c)=>({ position:'absolute', top:`${r*CELL}%`, left:`${c*CELL}%`, width:`${CELL}%`, height:`${CELL}%` });
-const START_INDEX = { 0:'red', 13:'green', 26:'yellow', 39:'blue' };
+const START_INDEX = { 0:'green', 13:'yellow', 26:'blue', 39:'red' };
 const STAR = new Set([8,21,34,47]);
+const GLOBE = new Set([21,47]); // two of the safe cells shown as globes
 const hexOf = id => LUDO_COLORS.find(c=>c.id===id).hex;
 const PLAYER_SETS = { 2:[0,2], 3:[0,1,2], 4:[0,1,2,3] };
+// travel direction leaving each start square
+const START_ARROW = { green:'▸', yellow:'▾', blue:'◂', red:'▴' };
 
 // ── colour helpers for glossy gradients ──
 const clamp = v => Math.max(0,Math.min(255,v));
@@ -22,59 +28,68 @@ function shade(hex,amt){
 }
 const tokenBg = c => `radial-gradient(circle at 34% 28%, ${shade(c,62)}, ${c} 58%, ${shade(c,-28)})`;
 
-const BASES = [
-  { color:'red',    r0:0, c0:0, arrow:'▸' },
-  { color:'green',  r0:0, c0:9, arrow:'▾' },
-  { color:'yellow', r0:9, c0:9, arrow:'◂' },
-  { color:'blue',   r0:9, c0:0, arrow:'▴' },
-];
-const HOME_ARROW = { red:'▸', green:'▾', yellow:'◂', blue:'▴' };
+// Coin-style token: colour ring, light centre, crown emblem.
+function Coin({ color, canMove, style, onClick }){
+  return (
+    <div onClick={onClick} style={{...style, borderRadius:'50%', background:color,
+      boxShadow:canMove?'0 0 0 3px rgba(255,255,255,.9),0 4px 9px rgba(0,0,0,.5)':'0 4px 9px rgba(0,0,0,.5)',
+      display:'flex',alignItems:'center',justifyContent:'center',padding:'12%',
+      cursor:canMove?'pointer':'default'}}>
+      <div style={{width:'100%',height:'100%',borderRadius:'50%',background:`radial-gradient(circle at 50% 36%, #ffffff, ${shade(color,58)})`,display:'flex',alignItems:'center',justifyContent:'center',boxShadow:'inset 0 -1px 2px rgba(0,0,0,.2)'}}>
+        <span style={{color,fontSize:'min(1.9vh,3.6vw)',lineHeight:1,fontWeight:900,textShadow:'0 1px 0 rgba(255,255,255,.5)'}}>♛</span>
+      </div>
+    </div>
+  );
+}
 
-function BoardStatic({ active }){
+const BASES = [
+  { color:'green',  r0:0, c0:0 }, // top-left
+  { color:'yellow', r0:0, c0:9 }, // top-right
+  { color:'blue',   r0:9, c0:9 }, // bottom-right
+  { color:'red',    r0:9, c0:0 }, // bottom-left
+];
+const HOME_ARROW = { green:'▸', yellow:'▾', blue:'◂', red:'▴' };
+const GRID = '1px solid rgba(0,0,0,.55)';
+
+function BoardStatic({ activeColors }){
   return (
     <>
-      {/* Corner bases */}
-      {BASES.map((b,pi)=>{
-        const on=active.includes(pi); const col=hexOf(b.color);
+      {/* Corner bases — bright fill, dark inner panel, 4 sockets */}
+      {BASES.map(b=>{
+        const on=activeColors.has(b.color); const col=hexOf(b.color);
         return (
           <div key={b.color} style={{...pos(b.r0,b.c0),width:`${6*CELL}%`,height:`${6*CELL}%`,
-            background:`linear-gradient(135deg, ${shade(col,18)}, ${col} 55%, ${shade(col,-22)})`,
-            borderRadius:'16%',padding:'9%',opacity:on?1:0.32,boxShadow:'inset 0 2px 6px rgba(255,255,255,.25), inset 0 -3px 8px rgba(0,0,0,.3)'}}>
-            <div style={{width:'100%',height:'100%',background:'linear-gradient(160deg,#ffffff,#eef0ec)',borderRadius:'12%',display:'grid',gridTemplateColumns:'1fr 1fr',placeItems:'center',gap:'6%',padding:'11%',boxShadow:'inset 0 1px 3px rgba(0,0,0,.25)'}}>
-              {[0,1,2,3].map(i=><div key={i} style={{width:'66%',aspectRatio:'1',borderRadius:'50%',background:`radial-gradient(circle at 40% 35%, #fff, ${shade(col,55)})`,boxShadow:`inset 0 2px 4px rgba(0,0,0,.28), 0 0 0 2px ${col}`}}/>)}
+            background:col,border:GRID,boxSizing:'border-box',padding:'10.5%',opacity:on?1:0.4}}>
+            <div style={{width:'100%',height:'100%',background:shade(col,-16),borderRadius:'10%',display:'grid',gridTemplateColumns:'1fr 1fr',placeItems:'center',gap:'10%',padding:'12%',boxShadow:'inset 0 2px 5px rgba(0,0,0,.35)'}}>
+              {[0,1,2,3].map(i=><div key={i} style={{width:'80%',aspectRatio:'1',borderRadius:'50%',background:shade(col,-30),boxShadow:'inset 0 2px 4px rgba(0,0,0,.45)'}}/>)}
             </div>
           </div>
         );
       })}
 
-      {/* Ring cells */}
+      {/* Ring cells — white grid, colored starts, star/globe safes, arrows */}
       {RING.map(([r,c],i)=>{
         const startColor=START_INDEX[i];
-        const safe=STAR.has(i);
-        const bg = startColor
-          ? `linear-gradient(135deg, ${shade(hexOf(startColor),25)}, ${hexOf(startColor)})`
-          : '#fbfaf4';
+        const safe=STAR.has(i), globe=GLOBE.has(i);
         return (
-          <div key={`ring${i}`} style={{...pos(r,c),border:'1px solid rgba(0,0,0,.14)',background:bg,display:'flex',alignItems:'center',justifyContent:'center',boxSizing:'border-box',
-            boxShadow:startColor?'inset 0 1px 3px rgba(255,255,255,.4)':'inset 0 0 3px rgba(0,0,0,.04)'}}>
-            {safe&&<span style={{color:startColor?'rgba(255,255,255,.9)':'#C9A84C',fontSize:'1.5vh',lineHeight:1,textShadow:'0 1px 1px rgba(0,0,0,.3)'}}>★</span>}
+          <div key={`ring${i}`} style={{...pos(r,c),border:GRID,background:startColor?hexOf(startColor):'#fff',display:'flex',alignItems:'center',justifyContent:'center',boxSizing:'border-box'}}>
+            {startColor&&<span style={{color:'rgba(255,255,255,.92)',fontSize:'1.5vh',lineHeight:1,textShadow:'0 1px 1px rgba(0,0,0,.35)'}}>{START_ARROW[startColor]}</span>}
+            {!startColor&&globe&&<span style={{fontSize:'1.5vh',lineHeight:1}}>🌍</span>}
+            {!startColor&&!globe&&safe&&<span style={{color:'#9aa0a6',fontSize:'1.7vh',lineHeight:1}}>★</span>}
           </div>
         );
       })}
 
-      {/* Home columns with directional chevrons */}
+      {/* Home columns — solid colour with chevrons */}
       {Object.entries(HOME_PATHS).map(([id,cells])=>cells.map(([r,c],i)=>(
-        <div key={`home${id}${i}`} style={{...pos(r,c),background:`linear-gradient(135deg, ${shade(hexOf(id),22)}, ${hexOf(id)})`,border:'1px solid rgba(0,0,0,.12)',boxSizing:'border-box',display:'flex',alignItems:'center',justifyContent:'center',color:'rgba(255,255,255,.55)',fontSize:'1.2vh'}}>
+        <div key={`home${id}${i}`} style={{...pos(r,c),background:hexOf(id),border:GRID,boxSizing:'border-box',display:'flex',alignItems:'center',justifyContent:'center',color:'rgba(255,255,255,.6)',fontSize:'1.2vh'}}>
           {i<5&&HOME_ARROW[id]}
         </div>
       )))}
 
-      {/* Centre pinwheel + emblem */}
-      <div style={{...pos(6,6),width:`${3*CELL}%`,height:`${3*CELL}%`,background:
-        `conic-gradient(from 45deg, ${hexOf('yellow')} 0 90deg, ${hexOf('blue')} 90deg 180deg, ${hexOf('red')} 180deg 270deg, ${hexOf('green')} 270deg 360deg)`,
-        border:'1px solid rgba(0,0,0,.25)',display:'flex',alignItems:'center',justifyContent:'center',boxShadow:'inset 0 2px 8px rgba(255,255,255,.25), inset 0 -3px 8px rgba(0,0,0,.35)'}}>
-        <div style={{width:'46%',height:'46%',borderRadius:'50%',background:'radial-gradient(circle at 40% 35%, #FFE9A8, #C9A84C 70%, #8B6914)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'1.7vh',boxShadow:'0 1px 4px rgba(0,0,0,.5)'}}>👑</div>
-      </div>
+      {/* Centre — four triangles toward each home */}
+      <div style={{...pos(6,6),width:`${3*CELL}%`,height:`${3*CELL}%`,border:GRID,boxSizing:'border-box',background:
+        `conic-gradient(from 45deg, ${hexOf('blue')} 0 90deg, ${hexOf('red')} 90deg 180deg, ${hexOf('green')} 180deg 270deg, ${hexOf('yellow')} 270deg 360deg)`}}/>
     </>
   );
 }
@@ -167,7 +182,10 @@ export default function LudoScreen({ profile, onUpdate, persist, onExit }){
   const [fakeFace,setFakeFace]=useState(1);
   const [moving,setMoving]=useState(null);
   const [muted,setMutedState]=useState(!!(profile&&profile.muted));
-  const tn=useRef(0), rollingRef=useRef(false), movingRef=useRef(false), boardRef=useRef(null), awarded=useRef(false);
+  const [bubbles,setBubbles]=useState([]);
+  const [tray,setTray]=useState(null); // 'emoji' | 'chat' | null
+  const tn=useRef(0), rollingRef=useRef(false), movingRef=useRef(false), boardRef=useRef(null), awarded=useRef(false), bn=useRef(0);
+  const popBubble=(seat,txt)=>{bn.current++;const k=bn.current;setBubbles(b=>[...b,{seat,txt,k}]);setTimeout(()=>setBubbles(b=>b.filter(x=>x.k!==k)),2400);};
   const showT=m=>{tn.current++;const k=tn.current;setToast({m,k});setTimeout(()=>setToast(t=>t&&t.k===k?null:t),1500);};
 
   useEffect(()=>{ setMuted(!!(profile&&profile.muted)); },[]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -235,6 +253,16 @@ export default function LudoScreen({ profile, onUpdate, persist, onExit }){
     }
   },[state]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Turn timer — auto-act if the human stalls past the countdown.
+  useEffect(()=>{
+    if(state.turn!==0 || state.phase==='over' || state.phase==='setup' || movingRef.current) return;
+    const id=setTimeout(()=>{
+      if(state.phase==='roll') performRoll();
+      else if(state.phase==='move' && state.moves.length) performMove(state.moves[state.moves.length-1]);
+    }, TURN_SECONDS*1000);
+    return ()=>clearTimeout(id);
+  },[state]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // Award coins + stats + celebrate once.
   useEffect(()=>{
     if(state.phase!=='over' || awarded.current) return;
@@ -277,16 +305,12 @@ export default function LudoScreen({ profile, onUpdate, persist, onExit }){
     }
   }
 
-  const tokenStyle=(p,r,c,or,oc,z,canMove)=>({
-    position:'absolute', top:`${(r+0.5+or)*CELL}%`, left:`${(c+0.5+oc)*CELL}%`, transform:'translate(-50%,-62%)',
-    width:'5%', aspectRatio:'0.82', borderRadius:'50% 50% 50% 50% / 60% 60% 42% 42%',
-    background:tokenBg(hexOf(LUDO_COLORS[p].id)),
-    border:`1.5px solid ${canMove?'#fff':'rgba(0,0,0,.4)'}`,
-    boxShadow:canMove?'0 0 0 3px rgba(255,255,255,.75),0 4px 9px rgba(0,0,0,.55)':'0 4px 9px rgba(0,0,0,.5), inset 0 2px 2px rgba(255,255,255,.4)',
-    cursor:canMove?'pointer':'default', zIndex:z,
+  const coinPos=(r,c,or,oc,z,canMove)=>({
+    position:'absolute', top:`${(r+0.5+or)*CELL}%`, left:`${(c+0.5+oc)*CELL}%`, transform:'translate(-50%,-60%)',
+    width:'5.8%', aspectRatio:'1', zIndex:z,
     animation:canMove?'pulse 1s ease-in-out infinite':'none', transition:'top .3s,left .3s',
   });
-
+  const activeColors = new Set(state.active.map(p=>LUDO_COLORS[p].id));
   const curColor = state.phase!=='setup' ? hexOf(LUDO_COLORS[state.turn].id) : '#F0C040';
 
   return (
@@ -319,14 +343,14 @@ export default function LudoScreen({ profile, onUpdate, persist, onExit }){
       {/* Board */}
       <div style={{flex:1,display:'flex',alignItems:'center',justifyContent:'center',padding:'4px 10px',minHeight:0}}>
         <div ref={boardRef} style={{position:'relative',width:'min(94vw, 60vh)',aspectRatio:'1',
-          background:'linear-gradient(160deg,#12201A,#0a130e)',borderRadius:18,
-          padding:'2.4%',boxShadow:'0 22px 60px rgba(0,0,0,.65), 0 0 0 2px rgba(240,192,64,.25), inset 0 0 0 1px rgba(0,0,0,.4)'}}>
-          <div style={{position:'relative',width:'100%',height:'100%',borderRadius:10,overflow:'hidden',direction:'ltr',background:'#0d1712'}}>
-            <BoardStatic active={state.active}/>
+          background:'linear-gradient(160deg,#8a5a2e,#5a3417)',borderRadius:16,
+          padding:'2.8%',boxShadow:'0 22px 55px rgba(0,0,0,.65), inset 0 2px 4px rgba(255,255,255,.18), inset 0 -4px 8px rgba(0,0,0,.4)'}}>
+          <div style={{position:'relative',width:'100%',height:'100%',borderRadius:4,overflow:'hidden',direction:'ltr',background:'#ffffff',border:'1.5px solid rgba(0,0,0,.55)',boxSizing:'border-box'}}>
+            <BoardStatic activeColors={activeColors}/>
 
             {/* Destination previews */}
             {previews.map(pv=>(
-              <div key={`pv${pv.key}`} style={{position:'absolute',top:`${(pv.cell[0]+0.5)*CELL}%`,left:`${(pv.cell[1]+0.5)*CELL}%`,transform:'translate(-50%,-50%)',width:'4.4%',aspectRatio:'1',borderRadius:'50%',border:'2px dashed rgba(255,255,255,.85)',boxShadow:'0 0 8px rgba(255,255,255,.4)',zIndex:90,pointerEvents:'none',animation:'pulse 1.1s ease-in-out infinite'}}/>
+              <div key={`pv${pv.key}`} style={{position:'absolute',top:`${(pv.cell[0]+0.5)*CELL}%`,left:`${(pv.cell[1]+0.5)*CELL}%`,transform:'translate(-50%,-50%)',width:'5%',aspectRatio:'1',borderRadius:'50%',border:'2px dashed rgba(20,20,20,.75)',boxShadow:'0 0 8px rgba(255,255,255,.6)',zIndex:90,pointerEvents:'none',animation:'pulse 1.1s ease-in-out infinite'}}/>
             ))}
 
             {/* Tokens */}
@@ -334,33 +358,57 @@ export default function LudoScreen({ profile, onUpdate, persist, onExit }){
               const key=`${k.r.toFixed(1)},${k.c.toFixed(1)}`;
               const group=occ[key]; const idx=group.indexOf(k); const [or,oc]=OFFS[Math.min(idx,4)];
               const canMove = k.p===0 && humanMovable && humanMovable.has(k.t);
-              return <div key={`${k.p}-${k.t}`} onClick={()=>k.p===0&&humanMove(k.t)} style={tokenStyle(k.p,k.r,k.c,or,oc,100+idx,canMove)}/>;
+              return <Coin key={`${k.p}-${k.t}`} color={hexOf(LUDO_COLORS[k.p].id)} canMove={canMove} onClick={()=>k.p===0&&humanMove(k.t)} style={coinPos(k.r,k.c,or,oc,100+idx,canMove)}/>;
             })}
 
             {/* Hopping token */}
             {moving&&moving.cell&&(
-              <div style={{...tokenStyle(moving.p,moving.cell[0],moving.cell[1],0,0,200,false),
-                border:'1.5px solid #fff', boxShadow:'0 0 0 2px rgba(255,255,255,.5),0 7px 15px rgba(0,0,0,.6)',
-                animation:'none', transition:'top .14s linear,left .14s linear'}}/>
+              <Coin color={hexOf(LUDO_COLORS[moving.p].id)} canMove={false}
+                style={{...coinPos(moving.cell[0],moving.cell[1],0,0,200,false),animation:'none',transition:'top .14s linear,left .14s linear'}}/>
             )}
           </div>
         </div>
       </div>
 
+      {/* Reaction bubbles */}
+      {bubbles.map(bub=>(
+        <div key={bub.k} style={{position:'absolute',bottom:112,left:'50%',transform:'translateX(-50%)',background:'#fff',color:'#1a1a1a',borderRadius:16,padding:'8px 16px',fontSize:16,fontWeight:700,boxShadow:'0 8px 20px rgba(0,0,0,.45)',zIndex:150,animation:'popIn .3s cubic-bezier(.34,1.56,.64,1)',whiteSpace:'nowrap'}}>{bub.txt}</div>
+      ))}
+
       {/* Dice / controls */}
       {state.phase!=='setup'&&state.phase!=='over'&&(
-        <div style={{flexShrink:0,display:'flex',alignItems:'center',justifyContent:'center',gap:16,padding:'8px 14px calc(env(safe-area-inset-bottom,0px)+14px)'}}>
-          <div onClick={state.turn===0&&state.phase==='roll'?humanRoll:undefined}
-            style={{width:58,height:58,borderRadius:14,background:'linear-gradient(145deg,#FEFDF8,#E4DECB)',
-              boxShadow:state.turn===0&&state.phase==='roll'?`0 6px 18px ${curColor}66, 0 0 0 2px ${curColor}`:'0 6px 16px rgba(0,0,0,.5)',
-              cursor:state.turn===0&&state.phase==='roll'?'pointer':'default',
-              animation:rolling?'diceshake .32s ease-in-out infinite':'none'}}>
-            {(state.dice||rolling)?<Pips n={rolling?fakeFace:state.dice} color={curColor}/>:<div style={{width:'100%',height:'100%',display:'flex',alignItems:'center',justifyContent:'center',color:'#0C1410',fontSize:24}}>🎲</div>}
-          </div>
-          <div style={{minWidth:120,textAlign:'center'}}>
-            {state.turn===0&&state.phase==='roll'&&!rolling&&!moving&&<div style={{color:'#F0C040',fontSize:14,fontWeight:900}}>دورك — اضغط النرد 🎲</div>}
-            {state.turn===0&&state.phase==='move'&&!moving&&<div style={{color:'#2ECC71',fontSize:13,fontWeight:700}}>اختر قطعة للتحريك</div>}
-            {(state.turn!==0||moving||rolling)&&<div style={{color:'rgba(240,237,229,.6)',fontSize:13}}>دور {state.turn===0?'اللاعب':LUDO_COLORS[state.turn].name}…</div>}
+        <div style={{flexShrink:0,padding:'6px 14px calc(env(safe-area-inset-bottom,0px)+12px)'}}>
+          {/* Turn timer (human) */}
+          {state.turn===0&&!moving&&(
+            <div style={{height:4,borderRadius:2,background:'rgba(255,255,255,.12)',margin:'0 auto 8px',maxWidth:220,overflow:'hidden'}}>
+              <div key={state.evt} style={{height:'100%',background:curColor,borderRadius:2,animation:`shrinkbar ${TURN_SECONDS}s linear forwards`}}/>
+            </div>
+          )}
+          {/* Tray palette */}
+          {tray&&(
+            <div style={{display:'flex',flexWrap:'wrap',gap:6,justifyContent:'center',marginBottom:8,background:'rgba(8,12,10,.9)',border:'1px solid #7A5B1A',borderRadius:14,padding:8,maxWidth:340,margin:'0 auto 8px'}}>
+              {(tray==='emoji'?REACTIONS:PHRASES).map(x=>(
+                <button key={x} onClick={()=>{popBubble(0,x);setTray(null);}} style={{background:'rgba(255,255,255,.06)',border:'none',borderRadius:8,padding:tray==='emoji'?'4px 8px':'6px 10px',fontSize:tray==='emoji'?20:12,fontWeight:700,color:'#F0EDE5',cursor:'pointer',fontFamily:'Tajawal,sans-serif'}}>{x}</button>
+              ))}
+            </div>
+          )}
+          <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',gap:10}}>
+            <div style={{display:'flex',gap:6}}>
+              <button onClick={()=>setTray(t=>t==='emoji'?null:'emoji')} style={{width:40,height:40,borderRadius:10,border:'1px solid rgba(255,255,255,.12)',background:tray==='emoji'?'rgba(240,192,64,.18)':'rgba(255,255,255,.08)',fontSize:18,cursor:'pointer'}}>😄</button>
+              <button onClick={()=>setTray(t=>t==='chat'?null:'chat')} style={{width:40,height:40,borderRadius:10,border:'1px solid rgba(255,255,255,.12)',background:tray==='chat'?'rgba(240,192,64,.18)':'rgba(255,255,255,.08)',fontSize:16,cursor:'pointer'}}>💬</button>
+            </div>
+            <div style={{flex:1,textAlign:'center',minWidth:0}}>
+              {state.turn===0&&state.phase==='roll'&&!rolling&&!moving&&<div style={{color:'#F0C040',fontSize:14,fontWeight:900}}>دورك — اضغط النرد 🎲</div>}
+              {state.turn===0&&state.phase==='move'&&!moving&&<div style={{color:'#2ECC71',fontSize:13,fontWeight:700}}>اختر قطعة للتحريك</div>}
+              {(state.turn!==0||moving||rolling)&&<div style={{color:'rgba(240,237,229,.6)',fontSize:13}}>دور {state.turn===0?'اللاعب':LUDO_COLORS[state.turn].name}…</div>}
+            </div>
+            <div onClick={state.turn===0&&state.phase==='roll'?humanRoll:undefined}
+              style={{width:56,height:56,flexShrink:0,borderRadius:14,background:'linear-gradient(145deg,#FEFDF8,#E4DECB)',
+                boxShadow:state.turn===0&&state.phase==='roll'?`0 6px 18px ${curColor}66, 0 0 0 2px ${curColor}`:'0 6px 16px rgba(0,0,0,.5)',
+                cursor:state.turn===0&&state.phase==='roll'?'pointer':'default',
+                animation:rolling?'diceshake .32s ease-in-out infinite':'none'}}>
+              {(state.dice||rolling)?<Pips n={rolling?fakeFace:state.dice} color={curColor}/>:<div style={{width:'100%',height:'100%',display:'flex',alignItems:'center',justifyContent:'center',color:'#0C1410',fontSize:24}}>🎲</div>}
+            </div>
           </div>
         </div>
       )}

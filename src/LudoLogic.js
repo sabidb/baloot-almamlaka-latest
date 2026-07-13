@@ -5,11 +5,14 @@
 //   0..50     = on the ring (0 = own start square)
 //   51..56    = own home column (56 = finished / centre)
 
+// Corner layout matches a classic Ludo board: green top-left, yellow
+// top-right, blue bottom-right, red bottom-left. Player 0 (the human) is
+// red at the bottom-left, the conventional "you" seat.
 export const LUDO_COLORS = [
-  { id:'red',    name:'الأحمر', hex:'#E74C3C', start:0  },
-  { id:'green',  name:'الأخضر', hex:'#27AE60', start:13 },
-  { id:'yellow', name:'الأصفر', hex:'#F0C040', start:26 },
-  { id:'blue',   name:'الأزرق', hex:'#3498DB', start:39 },
+  { id:'red',    name:'الأحمر', hex:'#E23B3B', start:39 }, // bottom-left (human)
+  { id:'green',  name:'الأخضر', hex:'#3FB34F', start:0  }, // top-left
+  { id:'yellow', name:'الأصفر', hex:'#F2C230', start:13 }, // top-right
+  { id:'blue',   name:'الأزرق', hex:'#2E8BE6', start:26 }, // bottom-right
 ];
 
 // 52 ring cells [row,col], clockwise. Index 0 = red's start square.
@@ -30,19 +33,20 @@ export const RING = [
 ];
 
 // Home columns (6 cells each), from ring entrance toward the centre.
+// green→left, yellow→top, blue→right, red→bottom (matches corners above).
 export const HOME_PATHS = {
-  red:    [[7,1],[7,2],[7,3],[7,4],[7,5],[7,6]],
-  green:  [[1,7],[2,7],[3,7],[4,7],[5,7],[6,7]],
-  yellow: [[7,13],[7,12],[7,11],[7,10],[7,9],[7,8]],
-  blue:   [[13,7],[12,7],[11,7],[10,7],[9,7],[8,7]],
+  green:  [[7,1],[7,2],[7,3],[7,4],[7,5],[7,6]],
+  yellow: [[1,7],[2,7],[3,7],[4,7],[5,7],[6,7]],
+  blue:   [[7,13],[7,12],[7,11],[7,10],[7,9],[7,8]],
+  red:    [[13,7],[12,7],[11,7],[10,7],[9,7],[8,7]],
 };
 
 // Four token slots inside each corner yard (fractional grid coords).
 export const YARD = {
-  red:    [[1.5,1.5],[1.5,3.5],[3.5,1.5],[3.5,3.5]],
-  green:  [[1.5,10.5],[1.5,12.5],[3.5,10.5],[3.5,12.5]],
-  yellow: [[10.5,10.5],[10.5,12.5],[12.5,10.5],[12.5,12.5]],
-  blue:   [[10.5,1.5],[10.5,3.5],[12.5,1.5],[12.5,3.5]],
+  green:  [[1.5,1.5],[1.5,3.5],[3.5,1.5],[3.5,3.5]],     // top-left
+  yellow: [[1.5,10.5],[1.5,12.5],[3.5,10.5],[3.5,12.5]], // top-right
+  blue:   [[10.5,10.5],[10.5,12.5],[12.5,10.5],[12.5,12.5]], // bottom-right
+  red:    [[10.5,1.5],[10.5,3.5],[12.5,1.5],[12.5,3.5]], // bottom-left
 };
 
 export const CENTER = [7,7];
