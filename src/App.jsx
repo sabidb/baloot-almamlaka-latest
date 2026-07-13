@@ -290,12 +290,19 @@ function guestProfile(){
 }
 
 function HomeScreen({profile,onGame}){
+  const [notice,setNotice]=useState(null);
+  const noteN=useRef(0);
+  const showNote=m=>{noteN.current++;const k=noteN.current;setNotice({m,k});setTimeout(()=>setNotice(n=>n&&n.k===k?null:n),2600);};
   const modes=[
-    {id:'bot',   icon:'🤖',title:'مع الروبوت',  sub:'تدرب بدون انتظار',        color:'#9B59B6'},
-    {id:'create',icon:'👥',title:'مع الأصدقاء', sub:'أنشئ غرفة وشارك الكود',  color:'#F0C040'},
-    {id:'join',  icon:'🔑',title:'انضم لغرفة',  sub:'أدخل كود الغرفة',         color:'#3498DB'},
-    {id:'quick', icon:'⚡',title:'لعبة سريعة',  sub:'العب مع لاعبين عشوائيين',color:'#2ECC71'},
+    {id:'bot',   icon:'🤖',title:'مع الروبوت',  sub:'تدرب بدون انتظار',        color:'#9B59B6', online:false},
+    {id:'create',icon:'👥',title:'مع الأصدقاء', sub:'أنشئ غرفة وشارك الكود',  color:'#F0C040', online:true},
+    {id:'join',  icon:'🔑',title:'انضم لغرفة',  sub:'أدخل كود الغرفة',         color:'#3498DB', online:true},
+    {id:'quick', icon:'⚡',title:'لعبة سريعة',  sub:'العب مع لاعبين عشوائيين',color:'#2ECC71', online:false},
   ];
+  const pickMode=m=>{
+    if(m.id==='bot'||m.id==='quick'){ onGame(); return; }
+    showNote('🔒 اللعب أونلاين مع الأصدقاء — قريباً');
+  };
   return(
     <div style={{position:'absolute',inset:0,overflowY:'auto',WebkitOverflowScrolling:'touch',paddingBottom:'calc(60px + env(safe-area-inset-bottom,0px) + 12px)',paddingTop:'env(safe-area-inset-top,0px)'}}>
       <div style={{textAlign:'center',padding:'18px 14px 0'}}>
@@ -313,10 +320,12 @@ function HomeScreen({profile,onGame}){
           <span>🪙</span><span style={{fontSize:13,fontWeight:900,color:'#F0C040'}}>{profile.coins||500}</span>
         </div>
       </div>
+      {notice&&<div key={notice.k} style={{margin:'0 12px 10px',background:'rgba(240,192,64,.1)',border:'1px solid rgba(240,192,64,.3)',borderRadius:10,padding:'8px 12px',fontSize:12,fontWeight:700,color:'#F0C040',textAlign:'center',animation:'fadeUp .3s ease both'}}>{notice.m}</div>}
       <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,padding:'0 12px',marginBottom:12}}>
         {modes.map(m=>(
-          <div key={m.id} onClick={m.id==='bot'||m.id==='quick'?onGame:undefined}
-            style={{background:'rgba(13,20,16,.8)',border:'1px solid rgba(255,255,255,.07)',borderRadius:16,padding:'16px 10px',display:'flex',flexDirection:'column',alignItems:'center',gap:6,cursor:'pointer',touchAction:'manipulation'}}>
+          <div key={m.id} onClick={()=>pickMode(m)}
+            style={{background:'rgba(13,20,16,.8)',border:'1px solid rgba(255,255,255,.07)',borderRadius:16,padding:'16px 10px',display:'flex',flexDirection:'column',alignItems:'center',gap:6,cursor:'pointer',touchAction:'manipulation',position:'relative',opacity:m.online?0.75:1}}>
+            {m.online&&<span style={{position:'absolute',top:8,left:8,background:'rgba(240,192,64,.15)',color:'#F0C040',fontSize:8,fontWeight:700,padding:'2px 5px',borderRadius:5}}>قريباً</span>}
             <span style={{fontSize:26}}>{m.icon}</span>
             <span style={{fontSize:13,fontWeight:700,color:m.color+'CC'}}>{m.title}</span>
             <span style={{color:'rgba(240,237,229,.6)',fontSize:10,textAlign:'center',lineHeight:1.3}}>{m.sub}</span>
@@ -387,6 +396,8 @@ function gameReducer(s,a){
     }
     case 'NEXT_ROUND':
       return {...freshRound((s.dealer+1)%4), matchScores:s.matchScores, evt:s.evt+1, banner:null};
+    case 'RESET':
+      return initGame();
     default: return s;
   }
 }
@@ -522,6 +533,7 @@ function GameScreen({profile,onExit,onUpdate}){
   const myTurn=state.phase==='playing'&&state.turn===0;
   const legalSet=myTurn?new Set(legalPlays(state.hands[0],state.trick,mode,trump)):null;
   const myHand=sortHand(state.hands[0],mode,trump);
+  const winCardId=(state.trick.length===4&&state.contract)?trickWinner(state.trick,mode,trump).card.id:null;
 
   const humanBid=bid=>{ ensureAudio(); if(state.phase==='bidding'&&state.bidTurn===0) dispatch({type:'BID',payload:bid}); };
   const humanPlay=(e,card)=>{
@@ -534,6 +546,7 @@ function GameScreen({profile,onExit,onUpdate}){
     dispatch({type:'PLAY',payload:card}); setSel(null);
   };
   const react=emoji=>{ ensureAudio(); sounds.tick(); pushReaction(0,emoji); setReactOpen(false); };
+  const playAgain=()=>{ awarded.current=false; prevPhase.current='bidding'; prevTricks.current=0; setReactions([]); dispatch({type:'RESET'}); };
 
   const teamName=t=>t===0?'أ':'ب';
 
@@ -580,10 +593,15 @@ function GameScreen({profile,onExit,onUpdate}){
 
       {/* Trick center */}
       <div style={{position:'relative',width:200,height:170,zIndex:20}}>
-        {state.trick.map((p,i)=>(
-          <CardFace key={p.card.id} card={p.card}
-            style={{...G.card,position:'absolute',...SEAT_POS[p.player],zIndex:i+1,boxShadow:'0 6px 20px rgba(0,0,0,.65)'}}/>
-        ))}
+        {state.trick.map((p,i)=>{
+          const winning=p.card.id===winCardId;
+          return(
+            <CardFace key={p.card.id} card={p.card}
+              style={{...G.card,position:'absolute',...SEAT_POS[p.player],zIndex:winning?9:i+1,
+                boxShadow:winning?'0 0 0 2px #F0C040,0 0 18px rgba(240,192,64,.75)':'0 6px 20px rgba(0,0,0,.65)',
+                transition:'box-shadow .25s'}}/>
+          );
+        })}
         {state.phase==='bidding'&&<div style={{position:'absolute',top:'50%',left:'50%',transform:'translate(-50%,-50%)',color:'rgba(240,237,229,.4)',fontSize:11,fontWeight:600,whiteSpace:'nowrap'}}>{state.bidTurn===0?'اختر: حكم / صن / بس':'المزايدة...'}</div>}
         {myTurn&&state.trick.length<4&&<div style={{position:'absolute',bottom:-4,left:'50%',transform:'translate(-50%,0)',color:'#2ECC71',fontSize:11,fontWeight:700,whiteSpace:'nowrap'}}>دورك 🎯</div>}
       </div>
@@ -655,7 +673,10 @@ function GameScreen({profile,onExit,onUpdate}){
                 </div>
               ))}
             </div>
-            <button onClick={onExit} style={{...G.btn,width:'100%',padding:13,fontSize:15,background:'linear-gradient(135deg,#8B6914,#F0C040)',color:'#07090A'}}>العب مجدداً</button>
+            <div style={{display:'flex',gap:8}}>
+              <button onClick={onExit} style={{...G.btn,flex:1,padding:13,fontSize:14,background:'rgba(255,255,255,.08)',color:'rgba(240,237,229,.75)',border:'1px solid rgba(255,255,255,.12)'}}>خروج</button>
+              <button onClick={playAgain} style={{...G.btn,flex:2,padding:13,fontSize:15,background:'linear-gradient(135deg,#8B6914,#F0C040)',color:'#07090A'}}>العب مجدداً 🔄</button>
+            </div>
           </div>
         </div>
       )}
