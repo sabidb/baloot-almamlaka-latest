@@ -6,7 +6,8 @@ import {
   buildDeck, shuffle, dealHands, botBid, botChoose, legalPlays,
   trickWinner, trickPoints, calcResult, sortHand,
   TABLE_THEMES, AVATAR_CATALOG, FREE_AVATARS, FRAMES, NAMEPLATES, CHAT_BUBBLES,
-  defaultInventory, applyAchievements,
+  REACTIONS, defaultInventory, applyAchievements,
+  sounds, setMuted, startAmbience, stopAmbience,
 } from './GameLogic';
 
 const firebaseConfig = {
@@ -396,6 +397,19 @@ const SEAT_POS={
   2:{top:0,left:'50%',transform:'translateX(-50%)'},
   3:{right:0,top:'50%',transform:'translateY(-50%)'},
 };
+// Where a reaction bubble pops for each seat.
+const REACT_POS={
+  0:{bottom:'calc(env(safe-area-inset-bottom,0px)+124px)',left:'50%',transform:'translateX(-50%)'},
+  1:{left:56,top:'42%'},
+  2:{top:150,left:'50%',transform:'translateX(-50%)'},
+  3:{right:56,top:'42%'},
+};
+function ReactionBubble({seat,emoji,bubbleId}){
+  const b=CHAT_BUBBLES.find(x=>x.id===(seat===0?bubbleId:'none'))||CHAT_BUBBLES[0];
+  return(
+    <div style={{position:'absolute',...REACT_POS[seat],zIndex:60,background:b.bg,border:`1px solid ${b.border}`,color:b.fg,borderRadius:14,padding:'6px 12px',fontSize:20,fontWeight:700,boxShadow:'0 6px 18px rgba(0,0,0,.6)',animation:'popIn .3s cubic-bezier(.34,1.56,.64,1)',pointerEvents:'none'}}>{emoji}</div>
+  );
+}
 
 function Seat({player,active,partner,backs}){
   return(
@@ -413,6 +427,17 @@ function GameScreen({profile,onExit,onUpdate}){
   const [toast,setToast]=useState(null);
   const tn=useRef(0); const awarded=useRef(false);
   const showT=msg=>{tn.current++;const k=tn.current;setToast({msg,k});setTimeout(()=>setToast(t=>t&&t.k===k?null:t),2200);};
+
+  const [muted,setMutedState]=useState(!!profile.muted);
+  const [reactions,setReactions]=useState([]);
+  const [reactOpen,setReactOpen]=useState(false);
+  const rn=useRef(0);
+  const pushReaction=(seat,emoji)=>{rn.current++;const k=rn.current;setReactions(r=>[...r,{seat,emoji,k}]);setTimeout(()=>setReactions(r=>r.filter(x=>x.k!==k)),2200);};
+  const ensureAudio=()=>{ if(!muted) startAmbience(); };
+  const toggleMute=()=>{ const m=!muted; setMutedState(m); setMuted(m); if(m)stopAmbience(); else startAmbience(); onUpdate&&onUpdate(p=>({...p,muted:m})); persistProfile(profile.uid,{muted:m}); };
+
+  // Audio lifecycle: ambience while in the game; foley cued by transitions.
+  useEffect(()=>{ setMuted(!!profile.muted); if(!profile.muted){ startAmbience(); sounds.shuffle(); } return ()=>stopAmbience(); },[]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const felt=(TABLE_THEMES[profile.tableTheme]||TABLE_THEMES.classic).felt;
   const frameRing=(FRAMES.find(f=>f.id===(profile.frame||'none'))||FRAMES[0]).ring;
@@ -437,6 +462,7 @@ function GameScreen({profile,onExit,onUpdate}){
     if(phase==='playing' && trick.length<4 && turn!==0){
       const id=setTimeout(()=>{
         const card=botChoose(hands[turn],trick,contract.type,contract.trump,turn);
+        sounds.play();
         dispatch({type:'PLAY',payload:card});
       },720);
       return ()=>clearTimeout(id);
@@ -468,21 +494,46 @@ function GameScreen({profile,onExit,onUpdate}){
     }
   },[state.phase]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Foley on phase transitions (deal / round chime / gahwa / game win).
+  const prevPhase=useRef(state.phase);
+  useEffect(()=>{
+    const prev=prevPhase.current;
+    if(prev!==state.phase){
+      if(state.phase==='playing'&&prev==='bidding') sounds.deal();
+      if(state.phase==='roundOver'&&state.roundResult) (state.roundResult.isGahwa?sounds.gahwa:sounds.win)();
+      if(state.phase==='gameOver') sounds.win();
+      prevPhase.current=state.phase;
+    }
+  },[state.phase]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Trick pickup chime + occasional bot reaction.
+  const prevTricks=useRef(0);
+  useEffect(()=>{
+    const total=state.tricksWon[0]+state.tricksWon[1];
+    if(total>prevTricks.current){
+      prevTricks.current=total; sounds.trick();
+      const w=state.lastWinner;
+      if(w!=null&&w!==0&&Math.random()<0.35) pushReaction(w,REACTIONS[Math.floor(Math.random()*REACTIONS.length)]);
+    }else if(total<prevTricks.current){ prevTricks.current=total; }
+  },[state.tricksWon]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const mode=state.contract?.type||'sun';
   const trump=state.contract?.trump||null;
   const myTurn=state.phase==='playing'&&state.turn===0;
   const legalSet=myTurn?new Set(legalPlays(state.hands[0],state.trick,mode,trump)):null;
   const myHand=sortHand(state.hands[0],mode,trump);
 
-  const humanBid=bid=>{ if(state.phase==='bidding'&&state.bidTurn===0) dispatch({type:'BID',payload:bid}); };
+  const humanBid=bid=>{ ensureAudio(); if(state.phase==='bidding'&&state.bidTurn===0) dispatch({type:'BID',payload:bid}); };
   const humanPlay=(e,card)=>{
+    ensureAudio();
     if(!myTurn) return;
     if(!legalSet.has(card)){ showT('يجب اتباع نفس النوع! 🚫'); return; }
     if(sel!==card){ setSel(card); return; }
     const r=e.currentTarget.getBoundingClientRect();
-    spawnParticles(r.left+27,r.top+40);
+    spawnParticles(r.left+27,r.top+40); sounds.play();
     dispatch({type:'PLAY',payload:card}); setSel(null);
   };
+  const react=emoji=>{ ensureAudio(); sounds.tick(); pushReaction(0,emoji); setReactOpen(false); };
 
   const teamName=t=>t===0?'أ':'ب';
 
@@ -496,7 +547,10 @@ function GameScreen({profile,onExit,onUpdate}){
 
       {/* Header */}
       <div style={{position:'absolute',top:'calc(env(safe-area-inset-top,0px)+8px)',left:0,right:0,display:'flex',alignItems:'center',justifyContent:'space-between',padding:'0 10px',zIndex:20}}>
-        <button onClick={onExit} style={{...G.btn,background:'rgba(255,255,255,.08)',color:'rgba(240,237,229,.7)',border:'1px solid rgba(255,255,255,.1)',fontSize:11,padding:'5px 10px'}}>خروج</button>
+        <div style={{display:'flex',gap:6}}>
+          <button onClick={onExit} style={{...G.btn,background:'rgba(255,255,255,.08)',color:'rgba(240,237,229,.7)',border:'1px solid rgba(255,255,255,.1)',fontSize:11,padding:'5px 10px'}}>خروج</button>
+          <button onClick={toggleMute} aria-label="mute" style={{...G.btn,background:'rgba(255,255,255,.08)',color:'rgba(240,237,229,.7)',border:'1px solid rgba(255,255,255,.1)',fontSize:13,padding:'5px 9px'}}>{muted?'🔇':'🔊'}</button>
+        </div>
         <div style={{padding:'4px 12px',borderRadius:20,fontSize:11,fontWeight:700,border:'1.5px solid rgba(240,192,64,.4)',background:'rgba(240,192,64,.1)',color:'#F0C040'}}>
           {state.contract? (state.contract.type==='sun'?'صن ☀️':`حكم ${state.contract.trump}`) : 'المزايدة'}
         </div>
@@ -605,6 +659,17 @@ function GameScreen({profile,onExit,onUpdate}){
           </div>
         </div>
       )}
+      {/* Reaction bubbles */}
+      {reactions.map(r=><ReactionBubble key={r.k} seat={r.seat} emoji={r.emoji} bubbleId={profile.bubble||'none'}/>)}
+
+      {/* Emote / reactions */}
+      {reactOpen&&(
+        <div style={{position:'absolute',bottom:'calc(env(safe-area-inset-bottom,0px)+124px)',left:10,display:'flex',flexWrap:'wrap',gap:6,maxWidth:200,background:'rgba(8,12,10,.95)',border:'1px solid #7A5B1A',borderRadius:14,padding:8,zIndex:45}}>
+          {REACTIONS.map(em=><button key={em} onClick={()=>react(em)} style={{...G.btn,background:'rgba(255,255,255,.06)',border:'none',fontSize:20,padding:'4px 7px'}}>{em}</button>)}
+        </div>
+      )}
+      <button onClick={()=>setReactOpen(o=>!o)} aria-label="react" style={{...G.btn,position:'absolute',bottom:'calc(env(safe-area-inset-bottom,0px)+124px)',right:10,background:'rgba(10,14,12,.85)',border:'1px solid rgba(240,192,64,.25)',color:'#F0C040',fontSize:18,padding:'6px 10px',zIndex:45}}>😄</button>
+
       {/* frame ring token (kept for potential avatar framing) */}
       <span style={{display:'none'}} data-frame={frameRing}/>
     </div>

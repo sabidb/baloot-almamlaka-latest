@@ -128,28 +128,85 @@ export function botBid(hand,passCount){
   return{type:'pass'};
 }
 export function genCode(){return Math.floor(100000+Math.random()*900000).toString();}
-export function playTone(freq,vol=0.1,type='sine'){
+// ── Audio: shared AudioContext, foley + Majlis ambience ───
+// NOTE: real deployments should swap these synthesized cues for the
+// high-fidelity clips in the spec (§2). This keeps the wiring identical.
+let _actx=null, _muted=false;
+function ctx(){
+  if(_muted) return null;
   try{
-    const ctx=new(window.AudioContext||window.webkitAudioContext)();
+    if(!_actx) _actx=new (window.AudioContext||window.webkitAudioContext)();
+    if(_actx.state==='suspended') _actx.resume();
+    return _actx;
+  }catch{ return null; }
+}
+export function setMuted(m){ _muted=!!m; if(_muted) stopAmbience(); }
+export function isMuted(){ return _muted; }
+
+export function playTone(freq,vol=0.1,type='sine'){
+  const c=ctx(); if(!c) return;
+  try{
     const freqs=Array.isArray(freq)?freq:[freq];
     freqs.forEach((f,i)=>{
-      const osc=ctx.createOscillator(),gain=ctx.createGain();
-      osc.connect(gain);gain.connect(ctx.destination);
+      const osc=c.createOscillator(),gain=c.createGain();
+      osc.connect(gain);gain.connect(c.destination);
       osc.type=type;osc.frequency.value=f;
-      gain.gain.setValueAtTime(vol,ctx.currentTime+i*0.12);
-      gain.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+i*0.12+0.15);
-      osc.start(ctx.currentTime+i*0.12);osc.stop(ctx.currentTime+i*0.12+0.15);
+      gain.gain.setValueAtTime(vol,c.currentTime+i*0.12);
+      gain.gain.exponentialRampToValueAtTime(0.001,c.currentTime+i*0.12+0.15);
+      osc.start(c.currentTime+i*0.12);osc.stop(c.currentTime+i*0.12+0.15);
     });
-  }catch{ /* audio unsupported — ignore */ }
+  }catch{ /* ignore */ }
+}
+// Short filtered-noise burst — the basis for card 'snap' and 'shuffle'.
+function noise(dur=0.09,vol=0.14,{hp=800,lp=6000}={}){
+  const c=ctx(); if(!c) return;
+  try{
+    const n=Math.floor(c.sampleRate*dur), buf=c.createBuffer(1,n,c.sampleRate), d=buf.getChannelData(0);
+    for(let i=0;i<n;i++) d[i]=(Math.random()*2-1)*(1-i/n); // decaying
+    const src=c.createBufferSource(); src.buffer=buf;
+    const hpF=c.createBiquadFilter(); hpF.type='highpass'; hpF.frequency.value=hp;
+    const lpF=c.createBiquadFilter(); lpF.type='lowpass';  lpF.frequency.value=lp;
+    const g=c.createGain(); g.gain.value=vol;
+    src.connect(hpF); hpF.connect(lpF); lpF.connect(g); g.connect(c.destination);
+    src.start();
+  }catch{ /* ignore */ }
 }
 export const sounds={
-  deal:()=>playTone(440,0.1,'triangle'),
-  play:()=>playTone(520,0.08,'sine'),
-  win: ()=>playTone([523,659,784],0.15,'sine'),
-  gahwa:()=>playTone([784,659,523,659,784],0.2,'triangle'),
-  tick:()=>playTone(880,0.05,'square'),
-  buy: ()=>playTone([523,659],0.1,'sine'),
+  shuffle:()=>{ noise(0.28,0.10,{hp:1200,lp:5000}); },     // deck slide/shuffle
+  deal:  ()=>{ noise(0.06,0.10,{hp:1500,lp:7000}); },       // single card slide
+  play:  ()=>{ noise(0.05,0.16,{hp:2000,lp:9000}); },       // crisp card 'snap'
+  trick: ()=>playTone([660,880],0.06,'sine'),               // trick pickup
+  win:   ()=>playTone([523,659,784],0.15,'sine'),           // round chime
+  gahwa: ()=>playTone([784,659,523,659,784],0.2,'triangle'),// coffee! double
+  tick:  ()=>playTone(880,0.05,'square'),
+  buy:   ()=>playTone([523,659],0.1,'sine'),
 };
+
+// Low-volume, low-pass Majlis ambience: a warm drone + coffee-shop hiss.
+let _amb=null;
+export function startAmbience(){
+  if(_muted||_amb) return;
+  const c=ctx(); if(!c) return;
+  try{
+    const master=c.createGain(); master.gain.value=0.05; master.connect(c.destination);
+    const oscs=[110,164.81,220].map(f=>{
+      const o=c.createOscillator(); o.type='sine'; o.frequency.value=f;
+      const g=c.createGain(); g.gain.value=0.4; o.connect(g); g.connect(master); o.start(); return o;
+    });
+    const n=2*c.sampleRate, buf=c.createBuffer(1,n,c.sampleRate), d=buf.getChannelData(0);
+    for(let i=0;i<n;i++) d[i]=(Math.random()*2-1)*0.12;
+    const src=c.createBufferSource(); src.buffer=buf; src.loop=true;
+    const lp=c.createBiquadFilter(); lp.type='lowpass'; lp.frequency.value=420;
+    const ng=c.createGain(); ng.gain.value=0.35;
+    src.connect(lp); lp.connect(ng); ng.connect(master); src.start();
+    _amb={master,oscs,src};
+  }catch{ /* ignore */ }
+}
+export function stopAmbience(){
+  if(!_amb) return;
+  try{ _amb.oscs.forEach(o=>o.stop()); _amb.src.stop(); }catch{ /* ignore */ }
+  _amb=null;
+}
 
 // ── Legal move enforcement (Baloot rules) ─────────────────
 // Must-follow-suit; in hokum must cut with trump when void, and
