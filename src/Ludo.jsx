@@ -4,6 +4,7 @@ import {
   applyMove, botPickToken, tokenCell, rollDie,
 } from './LudoLogic';
 import { sounds, setMuted, REACTIONS } from './GameLogic';
+import { applyGameResult } from './progress';
 import {
   CELL, pos, START_INDEX, STAR, START_ARROW, HOME_ARROW, GRID, BASES, cellCenter,
   hexOf, shade, tokenBg, coinPos, spawnBurst, setupState, reducer,
@@ -172,18 +173,21 @@ export default function LudoScreen({ profile, onUpdate, persist, onExit, onOnlin
     return ()=>clearTimeout(id);
   },[state]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Award coins + stats + celebrate once.
+  // Award coins + XP/level/streak/missions + celebrate once.
   useEffect(()=>{
     if(state.phase!=='over' || awarded.current) return;
     awarded.current=true;
     if(!muted) sounds.win();
     const place=state.ranks.indexOf(0);
     if(place===0) launchConfetti();
-    const reward=[100,50,20,0][place]||0;
-    const patch={};
-    if(reward>0) patch.coins=(profile?.coins||0)+reward;
-    if(place===0) patch.ludoWins=(profile?.ludoWins||0)+1;
-    if(Object.keys(patch).length){ if(onUpdate) onUpdate(p=>({...p,...patch,coins:patch.coins??p.coins})); if(persist) persist(patch); }
+    const { patch, toasts }=applyGameResult(profile,{game:'ludo',won:place===0});
+    if(onUpdate) onUpdate(p=>({ ...p, ...patch }));
+    if(persist) persist(patch);
+    toasts.forEach((t,i)=>setTimeout(()=>{
+      if(t.type==='levelup') showT(`🎉 المستوى ${t.value}!`);
+      else if(t.type==='streak'&&t.value>1) showT(`🔥 سلسلة ${t.value} أيام!`);
+      else if(t.type==='mission') showT('✅ أنجزت مهمة!');
+    }, 1100+i*750));
   },[state.phase]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const humanRoll=()=>performRoll();

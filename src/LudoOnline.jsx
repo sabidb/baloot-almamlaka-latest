@@ -4,6 +4,7 @@ import { reducer, newGame, PLAYER_SETS, coinPos, hexOf, tokenBg } from './ludoSh
 import { BoardStatic, Coin, Pips } from './Ludo';
 import { sounds, setMuted } from './GameLogic';
 import { openRoom, genRoomCode, ONLINE_MODE, now } from './online';
+import { applyGameResult } from './progress';
 
 const TURN_MS = 18000;      // a player's own auto-act timeout
 const HOST_TAKEOVER_MS = 26000; // host covers a stalled/disconnected human
@@ -15,7 +16,7 @@ function clientId(profile){
   return id;
 }
 
-export default function LudoOnline({ profile, onExit }){
+export default function LudoOnline({ profile, onExit, onUpdate, persist }){
   const myUid = clientId(profile);
   const myName = profile?.name || 'لاعب';
   const myAvatar = profile?.avatar || '🎲';
@@ -32,6 +33,7 @@ export default function LudoOnline({ profile, onExit }){
   const actedEvt=useRef(-1);
   const prevEvt=useRef(-1);
   const unsub=useRef(null);
+  const rewarded=useRef(false);
 
   useEffect(()=>{ setMuted(!!(profile&&profile.muted)); return ()=>{ if(unsub.current) unsub.current(); }; },[]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -149,6 +151,17 @@ export default function LudoOnline({ profile, onExit }){
       if(st.phase==='over' && !muted) sounds.win();
     }
   },[room?.state?.evt]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Reward the local human once the online game ends.
+  useEffect(()=>{
+    if(!st) return;
+    if(st.phase!=='over'){ rewarded.current=false; return; }
+    if(rewarded.current || mySeat<0) return;
+    rewarded.current=true;
+    const { patch }=applyGameResult(profile,{game:'ludo',won:st.winner===mySeat});
+    if(onUpdate) onUpdate(p=>({ ...p, ...patch }));
+    if(persist) persist(patch);
+  },[room?.state?.phase]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const curColor = st ? hexOf(LUDO_COLORS[st.turn].id) : '#F0C040';
   const activeColors = new Set(active.map(p=>LUDO_COLORS[p].id));

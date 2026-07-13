@@ -9,6 +9,7 @@ import {
   REACTIONS, defaultInventory, applyAchievements,
   sounds, setMuted, startAmbience, stopAmbience,
 } from './GameLogic';
+import { applyGameResult, withProgress, levelBar, getMissions, claimMission, claimDaily, dailyStatus } from './progress';
 import LudoScreen from './Ludo';
 import LudoOnline from './LudoOnline';
 
@@ -187,7 +188,7 @@ export default function App(){
   );
   if(game==='ludoOnline')return(
     <div style={{height:'100dvh',overflow:'hidden'}}>
-      <LudoOnline profile={profile} onExit={()=>{setGame(null);setTab('home');}}/>
+      <LudoOnline profile={profile} onUpdate={setProfile} persist={patch=>persistProfile(profile.uid,patch)} onExit={()=>{setGame(null);setTab('home');}}/>
     </div>
   );
 
@@ -196,7 +197,7 @@ export default function App(){
   return(
     <div style={{height:'100dvh',display:'flex',flexDirection:'column',background:'#07090A',fontFamily:'Tajawal,sans-serif',color:'#F0EDE5',direction:'rtl',overflow:'hidden'}}>
       <div style={{flex:1,overflow:'hidden',position:'relative'}}>
-        {tab==='home'    &&<HomeScreen    profile={profile} onGame={setGame}/>}
+        {tab==='home'    &&<HomeScreen    profile={profile} onGame={setGame} onUpdate={setProfile}/>}
         {tab==='board'   &&<LeaderScreen/>}
         {tab==='store'   &&<StoreScreen   profile={profile} onUpdate={setProfile}/>}
         {tab==='friends' &&<FriendScreen/>}
@@ -238,7 +239,7 @@ function AuthScreen({onDone}){
     if(!pending)return;
     setBusy(true);
     try{
-      const p={uid:pending.uid,name:pending.displayName||'لاعب',avatar:av,city,wins:0,losses:0,coins:500,
+      const p={uid:pending.uid,name:pending.displayName||'لاعب',avatar:av,city,wins:0,losses:0,coins:500,gems:0,
         tableTheme:'classic',frame:'none',nameplate:'none',bubble:'none',inventory:defaultInventory(),
         createdAt:serverTimestamp()};
       await setDoc(doc(db,'users',pending.uid),p,{merge:true});
@@ -303,69 +304,117 @@ function AuthScreen({onDone}){
 
 // Local-only profile for guests (no backend). Progress lives in memory.
 function guestProfile(){
-  return {uid:'guest',name:'ضيف',avatar:FREE_AVATARS[0],city:'الرياض',wins:0,losses:0,coins:1200,
+  return {uid:'guest',name:'ضيف',avatar:FREE_AVATARS[0],city:'الرياض',wins:0,losses:0,coins:1200,gems:0,
     tableTheme:'classic',frame:'none',nameplate:'none',bubble:'none',inventory:defaultInventory(),guest:true};
 }
 
-function HomeScreen({profile,onGame}){
+function HomeScreen({profile,onGame,onUpdate}){
   const [notice,setNotice]=useState(null);
   const noteN=useRef(0);
   const showNote=m=>{noteN.current++;const k=noteN.current;setNotice({m,k});setTimeout(()=>setNotice(n=>n&&n.k===k?null:n),2600);};
-  const modes=[
-    {id:'bot',   icon:'🤖',title:'مع الروبوت',  sub:'تدرب بدون انتظار',        color:'#9B59B6', online:false},
-    {id:'create',icon:'👥',title:'مع الأصدقاء', sub:'أنشئ غرفة وشارك الكود',  color:'#F0C040', online:true},
-    {id:'join',  icon:'🔑',title:'انضم لغرفة',  sub:'أدخل كود الغرفة',         color:'#3498DB', online:true},
-    {id:'quick', icon:'⚡',title:'لعبة سريعة',  sub:'العب مع لاعبين عشوائيين',color:'#2ECC71', online:false},
-  ];
-  const pickMode=m=>{
-    if(m.id==='bot'||m.id==='quick'){ onGame('baloot'); return; }
-    showNote('🔒 اللعب أونلاين مع الأصدقاء — قريباً');
+  const lb=levelBar(profile);
+  const daily=dailyStatus(profile);
+  const missions=getMissions(profile).items;
+  const pr=withProgress(profile);
+  const firstName=(profile.name||'لاعب').split(' ')[0];
+
+  const doClaim=(res,label)=>{
+    if(!res){ return; }
+    if(res.locked){ showNote('🎮 العب مباراة واحدة اليوم لفتح المكافأة'); return; }
+    onUpdate&&onUpdate(p=>({...p,...res.patch}));
+    persistProfile(profile.uid,res.patch);
+    sounds.buy&&sounds.buy();
+    showNote(`🎁 ${label} +${res.reward} 🪙`);
   };
+
+  const card={background:'rgba(13,20,16,.82)',border:'1px solid rgba(255,255,255,.07)',borderRadius:16};
   return(
     <div style={{position:'absolute',inset:0,overflowY:'auto',WebkitOverflowScrolling:'touch',paddingBottom:'calc(60px + env(safe-area-inset-bottom,0px) + 12px)',paddingTop:'env(safe-area-inset-top,0px)'}}>
-      <div style={{textAlign:'center',padding:'18px 14px 0'}}>
-        <div style={{fontFamily:"'Scheherazade New',serif",fontSize:'clamp(28px,9vw,44px)',background:'linear-gradient(135deg,#7A5B1A,#F0C040,#FFE08A,#F0C040,#7A5B1A)',WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent',backgroundClip:'text',lineHeight:1.1,marginBottom:4}}>بلوت المملكة</div>
-        <div style={{color:'rgba(240,237,229,.6)',fontSize:11,letterSpacing:2,marginBottom:8}}>العب · تنافس · افوز</div>
-        <div style={{width:60,height:1,margin:'0 auto 16px',background:'linear-gradient(90deg,transparent,#7A5B1A,transparent)'}}/>
-      </div>
-      <div style={{display:'flex',alignItems:'center',gap:10,padding:'0 14px',marginBottom:12}}>
-        <AvatarBadge emoji={profile.avatar} frameId={profile.frame||'none'} size={44}/>
-        <div style={{flex:1}}>
-          <NamePlate name={profile.name} plateId={profile.nameplate||'none'} size={14}/>
-          <div style={{color:'rgba(240,237,229,.6)',fontSize:11,marginTop:2}}>{profile.city} · {profile.wins||0} انتصار</div>
+      {/* Welcome header */}
+      <div style={{display:'flex',alignItems:'center',gap:11,padding:'16px 14px 10px'}}>
+        <AvatarBadge emoji={profile.avatar} frameId={profile.frame||'none'} size={50}/>
+        <div style={{flex:1,minWidth:0}}>
+          <div style={{color:'rgba(240,237,229,.55)',fontSize:11}}>أهلاً بعودتك 👋</div>
+          <NamePlate name={firstName} plateId={profile.nameplate||'none'} size={16}/>
         </div>
-        <div style={{display:'flex',alignItems:'center',gap:5,background:'rgba(240,192,64,.1)',border:'1px solid rgba(240,192,64,.2)',borderRadius:20,padding:'5px 10px'}}>
-          <span>🪙</span><span style={{fontSize:13,fontWeight:900,color:'#F0C040'}}>{profile.coins||500}</span>
+        <div style={{display:'flex',flexDirection:'column',gap:4,alignItems:'flex-end'}}>
+          <div style={{display:'flex',gap:6}}>
+            <span style={{display:'flex',alignItems:'center',gap:4,background:'rgba(240,192,64,.1)',border:'1px solid rgba(240,192,64,.2)',borderRadius:20,padding:'3px 9px',fontSize:12,fontWeight:900,color:'#F0C040'}}>🪙 {profile.coins||0}</span>
+            <span style={{display:'flex',alignItems:'center',gap:4,background:'rgba(155,89,182,.14)',border:'1px solid rgba(155,89,182,.3)',borderRadius:20,padding:'3px 9px',fontSize:12,fontWeight:900,color:'#C79BE8'}}>💎 {profile.gems||0}</span>
+          </div>
+          {pr.streak>0&&<span style={{fontSize:11,fontWeight:800,color:'#FF7A45'}}>🔥 {pr.streak} يوم</span>}
         </div>
       </div>
+
+      {/* Level bar */}
+      <div style={{margin:'0 14px 12px'}}>
+        <div style={{display:'flex',justifyContent:'space-between',fontSize:10,marginBottom:4}}>
+          <span style={{color:'#F0C040',fontWeight:900}}>المستوى {lb.level}</span>
+          <span style={{color:'rgba(240,237,229,.5)'}}>{lb.xp}/{lb.need} XP</span>
+        </div>
+        <div style={{height:8,borderRadius:6,background:'rgba(255,255,255,.08)',overflow:'hidden'}}>
+          <div style={{height:'100%',width:`${Math.round(lb.pct*100)}%`,borderRadius:6,background:'linear-gradient(90deg,#8B6914,#F0C040,#FFE08A)',transition:'width .5s',boxShadow:'0 0 8px rgba(240,192,64,.5)'}}/>
+        </div>
+      </div>
+
       {notice&&<div key={notice.k} style={{margin:'0 12px 10px',background:'rgba(240,192,64,.1)',border:'1px solid rgba(240,192,64,.3)',borderRadius:10,padding:'8px 12px',fontSize:12,fontWeight:700,color:'#F0C040',textAlign:'center',animation:'fadeUp .3s ease both'}}>{notice.m}</div>}
+
+      {/* Game cards */}
       <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,padding:'0 12px',marginBottom:12}}>
-        {modes.map(m=>(
-          <div key={m.id} onClick={()=>pickMode(m)}
-            style={{background:'rgba(13,20,16,.8)',border:'1px solid rgba(255,255,255,.07)',borderRadius:16,padding:'16px 10px',display:'flex',flexDirection:'column',alignItems:'center',gap:6,cursor:'pointer',touchAction:'manipulation',position:'relative',opacity:m.online?0.75:1}}>
-            {m.online&&<span style={{position:'absolute',top:8,left:8,background:'rgba(240,192,64,.15)',color:'#F0C040',fontSize:8,fontWeight:700,padding:'2px 5px',borderRadius:5}}>قريباً</span>}
-            <span style={{fontSize:26}}>{m.icon}</span>
-            <span style={{fontSize:13,fontWeight:700,color:m.color+'CC'}}>{m.title}</span>
-            <span style={{color:'rgba(240,237,229,.6)',fontSize:10,textAlign:'center',lineHeight:1.3}}>{m.sub}</span>
-          </div>
-        ))}
-      </div>
-      <div onClick={()=>onGame('ludo')} style={{margin:'0 12px 12px',display:'flex',alignItems:'center',gap:12,background:'linear-gradient(135deg,rgba(155,89,182,.25),rgba(52,152,219,.18))',border:'1px solid rgba(240,192,64,.25)',borderRadius:16,padding:'14px 16px',cursor:'pointer',touchAction:'manipulation'}}>
-        <span style={{fontSize:34}}>🎲</span>
-        <div style={{flex:1}}>
-          <div style={{fontSize:15,fontWeight:900,color:'#F0C040'}}>لودو المملكة</div>
-          <div style={{color:'rgba(240,237,229,.7)',fontSize:11,marginTop:2}}>لعبة اللودو الكلاسيكية · ضد الروبوت · بالوضع الأفقي</div>
+        <div onClick={()=>onGame('baloot')} style={{...card,background:'linear-gradient(150deg,rgba(26,61,32,.9),rgba(13,20,16,.85))',border:'1px solid rgba(46,204,113,.28)',padding:'18px 12px',display:'flex',flexDirection:'column',alignItems:'center',gap:6,cursor:'pointer'}}>
+          <span style={{fontSize:34}}>🃏</span>
+          <span style={{fontSize:15,fontWeight:900,color:'#F0EDE5'}}>بلوت</span>
+          <span style={{color:'rgba(240,237,229,.55)',fontSize:10}}>اللعبة الأصيلة · ضد الروبوت</span>
         </div>
-        <span style={{fontSize:20,color:'#F0C040'}}>‹</span>
+        <div onClick={()=>onGame('ludo')} style={{...card,background:'linear-gradient(150deg,rgba(52,152,219,.22),rgba(155,89,182,.16))',border:'1px solid rgba(52,152,219,.3)',padding:'18px 12px',display:'flex',flexDirection:'column',alignItems:'center',gap:6,cursor:'pointer'}}>
+          <span style={{fontSize:34}}>🎲</span>
+          <span style={{fontSize:15,fontWeight:900,color:'#F0EDE5'}}>لودو المملكة</span>
+          <span style={{color:'rgba(240,237,229,.55)',fontSize:10}}>٢-٤ لاعبين · أونلاين وروبوت</span>
+        </div>
       </div>
-      <div style={{display:'flex',background:'rgba(13,20,16,.75)',border:'1px solid rgba(240,192,64,.1)',borderRadius:14,margin:'0 12px',overflow:'hidden'}}>
-        {[['٦.٢م','لاعب'],['٩٨٤','مباراة الآن'],['٤.٨','التقييم']].map(([n,l],i)=>(
-          <div key={i} style={{flex:1,textAlign:'center',padding:'10px 4px',borderRight:i<2?'1px solid rgba(255,255,255,.06)':'none'}}>
-            <div style={{fontSize:15,fontWeight:900,color:'#F0C040'}}>{n}</div>
-            <div style={{color:'rgba(240,237,229,.6)',fontSize:9,marginTop:1}}>{l}</div>
-          </div>
-        ))}
+
+      {/* Daily reward */}
+      <div style={{...card,margin:'0 12px 12px',padding:'12px 14px',display:'flex',alignItems:'center',gap:12,border:'1px solid rgba(240,192,64,.25)'}}>
+        <span style={{fontSize:30}}>🎁</span>
+        <div style={{flex:1}}>
+          <div style={{fontSize:13,fontWeight:900,color:'#F0C040'}}>الجائزة اليومية</div>
+          <div style={{color:'rgba(240,237,229,.6)',fontSize:11}}>{daily.claimed?'استلمتها اليوم — عد غداً':`العب لتفتح +${daily.reward} 🪙 · سلسلتك 🔥${daily.streak||0}`}</div>
+        </div>
+        <button disabled={daily.claimed} onClick={()=>doClaim(claimDaily(profile),'الجائزة اليومية')}
+          style={{...G.btn,padding:'8px 14px',fontSize:12,opacity:daily.claimed?0.4:1,
+            background:daily.claimed?'rgba(255,255,255,.08)':(daily.playedToday?'linear-gradient(135deg,#8B6914,#F0C040)':'rgba(240,192,64,.15)'),
+            color:daily.claimed?'rgba(240,237,229,.6)':(daily.playedToday?'#07090A':'#F0C040'),border:daily.playedToday?'none':'1px solid rgba(240,192,64,.3)'}}>
+          {daily.claimed?'✓ تم':(daily.playedToday?'استلم':'🔒 العب')}
+        </button>
       </div>
+
+      {/* Daily missions */}
+      <div style={{...card,margin:'0 12px 12px',padding:'12px 14px'}}>
+        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:10}}>
+          <span style={{fontSize:13,fontWeight:900,color:'#F0C040'}}>🎯 المهام اليومية</span>
+          <span style={{fontSize:10,color:'rgba(240,237,229,.45)'}}>تتجدد كل يوم</span>
+        </div>
+        {missions.map(m=>{
+          const done=m.progress>=m.goal;
+          return(
+            <div key={m.id} style={{display:'flex',alignItems:'center',gap:10,padding:'7px 0',borderTop:'1px solid rgba(255,255,255,.05)'}}>
+              <span style={{fontSize:18,opacity:m.claimed?0.4:1}}>{m.icon}</span>
+              <div style={{flex:1,minWidth:0}}>
+                <div style={{fontSize:12,fontWeight:700,color:m.claimed?'rgba(240,237,229,.4)':'#F0EDE5'}}>{m.label}</div>
+                <div style={{height:5,borderRadius:4,background:'rgba(255,255,255,.08)',overflow:'hidden',marginTop:3}}>
+                  <div style={{height:'100%',width:`${Math.round(Math.min(1,m.progress/m.goal)*100)}%`,background:done?'#2ECC71':'#F0C040',borderRadius:4,transition:'width .4s'}}/>
+                </div>
+              </div>
+              <span style={{fontSize:10,color:'rgba(240,237,229,.5)',minWidth:26,textAlign:'center'}}>{m.progress}/{m.goal}</span>
+              {m.claimed
+                ? <span style={{fontSize:11,color:'#2ECC71',fontWeight:900,minWidth:52,textAlign:'center'}}>✓</span>
+                : <button disabled={!done} onClick={()=>doClaim(claimMission(profile,m.id),'مهمة')} style={{...G.btn,minWidth:52,padding:'5px 8px',fontSize:11,opacity:done?1:0.4,background:done?'linear-gradient(135deg,#1A5C28,#2ECC71)':'rgba(255,255,255,.06)',color:done?'#fff':'rgba(240,237,229,.5)'}}>{done?`+${m.reward}`:'—'}</button>}
+            </div>
+          );
+        })}
+      </div>
+
+      <div style={{textAlign:'center',color:'rgba(240,237,229,.35)',fontSize:10,padding:'2px 20px 4px'}}>كل الجوائز تُكسب باللعب فقط — بدون إعلانات 🎮</div>
     </div>
   );
 }
@@ -513,22 +562,22 @@ function GameScreen({profile,onExit,onUpdate}){
   // Transient banners.
   useEffect(()=>{ if(state.banner) showT(state.banner); },[state.evt]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Settle the match once (wins/losses/coins/achievements).
+  // Settle the match once — coins, XP/level, streak, missions, achievements.
   useEffect(()=>{
     if(state.phase!=='gameOver' || awarded.current) return;
     awarded.current=true;
     const humanWon=state.matchScores[0]>state.matchScores[1];
-    if(humanWon){
-      const wins=(profile.wins||0)+1, coins=(profile.coins||0)+50;
-      const {inventory,earned}=applyAchievements(profile.inventory,wins);
-      onUpdate&&onUpdate(p=>({...p,wins,coins,inventory}));
-      persistProfile(profile.uid,{wins,coins,inventory});
-      if(earned.length) setTimeout(()=>showT('🎁 فتحت مكافأة جديدة في المخزن!'),1000);
-    }else{
-      const losses=(profile.losses||0)+1;
-      onUpdate&&onUpdate(p=>({...p,losses}));
-      persistProfile(profile.uid,{losses});
-    }
+    const { patch, toasts }=applyGameResult(profile,{game:'baloot',won:humanWon});
+    const { inventory, earned }=applyAchievements(profile.inventory, patch.wins||profile.wins||0);
+    const full={ ...patch, inventory };
+    onUpdate&&onUpdate(p=>({ ...p, ...full }));
+    persistProfile(profile.uid, full);
+    toasts.forEach((t,i)=>setTimeout(()=>{
+      if(t.type==='levelup') showT(`🎉 وصلت للمستوى ${t.value}!`);
+      else if(t.type==='streak'&&t.value>1) showT(`🔥 سلسلة ${t.value} أيام متتالية!`);
+      else if(t.type==='mission') showT('✅ أنجزت مهمة يومية!');
+    }, 950+i*750));
+    if(earned.length) setTimeout(()=>showT('🎁 مكافأة جديدة في المخزن!'), 950+toasts.length*750);
   },[state.phase]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Foley on phase transitions (deal / round chime / gahwa / game win).
