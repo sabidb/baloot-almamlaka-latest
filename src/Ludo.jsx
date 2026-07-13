@@ -1,6 +1,6 @@
 import { useReducer, useEffect, useRef, useState } from 'react';
 import {
-  LUDO_COLORS, RING, HOME_PATHS, CENTER, FINISH,
+  LUDO_COLORS, RING, HOME_PATHS, YARD, CENTER, FINISH,
   initLudo, movableTokens, applyMove, playerFinished, botPickToken, tokenCell, rollDie,
 } from './LudoLogic';
 import { sounds, setMuted, REACTIONS } from './GameLogic';
@@ -12,7 +12,6 @@ const CELL = 100/15;
 const pos = (r,c)=>({ position:'absolute', top:`${r*CELL}%`, left:`${c*CELL}%`, width:`${CELL}%`, height:`${CELL}%` });
 const START_INDEX = { 0:'green', 13:'yellow', 26:'blue', 39:'red' };
 const STAR = new Set([8,21,34,47]);
-const GLOBE = new Set([21,47]); // two of the safe cells shown as globes
 const hexOf = id => LUDO_COLORS.find(c=>c.id===id).hex;
 const PLAYER_SETS = { 2:[0,2], 3:[0,1,2], 4:[0,1,2,3] };
 // travel direction leaving each start square
@@ -49,47 +48,53 @@ const BASES = [
   { color:'red',    r0:9, c0:0 }, // bottom-left
 ];
 const HOME_ARROW = { green:'▸', yellow:'▾', blue:'◂', red:'▴' };
-const GRID = '1px solid rgba(0,0,0,.55)';
+const GRID = '1px solid rgba(30,30,40,.45)';
+const cellCenter = (r,c)=>({ top:`${(r+0.5)*CELL}%`, left:`${(c+0.5)*CELL}%` });
 
 function BoardStatic({ activeColors }){
   return (
     <>
-      {/* Corner bases — bright fill, dark inner panel, 4 sockets */}
+      {/* Corner bases — clean solid fill + soft inner tray */}
       {BASES.map(b=>{
         const on=activeColors.has(b.color); const col=hexOf(b.color);
         return (
           <div key={b.color} style={{...pos(b.r0,b.c0),width:`${6*CELL}%`,height:`${6*CELL}%`,
-            background:col,border:GRID,boxSizing:'border-box',padding:'10.5%',opacity:on?1:0.4}}>
-            <div style={{width:'100%',height:'100%',background:shade(col,-16),borderRadius:'10%',display:'grid',gridTemplateColumns:'1fr 1fr',placeItems:'center',gap:'10%',padding:'12%',boxShadow:'inset 0 2px 5px rgba(0,0,0,.35)'}}>
-              {[0,1,2,3].map(i=><div key={i} style={{width:'80%',aspectRatio:'1',borderRadius:'50%',background:shade(col,-30),boxShadow:'inset 0 2px 4px rgba(0,0,0,.45)'}}/>)}
-            </div>
+            background:col,border:GRID,boxSizing:'border-box',borderRadius:'8%',opacity:on?1:0.38}}>
+            <div style={{position:'absolute',inset:'15%',borderRadius:'11%',background:'rgba(255,255,255,.9)',boxShadow:'inset 0 1px 3px rgba(0,0,0,.2)'}}/>
           </div>
         );
       })}
+      {/* Yard sockets (aligned to token positions) */}
+      {BASES.map(b=>{
+        const on=activeColors.has(b.color); const col=hexOf(b.color);
+        return YARD[b.color].map(([r,c],i)=>(
+          <div key={`sock${b.color}${i}`} style={{position:'absolute',...cellCenter(r,c),transform:'translate(-50%,-50%)',width:'6.6%',aspectRatio:'1',borderRadius:'50%',background:col,opacity:on?1:0.38,boxShadow:'inset 0 2px 4px rgba(0,0,0,.45), 0 1px 0 rgba(255,255,255,.4)'}}/>
+        ));
+      })}
 
-      {/* Ring cells — white grid, colored starts, star/globe safes, arrows */}
+      {/* Ring cells — white grid, colored starts w/ arrow, star safes */}
       {RING.map(([r,c],i)=>{
         const startColor=START_INDEX[i];
-        const safe=STAR.has(i), globe=GLOBE.has(i);
+        const safe=STAR.has(i);
         return (
-          <div key={`ring${i}`} style={{...pos(r,c),border:GRID,background:startColor?hexOf(startColor):'#fff',display:'flex',alignItems:'center',justifyContent:'center',boxSizing:'border-box'}}>
-            {startColor&&<span style={{color:'rgba(255,255,255,.92)',fontSize:'1.5vh',lineHeight:1,textShadow:'0 1px 1px rgba(0,0,0,.35)'}}>{START_ARROW[startColor]}</span>}
-            {!startColor&&globe&&<span style={{fontSize:'1.5vh',lineHeight:1}}>🌍</span>}
-            {!startColor&&!globe&&safe&&<span style={{color:'#9aa0a6',fontSize:'1.7vh',lineHeight:1}}>★</span>}
+          <div key={`ring${i}`} style={{...pos(r,c),border:GRID,background:startColor?hexOf(startColor):'#fefefe',display:'flex',alignItems:'center',justifyContent:'center',boxSizing:'border-box'}}>
+            {startColor&&<span style={{color:'rgba(255,255,255,.95)',fontSize:'1.6vh',lineHeight:1,textShadow:'0 1px 1px rgba(0,0,0,.3)'}}>{START_ARROW[startColor]}</span>}
+            {!startColor&&safe&&<span style={{color:'#9aa0a6',fontSize:'1.8vh',lineHeight:1}}>★</span>}
           </div>
         );
       })}
 
-      {/* Home columns — solid colour with chevrons */}
+      {/* Home columns — solid colour with subtle chevrons */}
       {Object.entries(HOME_PATHS).map(([id,cells])=>cells.map(([r,c],i)=>(
-        <div key={`home${id}${i}`} style={{...pos(r,c),background:hexOf(id),border:GRID,boxSizing:'border-box',display:'flex',alignItems:'center',justifyContent:'center',color:'rgba(255,255,255,.6)',fontSize:'1.2vh'}}>
+        <div key={`home${id}${i}`} style={{...pos(r,c),background:hexOf(id),border:GRID,boxSizing:'border-box',display:'flex',alignItems:'center',justifyContent:'center',color:'rgba(255,255,255,.65)',fontSize:'1.25vh'}}>
           {i<5&&HOME_ARROW[id]}
         </div>
       )))}
 
-      {/* Centre — four triangles toward each home */}
+      {/* Centre — four clean triangles toward each home */}
       <div style={{...pos(6,6),width:`${3*CELL}%`,height:`${3*CELL}%`,border:GRID,boxSizing:'border-box',background:
-        `conic-gradient(from 45deg, ${hexOf('blue')} 0 90deg, ${hexOf('red')} 90deg 180deg, ${hexOf('green')} 180deg 270deg, ${hexOf('yellow')} 270deg 360deg)`}}/>
+        `conic-gradient(from 45deg, ${hexOf('blue')} 0 90deg, ${hexOf('red')} 90deg 180deg, ${hexOf('green')} 180deg 270deg, ${hexOf('yellow')} 270deg 360deg)`,
+        boxShadow:'inset 0 0 0 1px rgba(255,255,255,.15)'}}/>
     </>
   );
 }
@@ -155,8 +160,8 @@ function Pips({n,color='#0C1410'}){
   const map={1:[4],2:[0,8],3:[0,4,8],4:[0,2,6,8],5:[0,2,4,6,8],6:[0,2,3,5,6,8]};
   const on=new Set(map[n]||[]);
   return (
-    <div style={{width:'100%',height:'100%',display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gridTemplateRows:'1fr 1fr 1fr',gap:2,padding:'11%'}}>
-      {Array.from({length:9}).map((_,i)=><div key={i} style={{display:'flex',alignItems:'center',justifyContent:'center'}}>{on.has(i)&&<div style={{width:'70%',aspectRatio:'1',borderRadius:'50%',background:color,boxShadow:'inset 0 1px 1px rgba(255,255,255,.4)'}}/>}</div>)}
+    <div style={{width:'100%',height:'100%',display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gridTemplateRows:'1fr 1fr 1fr',gap:'6%',padding:'16%'}}>
+      {Array.from({length:9}).map((_,i)=><div key={i} style={{display:'flex',alignItems:'center',justifyContent:'center'}}>{on.has(i)&&<div style={{width:'82%',aspectRatio:'1',borderRadius:'50%',background:`radial-gradient(circle at 38% 32%, ${shade(color,35)}, ${color} 75%)`,boxShadow:'0 1px 1px rgba(0,0,0,.35), inset 0 -1px 1px rgba(0,0,0,.25)'}}/>}</div>)}
     </div>
   );
 }
@@ -306,9 +311,9 @@ export default function LudoScreen({ profile, onUpdate, persist, onExit }){
   }
 
   const coinPos=(r,c,or,oc,z,canMove)=>({
-    position:'absolute', top:`${(r+0.5+or)*CELL}%`, left:`${(c+0.5+oc)*CELL}%`, transform:'translate(-50%,-60%)',
-    width:'5.8%', aspectRatio:'1', zIndex:z,
-    animation:canMove?'pulse 1s ease-in-out infinite':'none', transition:'top .3s,left .3s',
+    position:'absolute', top:`${(r+0.5+or)*CELL}%`, left:`${(c+0.5+oc)*CELL}%`, transform:'translate(-50%,-50%)',
+    width:'5.9%', aspectRatio:'1', zIndex:z,
+    animation:canMove?'coinpulse 1s ease-in-out infinite':'none', transition:'top .28s,left .28s',
   });
   const activeColors = new Set(state.active.map(p=>LUDO_COLORS[p].id));
   const curColor = state.phase!=='setup' ? hexOf(LUDO_COLORS[state.turn].id) : '#F0C040';
@@ -343,9 +348,9 @@ export default function LudoScreen({ profile, onUpdate, persist, onExit }){
       {/* Board */}
       <div style={{flex:1,display:'flex',alignItems:'center',justifyContent:'center',padding:'4px 10px',minHeight:0}}>
         <div ref={boardRef} style={{position:'relative',width:'min(94vw, 60vh)',aspectRatio:'1',
-          background:'linear-gradient(160deg,#8a5a2e,#5a3417)',borderRadius:16,
-          padding:'2.8%',boxShadow:'0 22px 55px rgba(0,0,0,.65), inset 0 2px 4px rgba(255,255,255,.18), inset 0 -4px 8px rgba(0,0,0,.4)'}}>
-          <div style={{position:'relative',width:'100%',height:'100%',borderRadius:4,overflow:'hidden',direction:'ltr',background:'#ffffff',border:'1.5px solid rgba(0,0,0,.55)',boxSizing:'border-box'}}>
+          background:'linear-gradient(150deg,#141a24,#0b0e14)',borderRadius:20,
+          padding:'2.6%',boxShadow:'0 22px 55px rgba(0,0,0,.6), 0 0 0 1.5px rgba(240,192,64,.45), inset 0 1px 1px rgba(255,255,255,.08)'}}>
+          <div style={{position:'relative',width:'100%',height:'100%',borderRadius:8,overflow:'hidden',direction:'ltr',background:'#fefefe',boxShadow:'0 0 0 1px rgba(30,30,40,.35)',boxSizing:'border-box'}}>
             <BoardStatic activeColors={activeColors}/>
 
             {/* Destination previews */}
@@ -403,11 +408,13 @@ export default function LudoScreen({ profile, onUpdate, persist, onExit }){
               {(state.turn!==0||moving||rolling)&&<div style={{color:'rgba(240,237,229,.6)',fontSize:13}}>دور {state.turn===0?'اللاعب':LUDO_COLORS[state.turn].name}…</div>}
             </div>
             <div onClick={state.turn===0&&state.phase==='roll'?humanRoll:undefined}
-              style={{width:56,height:56,flexShrink:0,borderRadius:14,background:'linear-gradient(145deg,#FEFDF8,#E4DECB)',
-                boxShadow:state.turn===0&&state.phase==='roll'?`0 6px 18px ${curColor}66, 0 0 0 2px ${curColor}`:'0 6px 16px rgba(0,0,0,.5)',
+              style={{width:60,height:60,flexShrink:0,borderRadius:15,background:'linear-gradient(150deg,#ffffff,#eceef1 58%,#dcdfe4)',
+                boxShadow:state.turn===0&&state.phase==='roll'
+                  ? `0 6px 16px ${curColor}55, 0 0 0 2px ${curColor}, inset 0 2px 3px #fff, inset 0 -4px 7px rgba(0,0,0,.12)`
+                  : '0 6px 15px rgba(0,0,0,.45), inset 0 2px 3px #fff, inset 0 -4px 7px rgba(0,0,0,.12)',
                 cursor:state.turn===0&&state.phase==='roll'?'pointer':'default',
                 animation:rolling?'diceshake .32s ease-in-out infinite':'none'}}>
-              {(state.dice||rolling)?<Pips n={rolling?fakeFace:state.dice} color={curColor}/>:<div style={{width:'100%',height:'100%',display:'flex',alignItems:'center',justifyContent:'center',color:'#0C1410',fontSize:24}}>🎲</div>}
+              {(state.dice||rolling)?<Pips n={rolling?fakeFace:state.dice} color={shade(curColor,-18)}/>:<div style={{width:'100%',height:'100%',display:'flex',alignItems:'center',justifyContent:'center',color:'#0C1410',fontSize:26}}>🎲</div>}
             </div>
           </div>
         </div>
