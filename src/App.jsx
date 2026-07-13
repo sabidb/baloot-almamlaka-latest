@@ -10,6 +10,7 @@ import {
   sounds, setMuted, startAmbience, stopAmbience,
 } from './GameLogic';
 import LudoScreen from './Ludo';
+import LudoOnline from './LudoOnline';
 
 const firebaseConfig = {
   apiKey:            import.meta.env.VITE_FIREBASE_API_KEY,
@@ -181,7 +182,12 @@ export default function App(){
   );
   if(game==='ludo')return(
     <div style={{height:'100dvh',overflow:'hidden'}}>
-      <LudoScreen profile={profile} onUpdate={setProfile} persist={patch=>persistProfile(profile.uid,patch)} onExit={()=>{setGame(null);setTab('home');}}/>
+      <LudoScreen profile={profile} onUpdate={setProfile} persist={patch=>persistProfile(profile.uid,patch)} onOnline={()=>setGame('ludoOnline')} onExit={()=>{setGame(null);setTab('home');}}/>
+    </div>
+  );
+  if(game==='ludoOnline')return(
+    <div style={{height:'100dvh',overflow:'hidden'}}>
+      <LudoOnline profile={profile} onExit={()=>{setGame(null);setTab('home');}}/>
     </div>
   );
 

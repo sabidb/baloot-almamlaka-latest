@@ -1,0 +1,22 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Player profiles — anyone may read (leaderboard); only the owner writes.
+    match /users/{uid} {
+      allow read: if true;
+      allow write: if request.auth != null && request.auth.uid == uid;
+    }
+
+    // Ludo rooms — ephemeral, client-authoritative game state (no sensitive
+    // data). Open read/write keeps guest play working without auth. Rooms
+    // older than a day are effectively abandoned; add a scheduled cleanup or
+    // TTL policy in production.
+    //
+    // To harden later: require `request.auth != null`, and validate that the
+    // writer owns the seat whose turn it is (state.turn) or is the host.
+    match /rooms/{code} {
+      allow read, write: if true;
+    }
+  }
+}
