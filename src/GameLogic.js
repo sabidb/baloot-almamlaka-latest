@@ -180,6 +180,11 @@ export const sounds={
   gahwa: ()=>playTone([784,659,523,659,784],0.2,'triangle'),// coffee! double
   tick:  ()=>playTone(880,0.05,'square'),
   buy:   ()=>playTone([523,659],0.1,'sine'),
+  // ── Ludo foley ──
+  dice:  ()=>{ noise(0.12,0.12,{hp:800,lp:5000}); setTimeout(()=>noise(0.10,0.10,{hp:800,lp:5000}),90); setTimeout(()=>noise(0.08,0.08,{hp:800,lp:5000}),180); },
+  hop:   ()=>playTone(760,0.05,'sine'),                     // token step
+  capture:()=>playTone([320,190,120],0.16,'sawtooth'),      // knock a token out
+  home:  ()=>playTone([523,784,1046],0.14,'sine'),          // token reaches home
 };
 
 // Low-volume, low-pass Majlis ambience: a warm drone + coffee-shop hiss.

@@ -138,6 +138,9 @@ export default function App(){
       @keyframes popIn{from{opacity:0;transform:scale(.7)}to{opacity:1;transform:scale(1)}}
       @keyframes pfly{0%{opacity:1;transform:translate(0,0) scale(1)}100%{opacity:0;transform:translate(var(--tx),var(--ty)) scale(0)}}
       @keyframes pulse{0%,100%{transform:translate(-50%,-60%) scale(1)}50%{transform:translate(-50%,-60%) scale(1.14)}}
+      @keyframes diceshake{0%,100%{transform:rotate(0) scale(1)}20%{transform:rotate(-16deg) scale(1.08)}40%{transform:rotate(14deg) scale(1.05)}60%{transform:rotate(-10deg) scale(1.08)}80%{transform:rotate(8deg) scale(1.03)}}
+      @keyframes tokland{0%{transform:translate(-50%,-60%) scale(1)}45%{transform:translate(-50%,-72%) scale(1.18)}100%{transform:translate(-50%,-60%) scale(1)}}
+      @keyframes confetti{0%{opacity:1;transform:translate(0,0) rotate(0) scale(1)}100%{opacity:0;transform:translate(var(--tx),var(--ty)) rotate(var(--rot)) scale(.4)}}
       select option{background:#0C1410}
     `;
     document.head.appendChild(style);
@@ -176,7 +179,7 @@ export default function App(){
   );
   if(game==='ludo')return(
     <div style={{height:'100dvh',overflow:'hidden'}}>
-      <LudoScreen profile={profile} onExit={()=>{setGame(null);setTab('home');}}/>
+      <LudoScreen profile={profile} onUpdate={setProfile} persist={patch=>persistProfile(profile.uid,patch)} onExit={()=>{setGame(null);setTab('home');}}/>
     </div>
   );
 
