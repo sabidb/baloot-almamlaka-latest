@@ -4,12 +4,14 @@
 
 export function todayStr(){ const d=new Date(); return `${d.getFullYear()}-${d.getMonth()+1}-${d.getDate()}`; }
 function ydayStr(){ const d=new Date(Date.now()-86400000); return `${d.getFullYear()}-${d.getMonth()+1}-${d.getDate()}`; }
+export function weekStr(){ const d=new Date(); const jan1=new Date(d.getFullYear(),0,1); const w=Math.ceil((((d-jan1)/86400000)+jan1.getDay()+1)/7); return `${d.getFullYear()}-W${w}`; }
 
 function baseProgress(){
   return {
     xp:0, level:1, streak:0, lastPlayDay:null, dailyClaimedDay:null,
     stats:{ gamesPlayed:0, winStreak:0, bestWinStreak:0, ludoWins:0, balootWins:0 },
     missions:null,
+    week:null, weeklyGames:0, weeklyWins:0, weeklyClaimedWeek:null,
   };
 }
 export function withProgress(profile){
@@ -84,6 +86,11 @@ export function applyGameResult(profile, { game, won }){
     if(game==='ludo') p.stats.ludoWins++; else p.stats.balootWins++; }
   else p.stats.winStreak=0;
 
+  // Weekly tally (resets each ISO week).
+  const wk=weekStr();
+  if(p.week!==wk){ p.week=wk; p.weeklyGames=0; p.weeklyWins=0; }
+  p.weeklyGames++; if(won) p.weeklyWins++;
+
   // Daily play streak (once per calendar day).
   const t=todayStr();
   if(p.lastPlayDay!==t){
@@ -114,4 +121,47 @@ export function applyGameResult(profile, { game, won }){
   if(won) patch.wins=(profile.wins||0)+1; else patch.losses=(profile.losses||0)+1;
   if(won && game==='ludo') patch.ludoWins=(profile.ludoWins||0)+1;
   return { patch, toasts, coins, gems };
+}
+
+// ── Weekly reward: a performance bonus for the week's play, claimable once
+// per ISO week (only if you've played). Scales with wins this week.
+export function weeklyReward(wins){ return 100 + wins*40; }
+export function weeklyStatus(profile){
+  const p=withProgress(profile); const wk=weekStr();
+  const games = p.week===wk ? p.weeklyGames : 0;
+  const wins  = p.week===wk ? p.weeklyWins  : 0;
+  return { games, wins, reward:weeklyReward(wins), claimed:p.weeklyClaimedWeek===wk, playable:games>0 };
+}
+export function claimWeekly(profile){
+  const p=withProgress(profile); const wk=weekStr();
+  if(p.weeklyClaimedWeek===wk) return null;
+  if(p.week!==wk || p.weeklyGames<1) return { locked:true };
+  const reward=weeklyReward(p.weeklyWins);
+  p.weeklyClaimedWeek=wk;
+  return { patch:{ progress:p, coins:(profile.coins||0)+reward }, reward };
+}
+
+// ── Achievements (milestones earned by playing) ──
+const totalWins = pr => (pr.stats.balootWins||0)+(pr.stats.ludoWins||0);
+export const ACHIEVEMENTS = [
+  { id:'first_win', icon:'🥇', title:'الفوز الأول',  desc:'افز بأول مباراة',    goal:1,  coins:100,           metric:p=>totalWins(p) },
+  { id:'games_20',  icon:'🎮', title:'مثابر',        desc:'العب ٢٠ مباراة',     goal:20, coins:150,           metric:p=>p.stats.gamesPlayed },
+  { id:'wins_10',   icon:'🏆', title:'بطل صاعد',     desc:'١٠ انتصارات',        goal:10, coins:250, gems:1,   metric:p=>totalWins(p) },
+  { id:'streak_5',  icon:'🔥', title:'لا يُقهر',      desc:'٥ انتصارات متتالية', goal:5,  coins:300, gems:1,   metric:p=>p.stats.bestWinStreak },
+  { id:'ludo_10',   icon:'🎲', title:'سيد اللودو',   desc:'١٠ انتصارات لودو',   goal:10, coins:300,           metric:p=>p.stats.ludoWins },
+  { id:'baloot_10', icon:'🃏', title:'صقر البلوت',   desc:'١٠ انتصارات بلوت',   goal:10, coins:300,           metric:p=>p.stats.balootWins },
+  { id:'level_10',  icon:'⭐', title:'خبير',         desc:'بلوغ المستوى ١٠',    goal:10, coins:500, gems:2,   metric:p=>p.level },
+  { id:'daily_7',   icon:'📅', title:'مواظب',        desc:'سلسلة ٧ أيام',       goal:7,  coins:400, gems:2,   metric:p=>p.streak },
+  { id:'wins_50',   icon:'👑', title:'ملك الطاولة',  desc:'٥٠ انتصار',          goal:50, coins:1000,gems:5,   metric:p=>totalWins(p) },
+];
+export function achievementList(profile){
+  const p=withProgress(profile); const claimed=new Set(profile.achClaimed||[]);
+  return ACHIEVEMENTS.map(a=>{ const value=Math.min(a.metric(p),a.goal); const done=value>=a.goal;
+    return { ...a, value, done, claimed:claimed.has(a.id) }; });
+}
+export function claimAchievement(profile, id){
+  const a=ACHIEVEMENTS.find(x=>x.id===id); if(!a) return null;
+  const p=withProgress(profile); const claimed=profile.achClaimed||[];
+  if(claimed.includes(id) || a.metric(p)<a.goal) return null;
+  return { patch:{ achClaimed:[...claimed,id], coins:(profile.coins||0)+a.coins, gems:(profile.gems||0)+(a.gems||0) }, reward:a.coins, gems:a.gems||0 };
 }

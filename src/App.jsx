@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useReducer } from 'react';
 import { initializeApp, getApps } from 'firebase/app';
 import { getFirestore, doc, getDoc, setDoc, collection, orderBy, limit, getDocs, query, serverTimestamp, updateDoc } from 'firebase/firestore';
-import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from 'firebase/auth';
+import { getAuth, GoogleAuthProvider, signInWithPopup, signInAnonymously, onAuthStateChanged, signOut } from 'firebase/auth';
 import {
   buildDeck, shuffle, dealHands, botBid, botChoose, legalPlays,
   trickWinner, trickPoints, calcResult, sortHand,
@@ -9,7 +9,7 @@ import {
   REACTIONS, defaultInventory, applyAchievements,
   sounds, setMuted, startAmbience, stopAmbience,
 } from './GameLogic';
-import { applyGameResult, withProgress, levelBar, getMissions, claimMission, claimDaily, dailyStatus } from './progress';
+import { applyGameResult, withProgress, levelBar, getMissions, claimMission, claimDaily, dailyStatus, weeklyStatus, claimWeekly, achievementList, claimAchievement } from './progress';
 import LudoScreen from './Ludo';
 import LudoOnline from './LudoOnline';
 
@@ -191,6 +191,11 @@ export default function App(){
       <LudoOnline profile={profile} onUpdate={setProfile} persist={patch=>persistProfile(profile.uid,patch)} onExit={()=>{setGame(null);setTab('home');}}/>
     </div>
   );
+  if(game==='__ach__')return(
+    <div style={{height:'100dvh',position:'relative',background:'#07090A',fontFamily:'Tajawal,sans-serif',color:'#F0EDE5',direction:'rtl',overflow:'hidden'}}>
+      <AchievementsScreen profile={profile} onUpdate={setProfile} onBack={()=>setGame(null)}/>
+    </div>
+  );
 
   const NAV=[{id:'home',i:'🏠',l:'الرئيسية'},{id:'board',i:'🏆',l:'المتصدرون'},{id:'store',i:'🛍️',l:'المتجر'},{id:'friends',i:'👥',l:'أصدقاء'},{id:'profile',i:'👤',l:'ملفي'}];
 
@@ -233,6 +238,24 @@ function AuthScreen({onDone}){
       if(snap.exists()){onDone({uid:res.user.uid,...snap.data()});}
       else{setPending(res.user);setStep('setup');setBusy(false);}
     }catch{setErr('تعذر تسجيل الدخول');setBusy(false);}
+  };
+
+  // Guest: use Firebase anonymous auth when available (real uid → online +
+  // persistence). Fall back to a fully local profile otherwise.
+  const doGuest=async()=>{
+    if(auth&&db){
+      setBusy(true);setErr('');
+      try{
+        const res=await signInAnonymously(auth);
+        const snap=await getDoc(doc(db,'users',res.user.uid));
+        if(snap.exists()){ onDone({uid:res.user.uid,...snap.data()}); return; }
+        const p={...guestProfile(),uid:res.user.uid};
+        await setDoc(doc(db,'users',res.user.uid),{...p,createdAt:serverTimestamp()},{merge:true});
+        onDone(p); return;
+      }catch{ /* fall through to local guest */ }
+      setBusy(false);
+    }
+    onDone(guestProfile());
   };
 
   const finish=async()=>{
@@ -295,7 +318,7 @@ function AuthScreen({onDone}){
             </>
           )}
         </button>
-        <button onClick={()=>onDone(guestProfile())} disabled={busy} style={{...G.btn,width:'100%',marginTop:10,padding:12,fontSize:14,background:'rgba(255,255,255,.06)',border:'1px solid rgba(240,192,64,.2)',color:'#F0C040'}}>العب كضيف 🎮</button>
+        <button onClick={doGuest} disabled={busy} style={{...G.btn,width:'100%',marginTop:10,padding:12,fontSize:14,background:'rgba(255,255,255,.06)',border:'1px solid rgba(240,192,64,.2)',color:'#F0C040'}}>العب كضيف 🎮</button>
         <div style={{color:'rgba(240,237,229,.6)',fontSize:10,textAlign:'center',marginTop:12}}>بالمتابعة توافق على شروط الاستخدام</div>
       </div>
     </div>
@@ -414,7 +437,75 @@ function HomeScreen({profile,onGame,onUpdate}){
         })}
       </div>
 
+      {/* Weekly reward */}
+      {(()=>{ const wk=weeklyStatus(profile); return (
+        <div style={{...card,margin:'0 12px 12px',padding:'12px 14px',display:'flex',alignItems:'center',gap:12,border:'1px solid rgba(155,89,182,.3)',background:'linear-gradient(150deg,rgba(155,89,182,.14),rgba(13,20,16,.85))'}}>
+          <span style={{fontSize:30}}>📦</span>
+          <div style={{flex:1}}>
+            <div style={{fontSize:13,fontWeight:900,color:'#C79BE8'}}>الجائزة الأسبوعية</div>
+            <div style={{color:'rgba(240,237,229,.6)',fontSize:11}}>{wk.claimed?'استلمتها هذا الأسبوع':`فوزات هذا الأسبوع: ${wk.wins} · +${wk.reward} 🪙`}</div>
+          </div>
+          <button disabled={wk.claimed} onClick={()=>doClaim(claimWeekly(profile),'الجائزة الأسبوعية')}
+            style={{...G.btn,padding:'8px 14px',fontSize:12,opacity:wk.claimed?0.4:1,
+              background:wk.claimed?'rgba(255,255,255,.08)':(wk.playable?'linear-gradient(135deg,#4A0072,#9B59B6)':'rgba(155,89,182,.15)'),
+              color:wk.claimed?'rgba(240,237,229,.6)':'#fff',border:wk.playable?'none':'1px solid rgba(155,89,182,.35)'}}>
+            {wk.claimed?'✓ تم':(wk.playable?'استلم':'🔒 العب')}
+          </button>
+        </div>
+      );})()}
+
+      {/* Achievements shortcut */}
+      <div onClick={()=>onGame('__ach__')} style={{...card,margin:'0 12px 12px',padding:'12px 14px',display:'flex',alignItems:'center',gap:12,cursor:'pointer'}}>
+        <span style={{fontSize:26}}>🏅</span>
+        <div style={{flex:1}}>
+          <div style={{fontSize:13,fontWeight:900,color:'#F0C040'}}>الإنجازات</div>
+          <div style={{color:'rgba(240,237,229,.55)',fontSize:11}}>{achievementList(profile).filter(a=>a.done).length}/{achievementList(profile).length} مكتمل — اجمعها كلها</div>
+        </div>
+        <span style={{fontSize:18,color:'#F0C040'}}>‹</span>
+      </div>
+
       <div style={{textAlign:'center',color:'rgba(240,237,229,.35)',fontSize:10,padding:'2px 20px 4px'}}>كل الجوائز تُكسب باللعب فقط — بدون إعلانات 🎮</div>
+    </div>
+  );
+}
+
+// ── Achievements screen (collection) ──
+function AchievementsScreen({profile,onUpdate,onBack}){
+  const [notice,setNotice]=useState(null);
+  const list=achievementList(profile);
+  const doClaim=id=>{ const res=claimAchievement(profile,id); if(!res)return; onUpdate&&onUpdate(p=>({...p,...res.patch})); persistProfile(profile.uid,res.patch); sounds.buy&&sounds.buy(); setNotice(`🎁 +${res.reward} 🪙${res.gems?` +${res.gems} 💎`:''}`); setTimeout(()=>setNotice(null),2400); };
+  return(
+    <div style={{position:'absolute',inset:0,overflowY:'auto',WebkitOverflowScrolling:'touch',paddingBottom:'calc(60px + env(safe-area-inset-bottom,0px) + 12px)',paddingTop:'env(safe-area-inset-top,0px)'}}>
+      <div style={{display:'flex',alignItems:'center',gap:10,padding:'16px 14px 10px'}}>
+        <button onClick={onBack} style={{...G.btn,background:'rgba(255,255,255,.08)',color:'rgba(240,237,229,.75)',border:'1px solid rgba(255,255,255,.12)',fontSize:12,padding:'6px 12px'}}>‹ رجوع</button>
+        <div style={{fontFamily:"'Scheherazade New',serif",fontSize:22,color:'#F0C040'}}>🏅 الإنجازات</div>
+      </div>
+      {notice&&<div style={{margin:'0 12px 10px',background:'rgba(240,192,64,.1)',border:'1px solid rgba(240,192,64,.3)',borderRadius:10,padding:'8px 12px',fontSize:12,fontWeight:700,color:'#F0C040',textAlign:'center'}}>{notice}</div>}
+      <div style={{padding:'0 12px'}}>
+        {list.map(a=>{
+          const claimable=a.done&&!a.claimed;
+          return(
+            <div key={a.id} style={{display:'flex',alignItems:'center',gap:12,background:'rgba(13,20,16,.82)',border:`1px solid ${claimable?'#F0C040':'rgba(255,255,255,.07)'}`,borderRadius:14,padding:'12px 14px',marginBottom:8,opacity:a.claimed?0.7:1}}>
+              <span style={{fontSize:30,filter:a.done?'none':'grayscale(1) opacity(.5)'}}>{a.icon}</span>
+              <div style={{flex:1,minWidth:0}}>
+                <div style={{fontSize:13,fontWeight:900,color:a.done?'#F0EDE5':'rgba(240,237,229,.7)'}}>{a.title}</div>
+                <div style={{color:'rgba(240,237,229,.55)',fontSize:11,marginBottom:5}}>{a.desc}</div>
+                <div style={{height:5,borderRadius:4,background:'rgba(255,255,255,.08)',overflow:'hidden'}}>
+                  <div style={{height:'100%',width:`${Math.round(Math.min(1,a.value/a.goal)*100)}%`,background:a.done?'#2ECC71':'#F0C040',borderRadius:4}}/>
+                </div>
+              </div>
+              <div style={{display:'flex',flexDirection:'column',alignItems:'center',gap:3,minWidth:60}}>
+                <span style={{fontSize:10,color:'rgba(240,237,229,.5)'}}>{a.value}/{a.goal}</span>
+                {a.claimed
+                  ? <span style={{fontSize:11,color:'#2ECC71',fontWeight:900}}>✓ تم</span>
+                  : claimable
+                    ? <button onClick={()=>doClaim(a.id)} style={{...G.btn,padding:'5px 10px',fontSize:11,background:'linear-gradient(135deg,#8B6914,#F0C040)',color:'#07090A'}}>استلم</button>
+                    : <span style={{fontSize:10,color:'#F0C040',fontWeight:700}}>🪙{a.coins}{a.gems?` 💎${a.gems}`:''}</span>}
+              </div>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
