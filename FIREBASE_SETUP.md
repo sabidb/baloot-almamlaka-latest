@@ -71,6 +71,37 @@ firebase deploy --only hosting   # optional: host on Firebase (firebase.json)
   The client whose turn it is writes the next state; the host also runs bot
   seats and covers a disconnected player after a timeout.
 
+## Fair dealing (anti-cheat) for online Baloot
+
+Online rooms are client-authoritative: the room doc holds the full game
+state. That's fine for Ludo (all pieces are public) and works for casual
+Baloot with friends — but because the doc is readable, a determined player
+could inspect opponents' **hidden hands**. To remove that vector, deal on
+the server.
+
+`functions/dealBaloot` (provided) deals with a CSPRNG and writes each human
+player's hand to a **private** doc `rooms/{code}/private/{uid}` that only
+that player can read (see `firestore.rules`); bot hands stay public. Deploy:
+
+```
+cd functions && npm install && cd ..
+firebase deploy --only functions,firestore:rules
+```
+
+Client wiring to complete the upgrade (kept out of the shipped client until
+you deploy, so nothing breaks without a backend):
+
+1. On host **start**, call the function instead of writing `initGame()`:
+   `httpsCallable(getFunctions(), 'dealBaloot')({ code })`.
+2. Each client subscribes to its private hand: `onSnapshot(doc(db,
+   'rooms',code,'private',myUid))` and merges `hand` into `state.hands[mySeat]`
+   for rendering + legal-move checks.
+3. On a human play, update that private doc (remove the card) alongside the
+   public write; or route plays through a second Cloud Function for full
+   server authority.
+
+Until then, online Baloot uses the verified client-authoritative path.
+
 ## Notes / later
 
 - Rooms aren't auto-deleted. Add a scheduled Cloud Function or a TTL policy to

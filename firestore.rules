@@ -17,6 +17,14 @@ service cloud.firestore {
     // writer owns the seat whose turn it is (state.turn) or is the host.
     match /rooms/{code} {
       allow read, write: if true;
+
+      // Private per-player hands written by the dealBaloot Cloud Function.
+      // Only the owning player may read their hand; nobody writes from the
+      // client (the admin SDK in the function bypasses these rules).
+      match /private/{uid} {
+        allow read: if request.auth != null && request.auth.uid == uid;
+        allow write: if false;
+      }
     }
   }
 }
