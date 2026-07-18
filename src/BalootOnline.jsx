@@ -36,6 +36,8 @@ export default function BalootOnline({ profile, onExit, onUpdate, persist }){
   const [err,setErr]=useState('');
   const [busy,setBusy]=useState(false);
   const [sel,setSel]=useState(null);
+  const [copied,setCopied]=useState(false);
+  const copyCode=code=>{ try{ navigator.clipboard&&navigator.clipboard.writeText(code); }catch{ /* ignore */ } setCopied(true); setTimeout(()=>setCopied(false),1500); };
   const chan=useRef(null), roomRef=useRef(null), actedEvt=useRef(-1), unsub=useRef(null), rewarded=useRef(false);
 
   useEffect(()=>()=>{ if(unsub.current) unsub.current(); },[]);
@@ -156,8 +158,8 @@ export default function BalootOnline({ profile, onExit, onUpdate, persist }){
     return (
       <div style={{...panel,height:'100%',background:'radial-gradient(ellipse 80% 60% at 50% 35%,#0F2A14,#07090A)',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:12,padding:24}}>
         <div style={{fontFamily:"'Scheherazade New',serif",fontSize:24,color:'#F0C040'}}>غرفة البلوت</div>
-        <div style={{background:'rgba(240,192,64,.1)',border:'1px solid rgba(240,192,64,.35)',borderRadius:14,padding:'10px 26px',fontSize:34,fontWeight:900,color:'#F0C040',letterSpacing:8}}>{room.code}</div>
-        <div style={{fontSize:11,color:'rgba(240,237,229,.55)'}}>شارك الكود — فريقان (أنت وشريكك ضد الآخرين)</div>
+        <div onClick={()=>copyCode(room.code)} style={{background:'rgba(240,192,64,.1)',border:'1px solid rgba(240,192,64,.35)',borderRadius:14,padding:'10px 26px',fontSize:34,fontWeight:900,color:'#F0C040',letterSpacing:8,cursor:'pointer',display:'flex',alignItems:'center',gap:12}}>{room.code}<span style={{fontSize:16}}>📋</span></div>
+        <div style={{fontSize:11,color:copied?'#2ECC71':'rgba(240,237,229,.55)'}}>{copied?'✓ تم نسخ الكود':'اضغط لنسخ الكود · فريقان (أنت وشريكك ضد الآخرين)'}</div>
         <div style={{width:'100%',maxWidth:320,display:'flex',flexDirection:'column',gap:8,margin:'6px 0'}}>
           {[0,1,2,3].map(seat=>{ const pl=players[seat]; const team=seat%2;
             return <div key={seat} style={{display:'flex',alignItems:'center',gap:10,background:'rgba(13,20,16,.8)',border:`1px solid ${team===0?'rgba(240,192,64,.25)':'rgba(52,152,219,.25)'}`,borderRadius:10,padding:'9px 12px'}}>

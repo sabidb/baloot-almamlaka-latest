@@ -27,6 +27,8 @@ export default function LudoOnline({ profile, onExit, onUpdate, persist }){
   const [err,setErr]=useState('');
   const [busy,setBusy]=useState(false);
   const [muted,setMutedState]=useState(!!(profile&&profile.muted));
+  const [copied,setCopied]=useState(false);
+  const copyCode=code=>{ try{ navigator.clipboard&&navigator.clipboard.writeText(code); }catch{ /* ignore */ } setCopied(true); setTimeout(()=>setCopied(false),1500); };
 
   const chan=useRef(null);
   const roomRef=useRef(null);
@@ -214,8 +216,8 @@ export default function LudoOnline({ profile, onExit, onUpdate, persist }){
     return (
       <div style={{...panel,height:'100%',background:'radial-gradient(ellipse 120% 90% at 50% 25%,#14261B,#07090A)',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:14,padding:24}}>
         <div style={{fontFamily:"'Scheherazade New',serif",fontSize:26,color:'#F0C040'}}>غرفة اللعب</div>
-        <div style={{background:'rgba(240,192,64,.1)',border:'1px solid rgba(240,192,64,.35)',borderRadius:14,padding:'10px 26px',fontSize:34,fontWeight:900,color:'#F0C040',letterSpacing:8}}>{room.code}</div>
-        <div style={{fontSize:11,color:'rgba(240,237,229,.55)'}}>شارك هذا الكود مع أصدقائك</div>
+        <div onClick={()=>copyCode(room.code)} style={{background:'rgba(240,192,64,.1)',border:'1px solid rgba(240,192,64,.35)',borderRadius:14,padding:'10px 26px',fontSize:34,fontWeight:900,color:'#F0C040',letterSpacing:8,cursor:'pointer',display:'flex',alignItems:'center',gap:12}}>{room.code}<span style={{fontSize:16}}>📋</span></div>
+        <div style={{fontSize:11,color:copied?'#2ECC71':'rgba(240,237,229,.55)'}}>{copied?'✓ تم نسخ الكود':'اضغط لنسخ الكود ومشاركته'}</div>
         <div style={{width:'100%',maxWidth:320,display:'flex',flexDirection:'column',gap:8,margin:'8px 0'}}>
           {room.active.map(seat=>{
             const pl=players[seat]; const c=LUDO_COLORS[seat];
