@@ -88,19 +88,27 @@ cd functions && npm install && cd ..
 firebase deploy --only functions,firestore:rules
 ```
 
-Client wiring to complete the upgrade (kept out of the shipped client until
-you deploy, so nothing breaks without a backend):
+The client wiring now ships, gated behind an **opt-in flag** so nothing
+changes until you deploy the function:
 
-1. On host **start**, call the function instead of writing `initGame()`:
-   `httpsCallable(getFunctions(), 'dealBaloot')({ code })`.
-2. Each client subscribes to its private hand: `onSnapshot(doc(db,
-   'rooms',code,'private',myUid))` and merges `hand` into `state.hands[mySeat]`
-   for rendering + legal-move checks.
-3. On a human play, update that private doc (remove the card) alongside the
-   public write; or route plays through a second Cloud Function for full
-   server authority.
+1. Deploy the function and rules (command above).
+2. Set `VITE_FAIR_DEAL=1` in your `.env` (see `.env.example`) and rebuild.
 
-Until then, online Baloot uses the verified client-authoritative path.
+With the flag on, the host deals every round through `dealBaloot`; each
+client subscribes to its private hand (`rooms/{code}/private/{uid}`),
+rehydrates the compact server cards, and renders/validates from it. Public
+state carries `[]` for human seats and full hands only for bots. If the
+function is unreachable, the host transparently falls back to a local deal so
+the game still starts.
+
+Known limits of the client-authoritative fallback within fair mode: a fully
+**disconnected** human can't be auto-covered by the host (their hand is
+hidden), and a **mid-round reload** re-seeds the full private hand. For full
+server authority (covering disconnects, validating plays), move turn
+resolution into a second Cloud Function.
+
+With the flag off (default), online Baloot uses the verified
+client-authoritative path.
 
 ## Notes / later
 

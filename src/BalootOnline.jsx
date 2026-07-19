@@ -1,10 +1,24 @@
 import { useEffect, useRef, useState } from 'react';
 import { SUITS, botBid, botChoose, legalPlays, sortHand } from './GameLogic';
-import { gameReducer, initGame, RANKSAR } from './balootEngine';
+import { gameReducer, initGame, RANKSAR, hydrateState, hydrateHand } from './balootEngine';
 import { openRoom, genRoomCode, ONLINE_MODE, now } from './online';
 import { applyGameResult } from './progress';
 
 const TURN_MS = 22000, HOST_MS = 30000;
+// Opt-in fair (server-side) dealing. When Firebase Functions are deployed and
+// VITE_FAIR_DEAL=1, the host deals through the dealBaloot Cloud Function, which
+// keeps each human's hand in a private doc only they can read. Otherwise the
+// verified client-authoritative path runs unchanged.
+const SERVER_DEAL = ONLINE_MODE==='firestore' && import.meta.env.VITE_FAIR_DEAL==='1';
+// Deal a round on the server; returns false if the function is unavailable so
+// the caller can fall back to a local deal.
+async function dealServer(code){
+  try{
+    const { getFunctions, httpsCallable } = await import('firebase/functions');
+    await httpsCallable(getFunctions(),'dealBaloot')({ code });
+    return true;
+  }catch(e){ console.warn('dealBaloot unavailable — local deal:', e?.message||e); return false; }
+}
 const SUIT_NAME = sy => (SUITS.find(s=>s.symbol===sy)||{}).name || '';
 const SUIT_COLOR = sy => (SUITS.find(s=>s.symbol===sy)||{}).color || '#111';
 
@@ -37,12 +51,18 @@ export default function BalootOnline({ profile, onExit, onUpdate, persist }){
   const [busy,setBusy]=useState(false);
   const [sel,setSel]=useState(null);
   const [copied,setCopied]=useState(false);
+  const [privHand,setPrivHand]=useState([]); // my private hand (server-deal mode); [] otherwise
   const copyCode=code=>{ try{ navigator.clipboard&&navigator.clipboard.writeText(code); }catch{ /* ignore */ } setCopied(true); setTimeout(()=>setCopied(false),1500); };
   const chan=useRef(null), roomRef=useRef(null), actedEvt=useRef(-1), unsub=useRef(null), rewarded=useRef(false);
+  const privRef=useRef([]), privEvt=useRef(-1), dealtEvt=useRef(-1);
+  const setPriv=h=>{ privRef.current=h; setPrivHand(h); };
 
   useEffect(()=>()=>{ if(unsub.current) unsub.current(); },[]);
   const setRoomBoth=r=>{ roomRef.current=r; setRoom(r); };
-  const subscribe=ch=>{ if(unsub.current) unsub.current(); unsub.current=ch.subscribe(r=>{ if(r) setRoomBoth(r); }); };
+  // Rehydrate compact server-dealt cards to full client cards on ingest (no-op
+  // for the client-authoritative path, whose cards are already full).
+  const ingest=r=>{ if(r&&r.state) r={...r,state:hydrateState(r.state)}; setRoomBoth(r); };
+  const subscribe=ch=>{ if(unsub.current) unsub.current(); unsub.current=ch.subscribe(r=>{ if(r) ingest(r); }); };
   const writeRoom=async patch=>{ const base=roomRef.current; if(!base||!chan.current) return; const next={...base,...patch,ts:now()}; setRoomBoth(next); await chan.current.set(next); };
 
   const create=async()=>{
@@ -93,15 +113,37 @@ export default function BalootOnline({ profile, onExit, onUpdate, persist }){
   const mySeat=seatOf(myUid);
   const botSeat=seat=>!players[seat];
 
+  // In server-deal mode my hand lives in a private doc (privHand); public
+  // state carries [] for my seat. Bot seats keep full public hands.
+  const serverDealt=!!st?.serverDealt;
+  const myHandRaw = st ? (serverDealt&&mySeat>=0 ? privHand : (st.hands[mySeat]||[])) : [];
+  // Remaining card count for any seat (hidden human hands are counted, not read).
+  const handCount=seat=>{
+    if(!st) return 0;
+    if(!serverDealt) return st.hands[seat]?.length||0;
+    if(seat===mySeat) return myHandRaw.length;
+    if(st.hands[seat]?.length) return st.hands[seat].length; // visible bot hand
+    const done=(st.tricksWon?.[0]||0)+(st.tricksWon?.[1]||0);
+    return Math.max(0, 8 - done - (st.trick.some(p=>p.player===seat)?1:0));
+  };
+  // Start / deal a match. Server-deal when enabled+available, else local.
+  const startMatch=async()=>{
+    dealtEvt.current=-1;
+    if(SERVER_DEAL && await dealServer(roomRef.current.code)) return; // function wrote the room
+    writeRoom({ status:'playing', state:initGame() });
+  };
+
   const advance=action=>{ const cur=roomRef.current?.state; if(!cur) return; if(actedEvt.current===cur.evt) return; actedEvt.current=cur.evt;
     const next=gameReducer(cur,action); writeRoom({ state:next, status: next.phase==='gameOver'?'over':'playing' }); };
 
   const humanBid=bid=>{ if(st&&st.phase==='bidding'&&st.bidTurn===mySeat) advance({type:'BID',payload:bid}); };
   const humanPlay=card=>{ if(!st||st.phase!=='playing'||st.turn!==mySeat) return;
-    const legal=legalPlays(st.hands[mySeat],st.trick,st.contract.type,st.contract.trump);
+    const legal=legalPlays(myHandRaw,st.trick,st.contract.type,st.contract.trump);
     if(!legal.some(c=>c.id===card.id)) return;
     if(sel!==card.id){ setSel(card.id); return; }
-    setSel(null); advance({type:'PLAY',payload:card}); };
+    setSel(null);
+    if(serverDealt) setPriv(privRef.current.filter(c=>c.id!==card.id));
+    advance({type:'PLAY',payload:card}); };
 
   // turn engine
   useEffect(()=>{
@@ -117,11 +159,20 @@ export default function BalootOnline({ profile, onExit, onUpdate, persist }){
       else {
         const seat=st.turn;
         const botPlay=()=>advance({type:'PLAY',payload:botChoose(st.hands[seat],st.trick,st.contract.type,st.contract.trump,seat)});
+        // The host can only auto-play a seat whose hand it can see. In
+        // server-deal mode human hands are hidden, so host coverage applies to
+        // bot seats only; a hidden human plays from their own client.
+        const hostCanCover=seat=>!serverDealt || (st.hands[seat]?.length>0);
         if(botSeat(seat)){ if(isHost) timers.push(setTimeout(botPlay,820)); }
-        else if(seat===mySeat) timers.push(setTimeout(()=>{ const legal=legalPlays(st.hands[mySeat],st.trick,st.contract.type,st.contract.trump); if(legal.length) advance({type:'PLAY',payload:legal[0]}); },TURN_MS));
-        else if(isHost) timers.push(setTimeout(botPlay,HOST_MS));
+        else if(seat===mySeat) timers.push(setTimeout(()=>{ const legal=legalPlays(myHandRaw,st.trick,st.contract.type,st.contract.trump); if(legal.length){ if(serverDealt) setPriv(privRef.current.filter(c=>c.id!==legal[0].id)); advance({type:'PLAY',payload:legal[0]}); } },TURN_MS));
+        else if(isHost && hostCanCover(seat)) timers.push(setTimeout(botPlay,HOST_MS));
       }
-    } else if(st.phase==='roundOver'){ if(isHost) timers.push(setTimeout(()=>advance({type:'NEXT_ROUND'}),3600)); }
+    } else if(st.phase==='roundOver'){
+      if(isHost) timers.push(setTimeout(()=>{
+        if(serverDealt){ if(dealtEvt.current===st.evt) return; dealtEvt.current=st.evt; dealServer(roomRef.current.code); }
+        else advance({type:'NEXT_ROUND'});
+      },3600));
+    }
     return ()=>timers.forEach(clearTimeout);
   },[room?.state?.evt, room?.status]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -134,6 +185,25 @@ export default function BalootOnline({ profile, onExit, onUpdate, persist }){
     const { patch }=applyGameResult(profile,{game:'baloot',won});
     if(onUpdate) onUpdate(p=>({...p,...patch})); if(persist) persist(patch);
   },[room?.state?.phase]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Server-deal mode: subscribe to my private hand doc. Seed once per deal
+  // (evt changes); plays decrement privHand locally so re-snapshots don't
+  // clobber it mid-round.
+  useEffect(()=>{
+    if(!SERVER_DEAL || !room?.code || mySeat<0) return;
+    let cancelled=false, off=null;
+    (async()=>{
+      try{
+        const { getFirestore, doc, onSnapshot } = await import('firebase/firestore');
+        off=onSnapshot(doc(getFirestore(),'rooms',room.code,'private',myUid), snap=>{
+          if(cancelled) return;
+          const d=snap.exists()?snap.data():null;
+          if(d && d.evt!==privEvt.current){ privEvt.current=d.evt; setPriv(hydrateHand(d.hand||[])); }
+        });
+      }catch(e){ console.warn('private hand subscribe failed:', e?.message||e); }
+    })();
+    return ()=>{ cancelled=true; if(off) off(); };
+  },[room?.code, mySeat]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const panel={fontFamily:'Tajawal,sans-serif',direction:'rtl',color:'#F0EDE5'};
   const btn=(bg,fg)=>({padding:'12px',borderRadius:12,border:'none',background:bg,color:fg,fontFamily:'Tajawal,sans-serif',fontWeight:900,fontSize:15,cursor:'pointer'});
@@ -190,7 +260,7 @@ export default function BalootOnline({ profile, onExit, onUpdate, persist }){
         {isHost
           ? <>
               {guests.length>0&&<div style={{fontSize:11,color:allReady?'#2ECC71':'rgba(240,237,229,.55)'}}>{allReady?'✓ كل اللاعبين جاهزون':`${readyGuests}/${guests.length} جاهزون`}</div>}
-              <button onClick={()=>writeRoom({status:'playing',state:initGame()})} style={{...btn('linear-gradient(135deg,#8B6914,#F0C040)','#07090A'),width:'100%',maxWidth:320,opacity:allReady?1:.85}}>ابدأ اللعب ▶ {humans<4?`(${4-humans} روبوت)`:''}</button>
+              <button onClick={startMatch} style={{...btn('linear-gradient(135deg,#8B6914,#F0C040)','#07090A'),width:'100%',maxWidth:320,opacity:allReady?1:.85}}>ابدأ اللعب ▶ {humans<4?`(${4-humans} روبوت)`:''}</button>
             </>
           : <div style={{color:'rgba(240,237,229,.6)',fontSize:13}}>بانتظار أن يبدأ المضيف…</div>}
         <button onClick={leave} style={{...btn('rgba(255,255,255,.08)','rgba(240,237,229,.7)'),border:'1px solid rgba(255,255,255,.12)',fontWeight:700,fontSize:13,maxWidth:320,width:'100%'}}>مغادرة</button>
@@ -203,8 +273,8 @@ export default function BalootOnline({ profile, onExit, onUpdate, persist }){
   const trump=st?.contract?.trump||null;
   const myTurn=st&&st.phase==='playing'&&st.turn===mySeat;
   const myBid=st&&st.phase==='bidding'&&st.bidTurn===mySeat;
-  const legalSet=myTurn?new Set(legalPlays(st.hands[mySeat],st.trick,mode,trump).map(c=>c.id)):null;
-  const myHand=st?sortHand(st.hands[mySeat]||[],mode,trump):[];
+  const legalSet=myTurn?new Set(legalPlays(myHandRaw,st.trick,mode,trump).map(c=>c.id)):null;
+  const myHand=st?sortHand(myHandRaw,mode,trump):[];
   const rel=seat=>(seat-mySeat+4)%4; // 0 me(bottom),1 right,2 partner(top),3 left
   const seatName=seat=>players[seat]?players[seat].name:`روبوت ${['أ','ب','ج','د'][seat]}`;
   const myTeam=mySeat%2;
@@ -227,7 +297,7 @@ export default function BalootOnline({ profile, onExit, onUpdate, persist }){
         return <div key={rp} style={{position:'absolute',...relPos[rp],zIndex:10,display:'flex',flexDirection:'column',alignItems:'center',gap:3}}>
           <div style={{width:38,height:38,borderRadius:'50%',border:`2px solid ${active?'#2ECC71':(seat%2===myTeam?'#F0C040':'#7A5B1A')}`,background:'rgba(16,26,18,.9)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:18,boxShadow:active?'0 0 12px rgba(46,204,113,.5)':'none'}}>{players[seat]?players[seat].avatar:'🤖'}</div>
           <span style={{color:active?'#2ECC71':'rgba(240,237,229,.6)',fontSize:10,fontWeight:700}}>{rp===2?`${seatName(seat)} (شريكك)`:seatName(seat)}</span>
-          {st&&<Backs n={st.hands[seat].length}/>}
+          {st&&<Backs n={handCount(seat)}/>}
         </div>;
       })}
 
@@ -278,7 +348,7 @@ export default function BalootOnline({ profile, onExit, onUpdate, persist }){
           <div style={{color:'rgba(240,237,229,.6)',fontSize:13,marginBottom:16}}>لنا {st.matchScores[myTeam]} — لهم {st.matchScores[1-myTeam]}</div>
           <div style={{display:'flex',gap:8}}>
             <button onClick={leave} style={{...btn('rgba(255,255,255,.08)','rgba(240,237,229,.75)'),flex:1,border:'1px solid rgba(255,255,255,.12)',fontWeight:700}}>خروج</button>
-            {isHost&&<button onClick={()=>{actedEvt.current=-1;rewarded.current=false;writeRoom({status:'playing',state:initGame()});}} style={{...btn('linear-gradient(135deg,#8B6914,#F0C040)','#07090A'),flex:1.4}}>مجدداً 🔄</button>}
+            {isHost&&<button onClick={()=>{actedEvt.current=-1;rewarded.current=false;privEvt.current=-1;startMatch();}} style={{...btn('linear-gradient(135deg,#8B6914,#F0C040)','#07090A'),flex:1.4}}>مجدداً 🔄</button>}
           </div>
         </div>
       </div>}
