@@ -223,7 +223,7 @@ export default function LudoOnline({ profile, onExit, onUpdate, persist }){
             const pl=players[seat]; const c=LUDO_COLORS[seat];
             return (
               <div key={seat} style={{display:'flex',alignItems:'center',gap:10,background:'rgba(13,20,16,.8)',border:'1px solid rgba(255,255,255,.07)',borderRadius:10,padding:'9px 12px'}}>
-                <div style={{width:16,height:16,borderRadius:'50%',background:tokenBg(c.hex)}}/>
+                <div style={{width:26,height:26,borderRadius:'50%',flexShrink:0,display:'flex',alignItems:'center',justifyContent:'center',fontSize:15,background:pl?'rgba(255,255,255,.06)':'transparent',boxShadow:`0 0 0 2px ${c.hex}`}}>{pl?pl.avatar:'🪑'}</div>
                 <span style={{flex:1,fontSize:13,fontWeight:700}}>{pl?pl.name:'بانتظار لاعب…'}</span>
                 <span style={{fontSize:11,color:pl?'#2ECC71':'rgba(240,237,229,.4)'}}>{pl?(pl.uid===myUid?'أنت':'جاهز'):'🤖 روبوت'}</span>
               </div>
@@ -251,10 +251,10 @@ export default function LudoOnline({ profile, onExit, onUpdate, persist }){
       {/* Player chips */}
       <div style={{flexShrink:0,display:'flex',gap:6,padding:'0 12px 8px',justifyContent:'center',flexWrap:'wrap'}}>
         {active.map(seat=>{
-          const c=LUDO_COLORS[seat]; const turn=st&&st.turn===seat&&st.phase!=='over';
+          const c=LUDO_COLORS[seat]; const turn=st&&st.turn===seat&&st.phase!=='over'; const pl=players[seat];
           return (
             <div key={seat} style={{display:'flex',alignItems:'center',gap:6,background:turn?'rgba(240,192,64,.14)':'rgba(13,20,16,.7)',border:`1px solid ${turn?'#F0C040':'rgba(255,255,255,.07)'}`,borderRadius:20,padding:'5px 10px',boxShadow:turn?`0 0 12px ${c.hex}55`:'none'}}>
-              <div style={{width:14,height:14,borderRadius:'50%',background:tokenBg(c.hex)}}/>
+              <div style={{width:20,height:20,borderRadius:'50%',display:'flex',alignItems:'center',justifyContent:'center',fontSize:12,background:pl?'rgba(255,255,255,.06)':tokenBg(c.hex),boxShadow:`0 0 0 1.5px ${c.hex}`}}>{pl?pl.avatar:'🤖'}</div>
               <span style={{fontSize:11,fontWeight:700}}>{seat===mySeat?'أنت':seatName(seat)}</span>
               <span style={{fontSize:11,fontWeight:900,color:'#F0C040'}}>{finishedCount(seat)}/4</span>
             </div>
