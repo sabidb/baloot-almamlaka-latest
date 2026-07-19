@@ -2,27 +2,92 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Player profiles — anyone may read (leaderboard); only the owner writes.
-    match /users/{uid} {
-      allow read: if true;
-      allow write: if request.auth != null && request.auth.uid == uid;
+    function signedIn() { return request.auth != null; }
+    function isSelf(uid) { return signedIn() && request.auth.uid == uid; }
+    // Admin access requires a custom claim set server-side (Admin SDK /
+    // Cloud Function). The client-side PIN in AdminPanel.jsx is NOT
+    // security — without this claim, admin writes are denied.
+    function isAdmin() { return signedIn() && request.auth.token.admin == true; }
+    function notBanned() { return !('banned' in resource.data) || resource.data.banned != true; }
+
+    // A client may edit its own profile but must NOT be able to mint
+    // currency or fake a record. coins may only go down (spending);
+    // wins/losses/isVip are server-only. The referee (Cloud Functions via
+    // Admin SDK) and admins bypass all of this.
+    function noEconomyCheat() {
+      let d = request.resource.data;
+      let o = resource.data;
+      return d.get('coins', 0) <= o.get('coins', 0)
+        && d.get('wins', 0) == o.get('wins', 0)
+        && d.get('losses', 0) == o.get('losses', 0)
+        && d.get('isVip', false) == o.get('isVip', false)
+        && d.get('banned', false) == o.get('banned', false);
     }
 
-    // Ludo rooms — ephemeral, client-authoritative game state (no sensitive
-    // data). Open read/write keeps guest play working without auth. Rooms
-    // older than a day are effectively abandoned; add a scheduled cleanup or
-    // TTL policy in production.
-    //
-    // To harden later: require `request.auth != null`, and validate that the
-    // writer owns the seat whose turn it is (state.turn) or is the host.
-    match /rooms/{code} {
-      allow read, write: if true;
+    match /users/{uid} {
+      // Any signed-in player can read profiles (leaderboard, friend search)
+      allow read: if signedIn();
+      // New profiles start with at most the 500-coin welcome bonus and a
+      // clean record — no self-granted VIP or inflated stats.
+      allow create: if isSelf(uid)
+        && request.resource.data.get('coins', 0) <= 500
+        && request.resource.data.get('wins', 0) == 0
+        && request.resource.data.get('losses', 0) == 0
+        && request.resource.data.get('isVip', false) == false
+        && request.resource.data.get('banned', false) == false;
+      // Players edit their own doc (profile, spending, cosmetics) but the
+      // economy fields are locked. Banned users cannot write.
+      allow update: if (isSelf(uid) && notBanned() && noEconomyCheat()) || isAdmin();
+      allow delete: if isAdmin();
 
-      // Private per-player hands written by the dealBaloot Cloud Function.
-      // Only the owning player may read their hand; nobody writes from the
-      // client (the admin SDK in the function bypasses these rules).
+      match /friends/{friendId} {
+        allow read: if isSelf(uid);
+        // The accepting user writes into BOTH friends subcollections
+        // (their own and the requester's), so the counterparty must also
+        // be allowed to write a doc keyed by their own uid.
+        allow write: if isSelf(uid) || (signedIn() && request.auth.uid == friendId);
+      }
+
+      // Daily-mission progress: the referee (Cloud Functions, Admin SDK)
+      // records games/wins here so it can't be forged, and pays out claims.
+      // Clients may only read their own progress — never write it.
+      match /missions/{day} {
+        allow read: if isSelf(uid);
+        allow write: if isAdmin();
+      }
+    }
+
+    // Friend requests — a pending invite from one player to another. Both
+    // parties can read it; only the sender creates it (for themselves); only
+    // the two parties can accept/decline (update) or remove (delete) it.
+    // NOTE: verify this block against your console version — the console
+    // screenshot was cut off mid-`create`. Keep whichever create predicate
+    // you already run if it is stricter.
+    match /friendRequests/{id} {
+      allow read: if signedIn() &&
+        (resource.data.to == request.auth.uid || resource.data.from == request.auth.uid);
+      allow create: if signedIn() &&
+        request.resource.data.from == request.auth.uid &&
+        request.resource.data.to is string &&
+        request.resource.data.to != request.auth.uid;
+      allow update, delete: if signedIn() &&
+        (resource.data.to == request.auth.uid || resource.data.from == request.auth.uid);
+    }
+
+    // Online game rooms (Ludo + Baloot). Ephemeral, client-authoritative
+    // game state — the client whose turn it is writes the next state; the
+    // host runs bots. Require sign-in (the app uses anonymous auth), which
+    // also gates the private hand docs below. Rooms are not auto-deleted;
+    // add a scheduled cleanup or TTL policy for old `rooms/*` in production.
+    // To harden further: validate that the writer owns state.turn or is host.
+    match /rooms/{code} {
+      allow read, write: if signedIn();
+
+      // Fair-dealing per-player hands, written ONLY by the dealBaloot Cloud
+      // Function (the Admin SDK bypasses these rules). A player may read
+      // only their own hand; clients can never write here.
       match /private/{uid} {
-        allow read: if request.auth != null && request.auth.uid == uid;
+        allow read: if isSelf(uid);
         allow write: if false;
       }
     }
