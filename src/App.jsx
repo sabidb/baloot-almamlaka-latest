@@ -209,9 +209,9 @@ export default function App(){
     <div style={{height:'100dvh',display:'flex',flexDirection:'column',background:'#07090A',fontFamily:'Tajawal,sans-serif',color:'#F0EDE5',direction:'rtl',overflow:'hidden'}}>
       <div style={{flex:1,overflow:'hidden',position:'relative'}}>
         {tab==='home'    &&<HomeScreen    profile={profile} onGame={setGame} onUpdate={setProfile}/>}
-        {tab==='board'   &&<LeaderScreen/>}
+        {tab==='board'   &&<LeaderScreen  profile={profile}/>}
         {tab==='store'   &&<StoreScreen   profile={profile} onUpdate={setProfile}/>}
-        {tab==='friends' &&<FriendScreen/>}
+        {tab==='friends' &&<FriendScreen  profile={profile} onGame={setGame}/>}
         {tab==='profile' &&<ProfileScreen profile={profile} onUpdate={setProfile} onLogout={async()=>{try{await signOut(auth);}catch{/* ignore */}setProfile(null);}}/>}
       </div>
       <nav style={{flexShrink:0,height:'calc(60px + env(safe-area-inset-bottom,0px))',paddingBottom:'env(safe-area-inset-bottom,0px)',background:'rgba(8,12,10,.97)',borderTop:'1px solid rgba(240,192,64,.12)',display:'flex'}}>
@@ -824,26 +824,64 @@ const SUIT_META={'♠':{n:'بستوني',c:'#0A0F0A'},'♥':{n:'كبة',c:'#C039
 function SUIT_NAME(sy){return (SUIT_META[sy]||{}).n||'';}
 function SUIT_COLOR(sy){return (SUIT_META[sy]||{}).c||'#111';}
 
-function LeaderScreen(){
+function LeaderScreen({profile}){
   const [players,setPlayers]=useState([{id:'1',name:'أبو عبدالله',avatar:'🧔',city:'الرياض',wins:247},{id:'2',name:'محمد الغامدي',avatar:'👲',city:'جدة',wins:198},{id:'3',name:'سعد العتيبي',avatar:'🤴',city:'الدمام',wins:187},{id:'4',name:'فهد القحطاني',avatar:'🧙',city:'مكة',wins:156},{id:'5',name:'عبدالرحمن',avatar:'👨‍💼',city:'المدينة',wins:143}]);
-  useEffect(()=>{(async()=>{try{const q=query(collection(db,'users'),orderBy('wins','desc'),limit(20));const s=await getDocs(q);if(s.docs.length)setPlayers(s.docs.map(d=>({id:d.id,...d.data()})));}catch{/* keep demo data */}})();},[]);
-  const ri=i=>i===0?'🥇':i===1?'🥈':i===2?'🥉':String(i+1);
+  const [live,setLive]=useState(false);
+  useEffect(()=>{(async()=>{try{const q=query(collection(db,'users'),orderBy('wins','desc'),limit(50));const s=await getDocs(q);if(s.docs.length){setPlayers(s.docs.map(d=>({id:d.id,...d.data()})));setLive(true);}}catch{/* keep demo data */}})();},[]);
+  const meId=profile?.uid;
+  // Ensure the local player appears even before their first sync to Firestore.
+  const list=(()=>{
+    const arr=[...players];
+    if(profile&&!arr.some(p=>p.id===meId)) arr.push({id:meId,name:profile.name,avatar:profile.avatar,city:profile.city,wins:profile.wins||0});
+    return arr.sort((a,b)=>(b.wins||0)-(a.wins||0));
+  })();
+  const myRank=meId?list.findIndex(p=>p.id===meId):-1;
   const rc=i=>i===0?'#FFD700':i===1?'#C0C0C0':i===2?'#CD7F32':'rgba(240,237,229,.55)';
+  const top3=list.slice(0,3);
+  const podium=[top3[1],top3[0],top3[2]]; // silver, gold, bronze — center is gold
+  const podH=[64,86,50], medal=['🥈','🥇','🥉'], mc=['#C0C0C0','#FFD700','#CD7F32'];
   return(
     <div style={{position:'absolute',inset:0,overflowY:'auto',WebkitOverflowScrolling:'touch',paddingBottom:'calc(60px + env(safe-area-inset-bottom,0px) + 12px)',paddingTop:'env(safe-area-inset-top,0px)'}}>
-      <div style={{padding:'16px 14px 8px',textAlign:'center'}}>
+      <div style={{padding:'16px 14px 6px',textAlign:'center'}}>
         <div style={{fontFamily:"'Scheherazade New',serif",fontSize:22,color:'#F0C040'}}>🏆 المتصدرون</div>
-        <div style={{color:'rgba(240,237,229,.6)',fontSize:11,marginTop:4}}>أفضل لاعبي المملكة</div>
+        <div style={{color:'rgba(240,237,229,.6)',fontSize:11,marginTop:4}}>{live?'أفضل لاعبي المملكة':'أفضل لاعبي المملكة · بيانات تجريبية حتى تتصل بـ Firebase'}</div>
+      </div>
+      {/* Podium */}
+      <div style={{display:'flex',alignItems:'flex-end',justifyContent:'center',gap:10,padding:'14px 14px 18px'}}>
+        {podium.map((p,idx)=>{ if(!p) return <div key={idx} style={{flex:1,maxWidth:96}}/>;
+          const gold=idx===1;
+          return (
+            <div key={p.id} style={{flex:1,maxWidth:96,display:'flex',flexDirection:'column',alignItems:'center',gap:6}}>
+              <span style={{fontSize:20}}>{medal[idx]}</span>
+              <div style={{width:gold?56:46,height:gold?56:46,borderRadius:'50%',background:'rgba(16,26,18,.95)',border:`2.5px solid ${mc[idx]}`,display:'flex',alignItems:'center',justifyContent:'center',fontSize:gold?28:22,boxShadow:gold?`0 0 18px ${mc[idx]}66`:'none'}}>{p.avatar||'🧔'}</div>
+              <div style={{fontSize:11,fontWeight:700,textAlign:'center',maxWidth:90,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{p.id===meId?'أنت':p.name}</div>
+              <div style={{width:'100%',height:podH[idx],borderRadius:'10px 10px 0 0',background:`linear-gradient(180deg,${mc[idx]}33,${mc[idx]}0d)`,border:`1px solid ${mc[idx]}55`,borderBottom:'none',display:'flex',alignItems:'flex-start',justifyContent:'center',paddingTop:6}}>
+                <span style={{fontSize:14,fontWeight:900,color:mc[idx]}}>{p.wins||0} ✓</span>
+              </div>
+            </div>
+          );
+        })}
       </div>
       <div style={{height:1,background:'rgba(255,255,255,.07)',margin:'0 14px'}}/>
-      {players.map((p,i)=>(
-        <div key={p.id} style={{display:'flex',alignItems:'center',gap:10,padding:'10px 14px',borderBottom:'1px solid rgba(255,255,255,.06)'}}>
-          <span style={{fontSize:i<3?18:13,fontWeight:900,color:rc(i),width:24,textAlign:'center',flexShrink:0}}>{ri(i)}</span>
-          <span style={{fontSize:26,flexShrink:0}}>{p.avatar||'🧔'}</span>
-          <div style={{flex:1,minWidth:0}}><div style={{fontSize:13,fontWeight:700,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{p.name}</div><div style={{color:'rgba(240,237,229,.6)',fontSize:10}}>{p.city}</div></div>
-          <span style={{fontSize:13,fontWeight:900,color:'#F0C040',flexShrink:0}}>{p.wins} ✓</span>
+      {/* Full list */}
+      {list.map((p,i)=>{ const me=p.id===meId;
+        return (
+        <div key={p.id||i} style={{display:'flex',alignItems:'center',gap:10,padding:'10px 14px',borderBottom:'1px solid rgba(255,255,255,.06)',background:me?'rgba(240,192,64,.08)':'transparent',borderRight:me?'3px solid #F0C040':'3px solid transparent'}}>
+          <span style={{fontSize:i<3?16:13,fontWeight:900,color:rc(i),width:24,textAlign:'center',flexShrink:0}}>{i<3?['🥇','🥈','🥉'][i]:i+1}</span>
+          <span style={{fontSize:24,flexShrink:0}}>{p.avatar||'🧔'}</span>
+          <div style={{flex:1,minWidth:0}}><div style={{fontSize:13,fontWeight:700,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',color:me?'#F0C040':undefined}}>{p.name}{me?' (أنت)':''}</div><div style={{color:'rgba(240,237,229,.6)',fontSize:10}}>{p.city||'—'}</div></div>
+          <span style={{fontSize:13,fontWeight:900,color:'#F0C040',flexShrink:0}}>{p.wins||0} ✓</span>
         </div>
-      ))}
+      );})}
+      {/* Sticky-ish your-rank band when outside top view */}
+      {myRank>=0&&(
+        <div style={{margin:'12px 14px 0',padding:'10px 14px',borderRadius:12,background:'linear-gradient(135deg,rgba(240,192,64,.14),rgba(240,192,64,.04))',border:'1px solid rgba(240,192,64,.3)',display:'flex',alignItems:'center',gap:10}}>
+          <span style={{fontSize:13,fontWeight:900,color:'#F0C040',width:24,textAlign:'center'}}>#{myRank+1}</span>
+          <span style={{fontSize:24}}>{profile.avatar}</span>
+          <div style={{flex:1}}><div style={{fontSize:12,fontWeight:700}}>ترتيبك</div><div style={{fontSize:10,color:'rgba(240,237,229,.6)'}}>العب أكثر لترتفع 🔝</div></div>
+          <span style={{fontSize:13,fontWeight:900,color:'#F0C040'}}>{profile.wins||0} ✓</span>
+        </div>
+      )}
     </div>
   );
 }
@@ -906,18 +944,31 @@ function StoreScreen({profile,onUpdate}){
   );
 }
 
-function FriendScreen(){
+function FriendScreen({onGame}){
   const friends=[{n:'محمد الغامدي',a:'👲',c:'جدة',s:'متصل',sc:'#2ECC71'},{n:'سعد العتيبي',a:'🤴',c:'الدمام',s:'في لعبة',sc:'#F0C040'},{n:'فهد القحطاني',a:'🧙',c:'مكة',s:'غير متصل',sc:'#666'},{n:'خالد الزهراني',a:'🦸',c:'تبوك',s:'متصل',sc:'#2ECC71'}];
   return(
     <div style={{position:'absolute',inset:0,overflowY:'auto',WebkitOverflowScrolling:'touch',paddingBottom:'calc(60px + env(safe-area-inset-bottom,0px) + 12px)',paddingTop:'env(safe-area-inset-top,0px)'}}>
       <div style={{padding:'16px 14px 8px',textAlign:'center'}}><div style={{fontFamily:"'Scheherazade New',serif",fontSize:22,color:'#F0C040'}}>👥 أصدقاء</div></div>
+      {/* Invite card — the real, working way to play with friends today */}
+      <div style={{margin:'4px 12px 14px',padding:16,borderRadius:16,background:'linear-gradient(135deg,rgba(26,61,32,.85),rgba(13,20,16,.85))',border:'1px solid rgba(240,192,64,.25)'}}>
+        <div style={{fontSize:14,fontWeight:900,color:'#F0C040',marginBottom:4}}>العب مع أصدقائك الآن</div>
+        <div style={{fontSize:11,color:'rgba(240,237,229,.65)',marginBottom:12,lineHeight:1.6}}>أنشئ غرفة واحصل على كود من ٤ أرقام، شاركه مع صديقك ليدخل ويلعب معك.</div>
+        <div style={{display:'flex',gap:8}}>
+          <button onClick={()=>onGame&&onGame('ludoOnline')} style={{...G.btn,flex:1,background:'linear-gradient(135deg,#1A5C28,#2ECC71)',color:'#fff',fontSize:12,padding:'10px'}}>🎲 لودو أونلاين</button>
+          <button onClick={()=>onGame&&onGame('balootOnline')} style={{...G.btn,flex:1,background:'linear-gradient(135deg,#8B6914,#F0C040)',color:'#07090A',fontSize:12,padding:'10px'}}>🃏 بلوت أونلاين</button>
+        </div>
+      </div>
       <div style={{padding:'0 12px 12px'}}><input style={G.input} placeholder="🔍 ابحث عن صديق..."/></div>
-      <div style={{height:1,background:'rgba(255,255,255,.07)',margin:'0 14px'}}/>
+      <div style={{display:'flex',alignItems:'center',gap:8,padding:'0 16px 8px'}}>
+        <div style={{height:1,flex:1,background:'rgba(255,255,255,.07)'}}/>
+        <span style={{fontSize:10,color:'rgba(240,237,229,.4)'}}>قائمة الأصدقاء · قريباً</span>
+        <div style={{height:1,flex:1,background:'rgba(255,255,255,.07)'}}/>
+      </div>
       {friends.map((f,i)=>(
-        <div key={i} style={{display:'flex',alignItems:'center',gap:10,padding:'12px 14px',borderBottom:'1px solid rgba(255,255,255,.06)'}}>
+        <div key={i} style={{display:'flex',alignItems:'center',gap:10,padding:'12px 14px',borderBottom:'1px solid rgba(255,255,255,.06)',opacity:.6}}>
           <span style={{fontSize:28}}>{f.a}</span>
           <div style={{flex:1,minWidth:0}}><div style={{fontSize:13,fontWeight:700}}>{f.n}</div><div style={{fontSize:10,color:f.sc}}>{f.s}</div></div>
-          {f.s==='متصل'&&<button style={{...G.btn,background:'linear-gradient(135deg,#1A5C28,#2ECC71)',color:'#fff',padding:'7px 14px',fontSize:12}}>دعوة</button>}
+          {f.s==='متصل'&&<button style={{...G.btn,background:'rgba(46,204,113,.15)',border:'1px solid rgba(46,204,113,.35)',color:'#2ECC71',padding:'7px 14px',fontSize:12}}>دعوة</button>}
         </div>
       ))}
     </div>

@@ -89,6 +89,13 @@ export default function LudoOnline({ profile, onExit, onUpdate, persist }){
 
   const toggleMute=()=>{ const m=!muted; setMutedState(m); setMuted(m); };
 
+  const toggleReady=async()=>{
+    const r=roomRef.current; if(!r||!chan.current||r.status!=='waiting') return;
+    const players={...r.players};
+    for(const s of Object.keys(players)) if(players[s].uid===myUid) players[s]={...players[s],ready:!players[s].ready};
+    await writeRoom({players});
+  };
+
   // ── derived ──
   const st = room?.state || null;
   const players = room?.players || {};
@@ -213,6 +220,10 @@ export default function LudoOnline({ profile, onExit, onUpdate, persist }){
 
   // ── LOBBY (waiting) ──
   if(room.status==='waiting'){
+    const guests=room.active.filter(s=>players[s]&&players[s].uid!==room.host);
+    const readyGuests=guests.filter(s=>players[s].ready).length;
+    const allReady=guests.length===0||readyGuests===guests.length;
+    const meReady=mySeat>=0&&!!players[mySeat]?.ready;
     return (
       <div style={{...panel,height:'100%',background:'radial-gradient(ellipse 120% 90% at 50% 25%,#14261B,#07090A)',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:14,padding:24}}>
         <div style={{fontFamily:"'Scheherazade New',serif",fontSize:26,color:'#F0C040'}}>غرفة اللعب</div>
@@ -221,17 +232,27 @@ export default function LudoOnline({ profile, onExit, onUpdate, persist }){
         <div style={{width:'100%',maxWidth:320,display:'flex',flexDirection:'column',gap:8,margin:'8px 0'}}>
           {room.active.map(seat=>{
             const pl=players[seat]; const c=LUDO_COLORS[seat];
+            const isHostSeat=pl&&pl.uid===room.host;
+            const st1= !pl ? {t:'🤖 روبوت',col:'rgba(240,237,229,.4)'}
+              : isHostSeat ? {t:'👑 المضيف',col:'#F0C040'}
+              : pl.ready ? {t:'✓ جاهز',col:'#2ECC71'}
+              : {t:'بالانتظار…',col:'rgba(240,237,229,.45)'};
             return (
-              <div key={seat} style={{display:'flex',alignItems:'center',gap:10,background:'rgba(13,20,16,.8)',border:'1px solid rgba(255,255,255,.07)',borderRadius:10,padding:'9px 12px'}}>
+              <div key={seat} style={{display:'flex',alignItems:'center',gap:10,background:'rgba(13,20,16,.8)',border:`1px solid ${pl&&pl.ready&&!isHostSeat?'rgba(46,204,113,.35)':'rgba(255,255,255,.07)'}`,borderRadius:10,padding:'9px 12px'}}>
                 <div style={{width:26,height:26,borderRadius:'50%',flexShrink:0,display:'flex',alignItems:'center',justifyContent:'center',fontSize:15,background:pl?'rgba(255,255,255,.06)':'transparent',boxShadow:`0 0 0 2px ${c.hex}`}}>{pl?pl.avatar:'🪑'}</div>
-                <span style={{flex:1,fontSize:13,fontWeight:700}}>{pl?pl.name:'بانتظار لاعب…'}</span>
-                <span style={{fontSize:11,color:pl?'#2ECC71':'rgba(240,237,229,.4)'}}>{pl?(pl.uid===myUid?'أنت':'جاهز'):'🤖 روبوت'}</span>
+                <span style={{flex:1,fontSize:13,fontWeight:700}}>{pl?(pl.uid===myUid?`${pl.name} (أنت)`:pl.name):'بانتظار لاعب…'}</span>
+                <span style={{fontSize:11,fontWeight:700,color:st1.col}}>{st1.t}</span>
               </div>
             );
           })}
         </div>
+        {!isHost&&mySeat>=0&&
+          <button onClick={toggleReady} style={{...btn(meReady?'rgba(46,204,113,.18)':'linear-gradient(135deg,#1A5C28,#2ECC71)',meReady?'#2ECC71':'#fff'),width:'100%',maxWidth:320,border:meReady?'1px solid rgba(46,204,113,.5)':'none'}}>{meReady?'✓ أنا جاهز — اضغط للإلغاء':'أنا جاهز'}</button>}
         {isHost
-          ? <button onClick={()=>writeRoom({status:'playing',state:newGame(room.seatsWanted)})} style={{...btn('linear-gradient(135deg,#8B6914,#F0C040)','#07090A'),width:'100%',maxWidth:320}}>ابدأ اللعب ▶ {humanCount<room.seatsWanted?`(${room.seatsWanted-humanCount} روبوت)`:''}</button>
+          ? <>
+              {guests.length>0&&<div style={{fontSize:11,color:allReady?'#2ECC71':'rgba(240,237,229,.55)'}}>{allReady?'✓ كل اللاعبين جاهزون':`${readyGuests}/${guests.length} جاهزون`}</div>}
+              <button onClick={()=>writeRoom({status:'playing',state:newGame(room.seatsWanted)})} style={{...btn('linear-gradient(135deg,#8B6914,#F0C040)','#07090A'),width:'100%',maxWidth:320,opacity:allReady?1:.85}}>ابدأ اللعب ▶ {humanCount<room.seatsWanted?`(${room.seatsWanted-humanCount} روبوت)`:''}</button>
+            </>
           : <div style={{color:'rgba(240,237,229,.6)',fontSize:13}}>بانتظار أن يبدأ المضيف…</div>}
         <button onClick={leave} style={{...btn('rgba(255,255,255,.08)','rgba(240,237,229,.7)'),border:'1px solid rgba(255,255,255,.12)',fontWeight:700,fontSize:13,maxWidth:320,width:'100%'}}>مغادرة</button>
       </div>
