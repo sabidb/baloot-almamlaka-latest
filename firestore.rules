@@ -57,29 +57,38 @@ service cloud.firestore {
       }
     }
 
-    // Friend requests — a pending invite from one player to another. Both
-    // parties can read it; only the sender creates it (for themselves); only
-    // the two parties can accept/decline (update) or remove (delete) it.
-    // NOTE: verify this block against your console version — the console
-    // screenshot was cut off mid-`create`. Keep whichever create predicate
-    // you already run if it is stricter.
     match /friendRequests/{id} {
       allow read: if signedIn() &&
         (resource.data.to == request.auth.uid || resource.data.from == request.auth.uid);
       allow create: if signedIn() &&
         request.resource.data.from == request.auth.uid &&
-        request.resource.data.to is string &&
-        request.resource.data.to != request.auth.uid;
-      allow update, delete: if signedIn() &&
-        (resource.data.to == request.auth.uid || resource.data.from == request.auth.uid);
+        request.resource.data.status == 'pending';
+      // Only the recipient can accept/reject, and may only change status.
+      allow update: if signedIn() &&
+        resource.data.to == request.auth.uid &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']);
     }
 
-    // Online game rooms (Ludo + Baloot). Ephemeral, client-authoritative
-    // game state — the client whose turn it is writes the next state; the
-    // host runs bots. Require sign-in (the app uses anonymous auth), which
-    // also gates the private hand docs below. Rooms are not auto-deleted;
-    // add a scheduled cleanup or TTL policy for old `rooms/*` in production.
-    // To harden further: validate that the writer owns state.turn or is host.
+    match /notifications/{id} {
+      allow read: if signedIn() && resource.data.to == request.auth.uid;
+      // Game invites are created by the sender addressed to someone else.
+      allow create: if signedIn() && request.resource.data.to is string;
+      // Recipient can mark as read.
+      allow update: if signedIn() &&
+        resource.data.to == request.auth.uid &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read']);
+    }
+
+    match /tournaments/{id} {
+      allow read: if signedIn();
+      allow create: if signedIn();
+      // MVP: any signed-in player can update (join flow rewrites the
+      // players array from the client). This is NOT tamper-proof — move
+      // joins/settlement to a Cloud Function before real prizes exist.
+      allow update: if signedIn();
+      allow delete: if isAdmin();
+    }
+
     match /rooms/{code} {
       allow read, write: if signedIn();
 
@@ -90,6 +99,26 @@ service cloud.firestore {
         allow read: if isSelf(uid);
         allow write: if false;
       }
+    }
+
+    // Match telemetry: append-only from clients; only the anti-collusion
+    // agent (Admin SDK, bypasses rules) and admins read it back.
+    match /matches/{id} {
+      allow create: if signedIn();
+      allow read: if isAdmin();
+      allow update, delete: if false;
+    }
+
+    // Anti-collusion flags: written only by the scan agent (Admin SDK),
+    // readable only by admins.
+    match /flags/{id} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+
+    // Deny everything not matched above.
+    match /{document=**} {
+      allow read, write: if false;
     }
   }
 }
