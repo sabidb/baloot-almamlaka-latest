@@ -110,6 +110,39 @@ resolution into a second Cloud Function.
 With the flag off (default), online Baloot uses the verified
 client-authoritative path.
 
+## Server-authoritative economy (referee)
+
+If your Firestore rules lock the economy fields (`coins` may only go down,
+`wins`/`losses`/`isVip` server-only — the `noEconomyCheat` rule), then the
+client cannot write game rewards or claim payouts directly; those writes are
+rejected. The `referee` Cloud Function (provided) is the sole writer of those
+fields: the client calls it, and it computes every payout from the STORED
+profile (never client input) and writes via the Admin SDK.
+
+It covers all reward paths — game results and daily/mission/weekly/achievement
+claims. Its reward math is a line-for-line port of `src/progress.js`, kept in
+lock-step by a parity test:
+
+```
+node functions/test-parity.mjs        # server logic == client logic
+```
+
+Enable it:
+
+```
+firebase deploy --only functions       # deploys referee + dealBaloot
+# then in .env:
+VITE_SERVER_ECONOMY=1
+npm run build && firebase deploy --only hosting
+```
+
+With the flag on, game results apply optimistically for a snappy UI and then
+reconcile with the server's authoritative patch (idempotent); claims go
+server-first so a rejected claim never shows a false success. With the flag
+off (default), the app uses the local client-authoritative path (fine offline
+or with permissive rules). Cosmetic unlocks (`inventory`) are not a locked
+field and continue to write directly.
+
 ## Notes / later
 
 - Rooms aren't auto-deleted. Add a scheduled Cloud Function or a TTL policy to

@@ -9,7 +9,8 @@ import {
   REACTIONS, defaultInventory, applyAchievements,
   sounds, setMuted, startAmbience, stopAmbience,
 } from './GameLogic';
-import { applyGameResult, withProgress, levelBar, getMissions, claimMission, claimDaily, dailyStatus, weeklyStatus, claimWeekly, achievementList, claimAchievement } from './progress';
+import { withProgress, levelBar, getMissions, dailyStatus, weeklyStatus, achievementList } from './progress';
+import { commitGame, commitClaim } from './referee';
 import { RANKSAR, initGame, gameReducer } from './balootEngine';
 import BalootOnline from './BalootOnline';
 import LudoScreen from './Ludo';
@@ -347,11 +348,11 @@ function HomeScreen({profile,onGame,onUpdate}){
   const pr=withProgress(profile);
   const firstName=(profile.name||'لاعب').split(' ')[0];
 
-  const doClaim=(res,label)=>{
-    if(!res){ return; }
+  const doClaim=async(op,params,label)=>{
+    const res=await commitClaim(profile,op,params,{ onPatch:patch=>onUpdate&&onUpdate(p=>({...p,...patch})), persist:patch=>persistProfile(profile.uid,patch) });
+    if(!res||res.error){ return; }
     if(res.locked){ showNote('🎮 العب مباراة واحدة اليوم لفتح المكافأة'); return; }
-    onUpdate&&onUpdate(p=>({...p,...res.patch}));
-    persistProfile(profile.uid,res.patch);
+    if(!res.ok){ return; }
     sounds.buy&&sounds.buy();
     showNote(`🎁 ${label} +${res.reward} 🪙`);
   };
@@ -417,7 +418,7 @@ function HomeScreen({profile,onGame,onUpdate}){
           <div style={{fontSize:13,fontWeight:900,color:'#F0C040'}}>الجائزة اليومية</div>
           <div style={{color:'rgba(240,237,229,.6)',fontSize:11}}>{daily.claimed?'استلمتها اليوم — عد غداً':`العب لتفتح +${daily.reward} 🪙 · سلسلتك 🔥${daily.streak||0}`}</div>
         </div>
-        <button disabled={daily.claimed} onClick={()=>doClaim(claimDaily(profile),'الجائزة اليومية')}
+        <button disabled={daily.claimed} onClick={()=>doClaim('claimDaily',{},'الجائزة اليومية')}
           style={{...G.btn,padding:'8px 14px',fontSize:12,opacity:daily.claimed?0.4:1,
             background:daily.claimed?'rgba(255,255,255,.08)':(daily.playedToday?'linear-gradient(135deg,#8B6914,#F0C040)':'rgba(240,192,64,.15)'),
             color:daily.claimed?'rgba(240,237,229,.6)':(daily.playedToday?'#07090A':'#F0C040'),border:daily.playedToday?'none':'1px solid rgba(240,192,64,.3)'}}>
@@ -445,7 +446,7 @@ function HomeScreen({profile,onGame,onUpdate}){
               <span style={{fontSize:10,color:'rgba(240,237,229,.5)',minWidth:26,textAlign:'center'}}>{m.progress}/{m.goal}</span>
               {m.claimed
                 ? <span style={{fontSize:11,color:'#2ECC71',fontWeight:900,minWidth:52,textAlign:'center'}}>✓</span>
-                : <button disabled={!done} onClick={()=>doClaim(claimMission(profile,m.id),'مهمة')} style={{...G.btn,minWidth:52,padding:'5px 8px',fontSize:11,opacity:done?1:0.4,background:done?'linear-gradient(135deg,#1A5C28,#2ECC71)':'rgba(255,255,255,.06)',color:done?'#fff':'rgba(240,237,229,.5)'}}>{done?`+${m.reward}`:'—'}</button>}
+                : <button disabled={!done} onClick={()=>doClaim('claimMission',{id:m.id},'مهمة')} style={{...G.btn,minWidth:52,padding:'5px 8px',fontSize:11,opacity:done?1:0.4,background:done?'linear-gradient(135deg,#1A5C28,#2ECC71)':'rgba(255,255,255,.06)',color:done?'#fff':'rgba(240,237,229,.5)'}}>{done?`+${m.reward}`:'—'}</button>}
             </div>
           );
         })}
@@ -459,7 +460,7 @@ function HomeScreen({profile,onGame,onUpdate}){
             <div style={{fontSize:13,fontWeight:900,color:'#C79BE8'}}>الجائزة الأسبوعية</div>
             <div style={{color:'rgba(240,237,229,.6)',fontSize:11}}>{wk.claimed?'استلمتها هذا الأسبوع':`فوزات هذا الأسبوع: ${wk.wins} · +${wk.reward} 🪙`}</div>
           </div>
-          <button disabled={wk.claimed} onClick={()=>doClaim(claimWeekly(profile),'الجائزة الأسبوعية')}
+          <button disabled={wk.claimed} onClick={()=>doClaim('claimWeekly',{},'الجائزة الأسبوعية')}
             style={{...G.btn,padding:'8px 14px',fontSize:12,opacity:wk.claimed?0.4:1,
               background:wk.claimed?'rgba(255,255,255,.08)':(wk.playable?'linear-gradient(135deg,#4A0072,#9B59B6)':'rgba(155,89,182,.15)'),
               color:wk.claimed?'rgba(240,237,229,.6)':'#fff',border:wk.playable?'none':'1px solid rgba(155,89,182,.35)'}}>
@@ -487,7 +488,7 @@ function HomeScreen({profile,onGame,onUpdate}){
 function AchievementsScreen({profile,onUpdate,onBack}){
   const [notice,setNotice]=useState(null);
   const list=achievementList(profile);
-  const doClaim=id=>{ const res=claimAchievement(profile,id); if(!res)return; onUpdate&&onUpdate(p=>({...p,...res.patch})); persistProfile(profile.uid,res.patch); sounds.buy&&sounds.buy(); setNotice(`🎁 +${res.reward} 🪙${res.gems?` +${res.gems} 💎`:''}`); setTimeout(()=>setNotice(null),2400); };
+  const doClaim=async id=>{ const res=await commitClaim(profile,'claimAchievement',{id},{ onPatch:patch=>onUpdate&&onUpdate(p=>({...p,...patch})), persist:patch=>persistProfile(profile.uid,patch) }); if(!res||!res.ok)return; sounds.buy&&sounds.buy(); setNotice(`🎁 +${res.reward} 🪙${res.gems?` +${res.gems} 💎`:''}`); setTimeout(()=>setNotice(null),2400); };
   return(
     <div style={{position:'absolute',inset:0,overflowY:'auto',WebkitOverflowScrolling:'touch',paddingBottom:'calc(60px + env(safe-area-inset-bottom,0px) + 12px)',paddingTop:'env(safe-area-inset-top,0px)'}}>
       <div style={{display:'flex',alignItems:'center',gap:10,padding:'16px 14px 10px'}}>
@@ -615,11 +616,11 @@ function GameScreen({profile,onExit,onUpdate}){
     if(state.phase!=='gameOver' || awarded.current) return;
     awarded.current=true;
     const humanWon=state.matchScores[0]>state.matchScores[1];
-    const { patch, toasts }=applyGameResult(profile,{game:'baloot',won:humanWon});
+    const { patch, toasts }=commitGame(profile,{game:'baloot',won:humanWon},{ onPatch:p2=>onUpdate&&onUpdate(p=>({...p,...p2})), persist:pt=>persistProfile(profile.uid,pt) });
+    // Cosmetic unlocks from total wins — inventory is not a locked economy
+    // field, so it persists directly even under the strict referee rules.
     const { inventory, earned }=applyAchievements(profile.inventory, patch.wins||profile.wins||0);
-    const full={ ...patch, inventory };
-    onUpdate&&onUpdate(p=>({ ...p, ...full }));
-    persistProfile(profile.uid, full);
+    if(earned.length){ onUpdate&&onUpdate(p=>({ ...p, inventory })); persistProfile(profile.uid, { inventory }); }
     toasts.forEach((t,i)=>setTimeout(()=>{
       if(t.type==='levelup') showT(`🎉 وصلت للمستوى ${t.value}!`);
       else if(t.type==='streak'&&t.value>1) showT(`🔥 سلسلة ${t.value} أيام متتالية!`);

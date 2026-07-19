@@ -4,7 +4,7 @@ import {
   applyMove, botPickToken, tokenCell, rollDie,
 } from './LudoLogic';
 import { sounds, setMuted, REACTIONS } from './GameLogic';
-import { applyGameResult } from './progress';
+import { commitGame } from './referee';
 import {
   CELL, pos, START_INDEX, STAR, START_ARROW, HOME_ARROW, GRID, BASES, cellCenter,
   hexOf, shade, tokenBg, coinPos, spawnBurst, setupState, reducer,
@@ -180,9 +180,7 @@ export default function LudoScreen({ profile, onUpdate, persist, onExit, onOnlin
     if(!muted) sounds.win();
     const place=state.ranks.indexOf(0);
     if(place===0) launchConfetti();
-    const { patch, toasts }=applyGameResult(profile,{game:'ludo',won:place===0});
-    if(onUpdate) onUpdate(p=>({ ...p, ...patch }));
-    if(persist) persist(patch);
+    const { toasts }=commitGame(profile,{game:'ludo',won:place===0},{ onPatch:patch=>onUpdate&&onUpdate(p=>({...p,...patch})), persist });
     toasts.forEach((t,i)=>setTimeout(()=>{
       if(t.type==='levelup') showT(`🎉 المستوى ${t.value}!`);
       else if(t.type==='streak'&&t.value>1) showT(`🔥 سلسلة ${t.value} أيام!`);

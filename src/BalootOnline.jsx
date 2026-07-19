@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { SUITS, botBid, botChoose, legalPlays, sortHand } from './GameLogic';
 import { gameReducer, initGame, RANKSAR, hydrateState, hydrateHand } from './balootEngine';
 import { openRoom, genRoomCode, ONLINE_MODE, now } from './online';
-import { applyGameResult } from './progress';
+import { commitGame } from './referee';
 
 const TURN_MS = 22000, HOST_MS = 30000;
 // Opt-in fair (server-side) dealing. When Firebase Functions are deployed and
@@ -182,8 +182,7 @@ export default function BalootOnline({ profile, onExit, onUpdate, persist }){
     if(st.phase!=='gameOver'){ rewarded.current=false; return; }
     if(rewarded.current || mySeat<0) return; rewarded.current=true;
     const won = st.matchScores[mySeat%2] > st.matchScores[1-(mySeat%2)];
-    const { patch }=applyGameResult(profile,{game:'baloot',won});
-    if(onUpdate) onUpdate(p=>({...p,...patch})); if(persist) persist(patch);
+    commitGame(profile,{game:'baloot',won},{ onPatch:patch=>onUpdate&&onUpdate(p=>({...p,...patch})), persist });
   },[room?.state?.phase]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Server-deal mode: subscribe to my private hand doc. Seed once per deal

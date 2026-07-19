@@ -4,7 +4,7 @@ import { reducer, newGame, PLAYER_SETS, coinPos, hexOf, tokenBg } from './ludoSh
 import { BoardStatic, Coin, Pips } from './Ludo';
 import { sounds, setMuted } from './GameLogic';
 import { openRoom, genRoomCode, ONLINE_MODE, now } from './online';
-import { applyGameResult } from './progress';
+import { commitGame } from './referee';
 
 const TURN_MS = 18000;      // a player's own auto-act timeout
 const HOST_TAKEOVER_MS = 26000; // host covers a stalled/disconnected human
@@ -167,9 +167,7 @@ export default function LudoOnline({ profile, onExit, onUpdate, persist }){
     if(st.phase!=='over'){ rewarded.current=false; return; }
     if(rewarded.current || mySeat<0) return;
     rewarded.current=true;
-    const { patch }=applyGameResult(profile,{game:'ludo',won:st.winner===mySeat});
-    if(onUpdate) onUpdate(p=>({ ...p, ...patch }));
-    if(persist) persist(patch);
+    commitGame(profile,{game:'ludo',won:st.winner===mySeat},{ onPatch:patch=>onUpdate&&onUpdate(p=>({...p,...patch})), persist });
   },[room?.state?.phase]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const curColor = st ? hexOf(LUDO_COLORS[st.turn].id) : '#F0C040';

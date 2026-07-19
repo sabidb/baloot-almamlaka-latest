@@ -10,13 +10,44 @@
 // The client enables this path automatically when the function exists (see
 // FIREBASE_SETUP.md → "Fair dealing").
 
+// Day/week reward boundaries follow Riyadh time so streaks/missions flip at a
+// sensible local hour (and match the client for Saudi players).
+process.env.TZ = 'Asia/Riyadh';
+
 const { onCall, HttpsError } = require('firebase-functions/v2/https');
 const { initializeApp } = require('firebase-admin/app');
 const { getFirestore } = require('firebase-admin/firestore');
 const crypto = require('crypto');
+const { runReferee } = require('./rewards');
 
 initializeApp();
 const db = getFirestore();
+
+// ── Referee: the sole writer of locked economy fields (coins up, wins,
+// losses). The client calls this instead of writing rewards directly, so
+// currency can't be minted and records can't be faked. All amounts are
+// computed from the STORED profile, never from client input.
+const REFEREE_OPS = new Set(['game', 'claimDaily', 'claimMission', 'claimWeekly', 'claimAchievement']);
+exports.referee = onCall(async (req) => {
+  const uid = req.auth && req.auth.uid;
+  if (!uid) throw new HttpsError('unauthenticated', 'Sign in required.');
+  const op = String((req.data || {}).op || '');
+  const params = (req.data || {}).params || {};
+  if (!REFEREE_OPS.has(op)) throw new HttpsError('invalid-argument', 'Unknown op.');
+  if (op === 'game' && !['ludo', 'baloot'].includes(params.game)) {
+    throw new HttpsError('invalid-argument', 'Bad game.');
+  }
+
+  const ref = db.doc('users/' + uid);
+  return db.runTransaction(async (tx) => {
+    const snap = await tx.get(ref);
+    if (!snap.exists) throw new HttpsError('not-found', 'Profile not found.');
+    const r = runReferee(snap.data(), op, params);
+    if (!r || !r.patch) return { ok: false, locked: !!(r && r.locked) };
+    tx.set(ref, r.patch, { merge: true });
+    return { ok: true, patch: r.patch, toasts: r.toasts || [], reward: r.reward || 0, gems: r.gems || 0 };
+  });
+});
 
 const SUITS = ['♠', '♥', '♦', '♣'];
 const RANKS = ['A', 'K', 'Q', 'J', '10', '9', '8', '7'];
